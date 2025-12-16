@@ -4,9 +4,9 @@
  * It contains form-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import FormModel from "../models/form.model";
-import { FORM_TYPE, FORM_STATUS as STATUS } from "../../utils/constants/form.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import FormModel from "./form.model.js";
+import { FORM_TYPE, FORM_STATUS as STATUS } from "../../utils/constants/form.constants.js";
 
 class FormRepository extends BaseRepository {
   constructor() {

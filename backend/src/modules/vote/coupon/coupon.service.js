@@ -3,21 +3,26 @@
  * Handles business logic for coupon management and validation
  */
 
-import { BaseService } from "../../shared/base.service";
-import CouponRepository from "./coupon.repository";
-import BundleRepository from "../bundle/bundle.repository";
-import EventRepository from "../../event/event.repository";
-import ActivityService from "../../activity/activity.service";
+import BaseService from "../../shared/base.service.js";
+import CouponRepository from "./coupon.repository.js";
+import BundleRepository from "../bundle/bundle.repository.js";
+import EventRepository from "../../event/event.repository.js";
+import ActivityService from "../../activity/activity.service.js";
 import CouponValidation from "./coupon.validation.js";
-import { COUPON_STATUS as STATUS, DISCOUNT_TYPE } from "../../../utils/constants/vote.constants";
-import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants";
+import { COUPON_STATUS as STATUS, DISCOUNT_TYPE } from "../../../utils/constants/vote.constants.js";
+import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants.js";
 import crypto from "crypto";
 
+// Set validation schemas for BaseService.validate()
+BaseService.setValidation(CouponValidation);
+
 class CouponService extends BaseService {
-  constructor() {
-    super(CouponRepository);
-    this.bundleRepository = BundleRepository;
-    this.eventRepository = EventRepository;
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || CouponRepository;
+    this.bundleRepository = dependencies.bundleRepository || BundleRepository;
+    this.eventRepository = dependencies.eventRepository || EventRepository;
+    this.activityService = dependencies.activityService || ActivityService;
   }
 
   /**
@@ -52,18 +57,11 @@ class CouponService extends BaseService {
    */
   async createCoupon(couponData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = CouponValidation.createCouponSchema.validate(
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(
         { ...couponData, created_by: adminId },
-        { abortEarly: false, stripUnknown: true }
+        CouponValidation.createCouponSchema
       );
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
       
       // Validate event exists
       const event = await this.eventRepository.findById(validatedData.event);
@@ -104,8 +102,8 @@ class CouponService extends BaseService {
 
       const coupon = await this.repository.create(couponToCreate);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.COUPON,
@@ -117,7 +115,7 @@ class CouponService extends BaseService {
           discountType: coupon.discount_type,
           discountValue: coupon.discount_value,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return coupon;
     } catch (error) {
@@ -134,18 +132,11 @@ class CouponService extends BaseService {
    */
   async updateCoupon(couponId, updateData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = CouponValidation.updateCouponSchema.validate(
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(
         { ...updateData, updated_by: adminId },
-        { abortEarly: false, stripUnknown: true }
+        CouponValidation.updateCouponSchema
       );
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
 
       const coupon = await this.repository.findById(couponId);
       if (!coupon) {
@@ -187,8 +178,8 @@ class CouponService extends BaseService {
 
       const updatedCoupon = await this.repository.updateById(couponId, updateData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.COUPON,
@@ -199,7 +190,7 @@ class CouponService extends BaseService {
           couponCode: coupon.code,
           changes: Object.keys(updateData),
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedCoupon;
     } catch (error) {
@@ -222,8 +213,8 @@ class CouponService extends BaseService {
 
       const deletedCoupon = await this.repository.delete({ _id: couponId });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.DELETE,
         entityType: ENTITY_TYPE.COUPON,
@@ -235,7 +226,7 @@ class CouponService extends BaseService {
           discountType: coupon.discount_type,
           discountValue: coupon.discount_value,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return deletedCoupon;
     } catch (error) {
@@ -262,8 +253,8 @@ class CouponService extends BaseService {
 
       const activatedCoupon = await this.repository.updateById(couponId, { status: STATUS.ACTIVE });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.COUPON,
@@ -271,7 +262,7 @@ class CouponService extends BaseService {
         eventId: coupon.event,
         description: `Activated coupon: ${coupon.code}`,
         metadata: { couponCode: coupon.code },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return activatedCoupon;
     } catch (error) {
@@ -298,8 +289,8 @@ class CouponService extends BaseService {
 
       const deactivatedCoupon = await this.repository.updateById(couponId, { status: STATUS.INACTIVE });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.COUPON,
@@ -307,7 +298,7 @@ class CouponService extends BaseService {
         eventId: coupon.event,
         description: `Deactivated coupon: ${coupon.code}`,
         metadata: { couponCode: coupon.code },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return deactivatedCoupon;
     } catch (error) {
@@ -410,8 +401,8 @@ class CouponService extends BaseService {
       // Increment redemption count
       const updatedCoupon = await this.repository.incrementRedemptions(couponId, userEmail);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.COUPON,
         entityId: couponId,
@@ -422,7 +413,7 @@ class CouponService extends BaseService {
           userEmail,
           totalRedemptions: updatedCoupon.current_redemptions,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedCoupon;
     } catch (error) {
@@ -446,8 +437,8 @@ class CouponService extends BaseService {
       // Decrement redemption count
       const updatedCoupon = await this.repository.decrementRedemptions(couponId, userEmail);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.COUPON,
         entityId: couponId,
@@ -458,7 +449,7 @@ class CouponService extends BaseService {
           userEmail,
           totalRedemptions: updatedCoupon.current_redemptions,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedCoupon;
     } catch (error) {
@@ -638,8 +629,8 @@ class CouponService extends BaseService {
 
       const clonedCoupon = await this.createCoupon(cloneData, adminId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.COUPON,
@@ -651,7 +642,7 @@ class CouponService extends BaseService {
           originalCouponCode: coupon.code,
           newCouponCode: clonedCoupon.code,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return clonedCoupon;
     } catch (error) {
@@ -660,4 +651,6 @@ class CouponService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { CouponService };
 export default new CouponService();

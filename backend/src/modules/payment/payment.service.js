@@ -3,29 +3,38 @@
  * Handles business logic for payment processing with Paystack
  */
 
-import { BaseService } from "../shared/base.service";
-import PaymentRepository from "./payment.repository";
-import BundleRepository from "../vote/bundle/bundle.repository";
-import EventRepository from "../event/event.repository";
-import CouponRepository from "../vote/coupon/coupon.repository";
-import BundleService from "../vote/bundle/bundle.service";
-import CouponService from "../vote/coupon/coupon.service";
-import ActivityService from "../activity/activity.service";
-import NotificationService from "../../services/notification.service";
-import EmailService from "../../services/email.service";
+import BaseService from "../shared/base.service.js";
+import PaymentRepository from "./payment.repository.js";
+import BundleRepository from "../vote/bundle/bundle.repository.js";
+import EventRepository from "../event/event.repository.js";
+import CouponRepository from "../vote/coupon/coupon.repository.js";
+import BundleService from "../vote/bundle/bundle.service.js";
+import CouponService from "../vote/coupon/coupon.service.js";
+import ActivityService from "../activity/activity.service.js";
+import NotificationService from "../../services/notification.service.js";
+import EmailService from "../../services/email.service.js";
 import agendaManager from "../../services/agenda.service.js";
-import PaymentValidation from "./payment.validation.js";
-import { STATUS as PAYMENT_STATUS } from "../../utils/constants/payment.constant";
-import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constants";
+import * as PaymentValidation from "./payment.validation.js";
+import { STATUS as PAYMENT_STATUS } from "../../utils/constants/payment.constants.js";
+import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constants.js";
 import crypto from "crypto";
 import axios from "axios";
 
+// Set up validation module for this service
+BaseService.setValidation(PaymentValidation);
+
 class PaymentService extends BaseService {
-  constructor() {
-    super(PaymentRepository);
-    this.bundleRepository = BundleRepository;
-    this.eventRepository = EventRepository;
-    this.couponRepository = CouponRepository;
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || PaymentRepository;
+    this.bundleRepository = dependencies.bundleRepository || BundleRepository;
+    this.eventRepository = dependencies.eventRepository || EventRepository;
+    this.couponRepository = dependencies.couponRepository || CouponRepository;
+    this.bundleService = dependencies.bundleService || BundleService;
+    this.couponService = dependencies.couponService || CouponService;
+    this.activityService = dependencies.activityService || ActivityService;
+    this.notificationService = dependencies.notificationService || NotificationService;
+    this.emailService = dependencies.emailService || EmailService;
     this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     this.paystackBaseUrl = "https://api.paystack.co";
   }
@@ -72,18 +81,8 @@ class PaymentService extends BaseService {
    */
   async initializePayment(paymentData) {
     try {
-      // Validate input data
-      const { error, value } = PaymentValidation.initializePaymentSchema.validate(paymentData, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
+      // Validate input data using BaseService validation
+      const validatedData = this.validate(paymentData, PaymentValidation.initializePaymentSchema);
 
       const {
         bundle_id: bundleId,
@@ -97,7 +96,7 @@ class PaymentService extends BaseService {
       } = validatedData;
 
       // Validate bundle availability
-      const bundleValidation = await BundleService.validateBundleAvailability(bundleId);
+      const bundleValidation = await this.bundleService.validateBundleAvailability(bundleId);
       if (!bundleValidation.isAvailable) {
         throw new Error(bundleValidation.reason);
       }
@@ -113,7 +112,7 @@ class PaymentService extends BaseService {
       // Validate and apply coupon if provided
       let coupon = null;
       if (couponCode) {
-        coupon = await CouponService.validateCouponForBundle(couponCode, bundleId, voterEmail);
+        coupon = await this.couponService.validateCouponForBundle(couponCode, bundleId, voterEmail);
         if (!coupon.isValid) {
           throw new Error(coupon.reason);
         }
@@ -121,7 +120,7 @@ class PaymentService extends BaseService {
       }
 
       // Calculate final price
-      const priceBreakdown = await BundleService.calculatePrice(bundleId, coupon);
+      const priceBreakdown = await this.bundleService.calculatePrice(bundleId, coupon);
 
       // Generate transaction reference and vote code
       const transactionReference = this.generateTransactionReference();
@@ -209,8 +208,8 @@ class PaymentService extends BaseService {
         paystack_access_code: paystackResponse.data.data.access_code,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: payment._id,
@@ -223,7 +222,7 @@ class PaymentService extends BaseService {
           voteCode,
           bundleName: bundle.name,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return {
         paymentId: payment._id,
@@ -348,8 +347,8 @@ class PaymentService extends BaseService {
         },
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: payment._id,
@@ -361,7 +360,7 @@ class PaymentService extends BaseService {
           currency: payment.currency,
           voteCode: payment.vote_code,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return {
         success: true,
@@ -462,8 +461,8 @@ class PaymentService extends BaseService {
         failure_reason: data.gateway_response || "Charge failed",
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: payment._id,
@@ -473,7 +472,7 @@ class PaymentService extends BaseService {
           voterEmail: payment.voter_email,
           reason: data.gateway_response,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return { success: true, message: "Failed charge processed" };
     } catch (error) {
@@ -506,8 +505,8 @@ class PaymentService extends BaseService {
         refunded_at: new Date(data.transferred_at || Date.now()),
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: payment._id,
@@ -518,7 +517,7 @@ class PaymentService extends BaseService {
           amount: payment.amount_paid,
           transferCode: data.transfer_code,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return { success: true, message: "Refund processed successfully" };
     } catch (error) {
@@ -538,8 +537,8 @@ class PaymentService extends BaseService {
         return { success: false, message: "Payment ID not found in transfer" };
       }
 
-      // Log refund failure
-      await ActivityService.log({
+      // Log refund failure (fire-and-forget)
+      this.activityService.log({
         action: ACTION_TYPE.ERROR,
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: paymentId,
@@ -548,7 +547,7 @@ class PaymentService extends BaseService {
           reason: data.reason,
           transferCode: data.transfer_code,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return { success: true, message: "Refund failure logged" };
     } catch (error) {
@@ -640,8 +639,8 @@ class PaymentService extends BaseService {
         }
       );
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.PAYMENT,
@@ -654,7 +653,7 @@ class PaymentService extends BaseService {
           currency: payment.currency,
           reason,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return {
         success: true,
@@ -859,4 +858,6 @@ class PaymentService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { PaymentService };
 export default new PaymentService();

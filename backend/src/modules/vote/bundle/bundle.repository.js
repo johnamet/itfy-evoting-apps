@@ -4,9 +4,9 @@
  * It contains bundle-specific data access methods
  */
 
-import { BaseRepository } from "../../shared/base.repository";
-import BundleModel from "../models/bundle.model";
-import { STATUS } from "../../utils/constants/bundle.constants";
+import { BaseRepository } from "../../shared/base.repository.js";
+import BundleModel from "./bundle.model.js";
+import { BUNDLE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
 
 class BundleRepository extends BaseRepository {
   constructor() {

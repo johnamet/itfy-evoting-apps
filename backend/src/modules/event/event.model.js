@@ -6,8 +6,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
-import { STATUS, EVENT_TYPE, VISIBILITY, CURRENCY } from "../../utils/constants/event.constants";
+import { BaseModel } from "../shared/base.model.js";
+import { STATUS, EVENT_TYPE, VISIBILITY, CURRENCY } from "../../utils/constants/event.constants.js";
 
 class Event extends BaseModel {
   constructor() {

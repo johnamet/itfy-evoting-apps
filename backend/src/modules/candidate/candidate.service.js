@@ -1,13 +1,16 @@
 /* eslint-disable no-undef */
 import BaseService from "../shared/base.service.js";
 import CandidateRepository from "./candidate.repository.js";
+import CandidateValidation from "./candidate.validation.js";
 import { STATUS, ADMIN_ONLY_FIELDS, PROFILE_UPDATE_REASONS } from "../../utils/constants/candidate.constants.js";
 import { NOTIFICATION_TYPE } from "../../utils/constants/notification.constants.js";
 import NotificationService from "../../services/notification.service.js";
 import agendaManager from "../../services/agenda.service.js";
 import EmailService from "../../services/email.service.js";
-import AuthHelpers from "../../utils/helpers/auth.helper.js";
+import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
 import crypto from "crypto";
+
+BaseService.setValidation(CandidateValidation);
 
 /**
  * Candidate Service
@@ -80,8 +83,11 @@ class CandidateService extends BaseService {
    */
   async updateProfileByCandidate(candidateId, updateData) {
     try {
+      // Validate input
+      const validated = this.validate(updateData, CandidateValidation.updateProfileSchema);
+
       // Validate that candidate isn't updating admin-only fields
-      const attemptedFields = Object.keys(updateData);
+      const attemptedFields = Object.keys(validated);
       const forbiddenFields = attemptedFields.filter((field) =>
         ADMIN_ONLY_FIELDS.includes(field)
       );
@@ -102,7 +108,7 @@ class CandidateService extends BaseService {
       // Track changed fields
       const changedFields = [];
       for (const field of attemptedFields) {
-        if (JSON.stringify(candidate[field]) !== JSON.stringify(updateData[field])) {
+        if (JSON.stringify(candidate[field]) !== JSON.stringify(validated[field])) {
           changedFields.push(field);
         }
       }
@@ -113,7 +119,7 @@ class CandidateService extends BaseService {
       }
 
       // Update candidate
-      const updated = await this.repository.updateById(candidateId, updateData);
+      const updated = await this.repository.updateById(candidateId, validated);
 
       // Request re-approval if candidate was previously approved
       if (candidate.status === STATUS.APPROVED || candidate.status === STATUS.PROFILE_UPDATE_PENDING) {
@@ -141,8 +147,10 @@ class CandidateService extends BaseService {
    */
   async updateProfileByAdmin(candidateId, updateData) {
     try {
-      // Admins can update any field
-      return await this.repository.updateById(candidateId, updateData);
+      // Validate input - admins can update any field
+      const validated = this.validate(updateData, CandidateValidation.updateCandidateSchema);
+
+      return await this.repository.updateById(candidateId, validated);
     } catch (error) {
       throw new Error(`Update profile by admin failed: ${error.message}`);
     }
@@ -156,8 +164,11 @@ class CandidateService extends BaseService {
    */
   async createCandidate(candidateData) {
     try {
+      // Validate input
+      const validated = this.validate(candidateData, CandidateValidation.createCandidateSchema);
+
       // Create candidate (admin creates without password - password set via email invite)
-      const candidate = await this.repository.create(candidateData);
+      const candidate = await this.repository.create(validated);
 
       // Remove sensitive fields from response
       const candidateObj = candidate.toObject();
@@ -179,6 +190,9 @@ class CandidateService extends BaseService {
    */
   async addCategory(candidateId, categoryId) {
     try {
+      // Validate input
+      const validated = this.validate({ categoryId }, CandidateValidation.addCategorySchema);
+
       const candidate = await this.repository.findById(candidateId);
 
       if (!candidate) {
@@ -186,12 +200,12 @@ class CandidateService extends BaseService {
       }
 
       // Check if already in category
-      if (candidate.categories.some((cat) => cat.toString() === categoryId.toString())) {
+      if (candidate.categories.some((cat) => cat.toString() === validated.categoryId.toString())) {
         throw new Error("Candidate already in this category");
       }
 
       // Add category
-      const updated = await this.repository.addToCategory(candidateId, categoryId);
+      const updated = await this.repository.addToCategory(candidateId, validated.categoryId);
 
       // Request re-approval if previously approved
       if (candidate.status === STATUS.APPROVED || candidate.status === STATUS.PROFILE_UPDATE_PENDING) {
@@ -270,8 +284,11 @@ class CandidateService extends BaseService {
    */
   async updateAdminVerifiedCategories(candidateId, categoryIds) {
     try {
+      // Validate input
+      const validated = this.validate({ categoryIds }, CandidateValidation.updateAdminVerifiedCategoriesSchema);
+
       return await this.repository.updateById(candidateId, {
-        admin_verified_categories: categoryIds,
+        admin_verified_categories: validated.categoryIds,
       });
     } catch (error) {
       throw new Error(`Update admin verified categories failed: ${error.message}`);
@@ -313,13 +330,16 @@ class CandidateService extends BaseService {
    */
   async rejectProfile(candidateId, adminId, reason = "") {
     try {
-      const candidate = await this.repository.reject(candidateId, adminId, reason);
+      // Validate input
+      const validated = this.validate({ reason }, CandidateValidation.rejectCandidateSchema);
+
+      const candidate = await this.repository.reject(candidateId, adminId, validated.reason);
 
       // Queue rejection email
       await agendaManager.now("send-candidate-profile-rejected-email", {
         email: candidate.email,
         name: candidate.name,
-        reason,
+        reason: validated.reason,
       });
 
       return candidate;
@@ -449,7 +469,16 @@ class CandidateService extends BaseService {
    */
   async search(query, filters = {}, page = 1, limit = 20, options = {}) {
     try {
-      return await this.repository.search(query, filters, page, limit, options);
+      // Validate input
+      const validated = this.validate({ query, filters, page, limit }, CandidateValidation.searchSchema);
+
+      return await this.repository.search(
+        validated.query,
+        validated.filters,
+        validated.page,
+        validated.limit,
+        options
+      );
     } catch (error) {
       throw new Error(`Search candidates failed: ${error.message}`);
     }
@@ -469,20 +498,24 @@ class CandidateService extends BaseService {
    */
   async createFromNomination(nominationData, eventId, categoryIds, submissionId, adminId = null) {
     try {
-      // Validate required fields
-      if (!nominationData.first_name || !nominationData.last_name || !nominationData.email) {
-        throw new Error("first_name, last_name, and email are required for candidate creation");
-      }
+      // Validate nomination data
+      const validatedData = this.validate(nominationData, CandidateValidation.createFromNominationSchema);
+
+      // Validate nomination context (eventId, categoryIds, submissionId)
+      const validatedContext = this.validate(
+        { eventId, categoryIds, submissionId, adminId },
+        CandidateValidation.nominationContextSchema
+      );
 
       // Check if candidate with this email already exists for this event
-      const existingCandidate = await this.repository.findByEmail(nominationData.email, eventId);
+      const existingCandidate = await this.repository.findByEmail(validatedData.email, validatedContext.eventId);
 
       if (existingCandidate) {
         // Update existing candidate instead of creating new one
         const updateData = {
-          ...nominationData,
-          categories: [...new Set([...existingCandidate.categories.map(c => c.toString()), ...categoryIds.map(c => c.toString())])],
-          nomination_submission: submissionId,
+          ...validatedData,
+          categories: [...new Set([...existingCandidate.categories.map(c => c.toString()), ...validatedContext.categoryIds.map(c => c.toString())])],
+          nomination_submission: validatedContext.submissionId,
         };
 
         // If candidate was rejected, reset to pending profile completion
@@ -503,21 +536,21 @@ class CandidateService extends BaseService {
 
       // Generate slug
       const slug = await this.generateUniqueSlug(
-        `${nominationData.first_name}-${nominationData.last_name}`
+        `${validatedData.first_name}-${validatedData.last_name}`
       );
 
       // Create candidate with pending profile completion status
       const candidateData = {
-        ...nominationData,
+        ...validatedData,
         password_hash: passwordHash,
         candidate_code: candidateCode,
         slug,
-        event: eventId,
-        categories: categoryIds,
+        event: validatedContext.eventId,
+        categories: validatedContext.categoryIds,
         status: STATUS.PENDING_PROFILE_COMPLETION,
         is_published: false,
-        nomination_submission: submissionId,
-        created_by: adminId, // Admin who approved the nomination
+        nomination_submission: validatedContext.submissionId,
+        created_by: validatedContext.adminId, // Admin who approved the nomination
       };
 
       const candidate = await this.repository.create(candidateData);
@@ -590,6 +623,9 @@ class CandidateService extends BaseService {
    */
   async completePendingProfile(candidateId, profileData) {
     try {
+      // Validate input
+      const validated = this.validate(profileData, CandidateValidation.completePendingProfileSchema);
+
       const candidate = await this.repository.findById(candidateId);
 
       if (!candidate) {
@@ -601,7 +637,7 @@ class CandidateService extends BaseService {
       }
 
       // Validate that candidate isn't updating admin-only fields
-      const attemptedFields = Object.keys(profileData);
+      const attemptedFields = Object.keys(validated);
       const forbiddenFields = attemptedFields.filter((field) =>
         ADMIN_ONLY_FIELDS.includes(field)
       );
@@ -614,7 +650,7 @@ class CandidateService extends BaseService {
 
       // Update profile with completed data
       const updated = await this.repository.updateById(candidateId, {
-        ...profileData,
+        ...validated,
         status: STATUS.PENDING, // Move to pending approval
         profile_completed_at: new Date(),
       });
@@ -783,4 +819,6 @@ class CandidateService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { CandidateService };
 export default new CandidateService();

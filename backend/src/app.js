@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * ITFY E-Voting Backend Application
  * Main entry point - Sets up Express server with MongoDB and Agenda
@@ -8,13 +9,18 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
-import { connectDB } from "./database/connection.js";
+import db from "./database/app.database.js"
 import agendaManager from "./services/agenda.service.js";
 import cache from "./utils/cache/cache.utils.js";
+import router from "./middleware/routes/app.routes.js";
+import { setupAPIDocs } from "./config/swagger.config.js";
+import BaseController from "./modules/shared/base.controller.js";
+import Joi from "joi";
 
 // Load environment variables
 dotenv.config();
 
+BaseController.setValidation(Joi)
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -45,11 +51,17 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // ========================================
+// API DOCUMENTATION
+// ========================================
+setupAPIDocs(app);
+
+
+// ========================================
 // ROUTES
 // ========================================
 
 // Health check
-app.get("/health", (req, res) => {
+app.get("/api/v1/health", (req, res) => {
   const agendaStatus = agendaManager.getStatus();
   
   res.json({
@@ -65,6 +77,38 @@ app.get("/health", (req, res) => {
   });
 });
 
+// API routes
+app.use("/api/v1", (req, res, next) => {
+  res.setHeader("X-Powered-By", "ITFY E-Voting");
+  next();
+});
+
+app.use("/api/v1", router);
+
+
+
+app.use("/api/v1/", (req, res) =>{
+  res.json({
+    message: "Welcome to the ITFY E-Voting API v1\nVisit /api/v1/health to check server status.",
+    api_routes: {
+      auth: "/api/v1/auth",
+      users: "/api/v1/users",
+      events: "/api/v1/events",
+      categories: "/api/v1/categories",
+      candidates: "/api/v1/candidates",
+      votes: "/api/v1/votes",
+      bundles: "/api/v1/bundles",
+      payments: "/api/v1/payments",
+      notifications: "/api/v1/notifications",
+    },
+    api_routes_docs: {
+      swagger_ui: "/api-docs",
+      redoc: "/api-docs/redoc",
+    },
+  });
+})
+
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -75,6 +119,7 @@ app.use((req, res) => {
 });
 
 // Error handler
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error("Error:", err);
 
@@ -96,7 +141,7 @@ async function startServer() {
   try {
     // 1. Connect to MongoDB
     console.log("🔌 Connecting to MongoDB...");
-    await connectDB();
+    await db.connect();
     console.log("✅ MongoDB connected successfully");
 
     // 2. Connect to Redis cache

@@ -329,6 +329,23 @@ class BaseRepository {
   }
 
   /**
+   * Count documents matching filters
+   * @param {Object} [filters={}] - Query filters
+   * @param {Object} [options] - Options: includeDeleted
+   * @returns {Promise<number>} - Count of matching documents
+   * @throws {Error} If count fails
+   */
+  async count(filters = {}, options = {}) {
+    try {
+      const query = this.model.countDocuments(filters);
+      if (options.includeDeleted) query._includeDeleted = true;
+      return await query.exec();
+    } catch (error) {
+      throw new Error(`Count failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Perform aggregation
    * @param {Array} pipeline - Aggregation pipeline
    * @param {Object} [options] - Options: allowDiskUse

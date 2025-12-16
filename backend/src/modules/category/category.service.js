@@ -702,5 +702,6 @@ class CategoryService extends BaseService {
   }
 }
 
-// Export singleton
+// Export both for testability (class) and convenience (singleton instance)
+export { CategoryService };
 export default new CategoryService();

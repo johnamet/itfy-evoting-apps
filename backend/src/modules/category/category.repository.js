@@ -4,9 +4,9 @@
  * It contains category-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import CategoryModel from "../models/category.model";
-import { STATUS } from "../../utils/constants/category.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import CategoryModel from "./category.model.js";
+import { STATUS } from "../../utils/constants/category.constants.js";
 
 class CategoryRepository extends BaseRepository {
   constructor() {

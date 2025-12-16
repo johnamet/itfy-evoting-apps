@@ -6,8 +6,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
-import { ACTION_TYPE, ENTITY_TYPE, SEVERITY } from "../../utils/constants/activity.constants";
+import { BaseModel } from "../shared/base.model.js";
+import { ACTION_TYPE, ENTITY_TYPE, SEVERITY } from "../../utils/constants/activity.constants.js";
 
 class Activity extends BaseModel {
   constructor() {

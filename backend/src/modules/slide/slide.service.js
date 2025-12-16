@@ -1,21 +1,26 @@
-/**
+ /**
  * Slide Service
  * Handles business logic for slide management (hero/banner sections)
  */
 
-import { BaseService } from "../shared/base.service";
-import SlideRepository from "./slide.repository";
-import EventRepository from "../event/event.repository";
-import ActivityService from "../activity/activity.service";
-import FileService from "../../services/file.service";
+import BaseService from "../shared/base.service.js";
+import SlideRepository from "./slide.repository.js";
+import EventRepository from "../event/event.repository.js";
+import ActivityService from "../activity/activity.service.js";
+import FileService from "../../services/file.service.js";
 import SlideValidation from "./slide.validation.js";
-import { SLIDE_STATUS, SLIDE_TYPE } from "../../utils/constants/slide.constants";
-import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constants";
+import { SLIDE_STATUS, SLIDE_TYPE } from "../../utils/constants/slide.constants.js";
+import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constants.js";
+
+// Set validation schemas for BaseService.validate()
+BaseService.setValidation(SlideValidation);
 
 class SlideService extends BaseService {
-  constructor() {
-    super(SlideRepository);
-    this.eventRepository = EventRepository;
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || SlideRepository;
+    this.eventRepository = dependencies.eventRepository || EventRepository;
+    this.activityService = dependencies.activityService || ActivityService;
   }
 
   /**
@@ -26,18 +31,8 @@ class SlideService extends BaseService {
    */
   async createSlide(slideData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = SlideValidation.createSlideSchema.validate(slideData, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(slideData, SlideValidation.createSlideSchema);
       
       // Validate event if provided
       if (validatedData.event) {
@@ -62,8 +57,8 @@ class SlideService extends BaseService {
 
       const slide = await this.repository.create(slideToCreate);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -75,7 +70,7 @@ class SlideService extends BaseService {
           slideType: slide.slide_type,
           status: slide.status,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return slide;
     } catch (error) {
@@ -92,18 +87,8 @@ class SlideService extends BaseService {
    */
   async updateSlide(slideId, updateData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = SlideValidation.updateSlideSchema.validate(updateData, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(updateData, SlideValidation.updateSlideSchema);
 
       const slide = await this.repository.findById(slideId);
       if (!slide) {
@@ -120,8 +105,8 @@ class SlideService extends BaseService {
 
       const updatedSlide = await this.repository.updateById(slideId, validatedData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -132,7 +117,7 @@ class SlideService extends BaseService {
           slideTitle: slide.title,
           changes: Object.keys(updateData),
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedSlide;
     } catch (error) {
@@ -166,8 +151,8 @@ class SlideService extends BaseService {
 
       const deletedSlide = await this.repository.delete({ _id: slideId });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.DELETE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -179,7 +164,7 @@ class SlideService extends BaseService {
           slideType: slide.slide_type,
           imagesDeleted: deleteImages,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return deletedSlide;
     } catch (error) {
@@ -208,8 +193,8 @@ class SlideService extends BaseService {
         status: SLIDE_STATUS.PUBLISHED,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -217,7 +202,7 @@ class SlideService extends BaseService {
         eventId: slide.event,
         description: `Published slide: ${slide.title}`,
         metadata: { slideTitle: slide.title },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return publishedSlide;
     } catch (error) {
@@ -246,8 +231,8 @@ class SlideService extends BaseService {
         status: SLIDE_STATUS.DRAFT,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -255,7 +240,7 @@ class SlideService extends BaseService {
         eventId: slide.event,
         description: `Unpublished slide: ${slide.title}`,
         metadata: { slideTitle: slide.title },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return unpublishedSlide;
     } catch (error) {
@@ -284,8 +269,8 @@ class SlideService extends BaseService {
         status: SLIDE_STATUS.ARCHIVED,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -293,7 +278,7 @@ class SlideService extends BaseService {
         eventId: slide.event,
         description: `Archived slide: ${slide.title}`,
         metadata: { slideTitle: slide.title },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return archivedSlide;
     } catch (error) {
@@ -329,8 +314,8 @@ class SlideService extends BaseService {
 
       const updatedSlides = await Promise.all(updatePromises);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -340,7 +325,7 @@ class SlideService extends BaseService {
           slideCount: slideIds.length,
           slideIds,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedSlides;
     } catch (error) {
@@ -515,8 +500,8 @@ class SlideService extends BaseService {
 
       const updatedSlide = await this.repository.updateById(slideId, updateData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -528,7 +513,7 @@ class SlideService extends BaseService {
           imageType: isMobile ? "mobile" : "desktop",
           publicId: uploadResult.public_id,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedSlide;
     } catch (error) {
@@ -574,8 +559,8 @@ class SlideService extends BaseService {
 
       const clonedSlide = await this.createSlide(cloneData, adminId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -587,7 +572,7 @@ class SlideService extends BaseService {
           originalSlideTitle: slide.title,
           newSlideTitle: clonedSlide.title,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return clonedSlide;
     } catch (error) {
@@ -627,8 +612,8 @@ class SlideService extends BaseService {
 
       const updatedSlides = await Promise.all(updatePromises);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.SLIDE,
@@ -638,7 +623,7 @@ class SlideService extends BaseService {
           slideIds,
           newStatus: status,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedSlides;
     } catch (error) {
@@ -647,4 +632,6 @@ class SlideService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { SlideService };
 export default new SlideService();

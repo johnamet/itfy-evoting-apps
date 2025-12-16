@@ -3,8 +3,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
-import { STATUS } from "../../utils/constants/candidate.constants";
+import { BaseModel } from "../shared/base.model.js";
+import { STATUS } from "../../utils/constants/candidate.constants.js";
 
 class Candidate extends BaseModel {
   constructor() {

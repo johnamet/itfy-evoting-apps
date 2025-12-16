@@ -5,6 +5,7 @@
 
 import BaseService from "../shared/base.service.js";
 import UserRepository from "./user.repository.js";
+import UserValidation from "./user.validation.js";
 import ActivityService from "../activity/activity.service.js";
 import EmailService from "../../services/email.service.js";
 import NotificationService from "../../services/notification.service.js";
@@ -13,9 +14,16 @@ import { ROLES, PERMISSIONS, STATUS } from "../../utils/constants/user.constants
 import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
 import { NOTIFICATION_TYPE } from "../../utils/constants/notification.constants.js";
 
+// Register validation class with BaseService
+BaseService.setValidation(UserValidation);
+
 class UserService extends BaseService {
-  constructor() {
-    super(UserRepository);
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || UserRepository;
+    this.activityService = dependencies.activityService || ActivityService;
+    this.emailService = dependencies.emailService || EmailService;
+    this.notificationService = dependencies.notificationService || NotificationService;
   }
 
   // ==================== USER MANAGEMENT ====================
@@ -28,35 +36,20 @@ class UserService extends BaseService {
    */
   async createUser(userData, creatorId = null) {
     try {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(userData.email)) {
-        throw new Error("Invalid email format");
-      }
+      // Validate input data
+      const validated = this.validate(userData, UserValidation.createUserSchema);
 
-      // Validate role
-      if (!Object.values(ROLES).includes(userData.role)) {
-        throw new Error(`Invalid role: ${userData.role}`);
-      }
+      // Hash password
+      validated.password_hash = await AuthHelpers.hashPassword(validated.password);
+      delete validated.password;
 
-      // Hash password if provided as plain text
-      if (userData.password && !userData.password_hash) {
-        userData.password_hash = await AuthHelpers.hashPassword(userData.password);
-        delete userData.password;
-      }
-
-      // Set default permissions based on role
-      if (!userData.permissions || userData.permissions.length === 0) {
-        userData.permissions = this._getDefaultPermissions(userData.role);
-      }
-
-      // Set default status
-      if (!userData.status) {
-        userData.status = STATUS.ACTIVE;
+      // Set default permissions based on role if not provided
+      if (!validated.permissions || validated.permissions.length === 0) {
+        validated.permissions = this._getDefaultPermissions(validated.role);
       }
 
       // Create user
-      const user = await this.repository.create(userData);
+      const user = await this.repository.create(validated);
 
       // Send welcome email
       await EmailService.sendEmail({
@@ -70,16 +63,16 @@ class UserService extends BaseService {
         },
       });
 
-      // Log activity
+      // Log activity (fire-and-forget)
       if (creatorId) {
-        await ActivityService.log({
+        this.activityService.log({
           userId: creatorId,
           action: ACTION_TYPE.USER_CREATED,
           entityType: ENTITY_TYPE.USER,
           entityId: user._id,
           description: `Created user: ${user.email} with role ${user.role}`,
           metadata: { userEmail: user.email, userRole: user.role },
-        });
+        }).catch(err => console.error("Activity log failed:", err));
       }
 
       return user;
@@ -97,39 +90,27 @@ class UserService extends BaseService {
    */
   async updateUser(userId, updateData, updaterId = null) {
     try {
+      // Validate input data
+      const validated = this.validate(updateData, UserValidation.updateUserSchema);
+
       const user = await this.repository.findById(userId);
       
       if (!user) {
         throw new Error("User not found");
       }
 
-      // Prevent email changes (security)
-      if (updateData.email && updateData.email !== user.email) {
-        throw new Error("Email cannot be changed. Contact administrator.");
-      }
+      const updated = await this.repository.updateById(userId, validated);
 
-      // Prevent direct password_hash updates
-      if (updateData.password_hash) {
-        delete updateData.password_hash;
-      }
-
-      // Prevent direct role updates (use updateUserRole)
-      if (updateData.role) {
-        delete updateData.role;
-      }
-
-      const updated = await this.repository.updateById(userId, updateData);
-
-      // Log activity
+      // Log activity (fire-and-forget)
       if (updaterId) {
-        await ActivityService.log({
+        this.activityService.log({
           userId: updaterId,
           action: ACTION_TYPE.USER_UPDATED,
           entityType: ENTITY_TYPE.USER,
           entityId: userId,
           description: `Updated user: ${user.email}`,
           metadata: { changes: Object.keys(updateData) },
-        });
+        }).catch(err => console.error("Activity log failed:", err));
       }
 
       return updated;
@@ -147,15 +128,13 @@ class UserService extends BaseService {
    */
   async updateUserRole(userId, newRole, adminId) {
     try {
+      // Validate input
+      const { role } = this.validate({ role: newRole }, UserValidation.updateRoleSchema);
+
       const user = await this.repository.findById(userId);
       
       if (!user) {
         throw new Error("User not found");
-      }
-
-      // Validate new role
-      if (!Object.values(ROLES).includes(newRole)) {
-        throw new Error(`Invalid role: ${newRole}`);
       }
 
       // Prevent self role change for super admins
@@ -164,10 +143,10 @@ class UserService extends BaseService {
       }
 
       // Update role and permissions
-      const newPermissions = this._getDefaultPermissions(newRole);
+      const newPermissions = this._getDefaultPermissions(role);
       
       const updated = await this.repository.updateById(userId, {
-        role: newRole,
+        role,
         permissions: newPermissions,
       });
 
@@ -176,18 +155,18 @@ class UserService extends BaseService {
         userId: userId,
         type: NOTIFICATION_TYPE.USER_ROLE_UPDATED,
         title: "Your Role Has Been Updated",
-        message: `Your role has been changed from ${user.role} to ${newRole}`,
+        message: `Your role has been changed from ${user.role} to ${role}`,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.USER_ROLE_UPDATED,
         entityType: ENTITY_TYPE.USER,
         entityId: userId,
-        description: `Changed user role from ${user.role} to ${newRole}`,
-        metadata: { oldRole: user.role, newRole, userEmail: user.email },
-      });
+        description: `Changed user role from ${user.role} to ${role}`,
+        metadata: { oldRole: user.role, newRole: role, userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
 
       return updated;
     } catch (error) {
@@ -204,6 +183,12 @@ class UserService extends BaseService {
    */
   async changePassword(userId, oldPassword, newPassword) {
     try {
+      // Validate input
+      const validated = this.validate(
+        { current_password: oldPassword, new_password: newPassword, confirm_password: newPassword },
+        UserValidation.changePasswordSchema
+      );
+
       const user = await this.repository.findById(userId, { select: "+password_hash" });
       
       if (!user) {
@@ -211,19 +196,14 @@ class UserService extends BaseService {
       }
 
       // Verify old password
-      const isValid = await AuthHelpers.comparePassword(oldPassword, user.password_hash);
+      const isValid = await AuthHelpers.comparePassword(validated.current_password, user.password_hash);
       
       if (!isValid) {
         throw new Error("Current password is incorrect");
       }
 
-      // Validate new password strength
-      if (newPassword.length < 8) {
-        throw new Error("New password must be at least 8 characters long");
-      }
-
       // Hash new password
-      const newPasswordHash = await AuthHelpers.hashPassword(newPassword);
+      const newPasswordHash = await AuthHelpers.hashPassword(validated.new_password);
 
       // Update password
       const updated = await this.repository.updateById(userId, {
@@ -242,14 +222,14 @@ class UserService extends BaseService {
         },
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: userId,
         action: ACTION_TYPE.PASSWORD_CHANGED,
         entityType: ENTITY_TYPE.USER,
         entityId: userId,
         description: "User changed their password",
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return updated;
     } catch (error) {
@@ -266,6 +246,9 @@ class UserService extends BaseService {
    */
   async resetPassword(userId, newPassword, adminId) {
     try {
+      // Validate input
+      const validated = this.validate({ new_password: newPassword }, UserValidation.resetPasswordSchema);
+
       const user = await this.repository.findById(userId);
       
       if (!user) {
@@ -273,7 +256,7 @@ class UserService extends BaseService {
       }
 
       // Hash new password
-      const newPasswordHash = await AuthHelpers.hashPassword(newPassword);
+      const newPasswordHash = await AuthHelpers.hashPassword(validated.new_password);
 
       // Update password
       const updated = await this.repository.updateById(userId, {
@@ -292,15 +275,15 @@ class UserService extends BaseService {
         },
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.PASSWORD_RESET,
         entityType: ENTITY_TYPE.USER,
         entityId: userId,
         description: `Admin reset password for user: ${user.email}`,
         metadata: { userEmail: user.email },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return updated;
     } catch (error) {
@@ -317,6 +300,9 @@ class UserService extends BaseService {
    */
   async deactivateUser(userId, adminId, reason = null) {
     try {
+      // Validate input
+      const validated = this.validate({ reason }, UserValidation.deactivateUserSchema);
+
       const user = await this.repository.findById(userId);
       
       if (!user) {
@@ -336,18 +322,18 @@ class UserService extends BaseService {
         userId: userId,
         type: NOTIFICATION_TYPE.USER_DEACTIVATED,
         title: "Account Deactivated",
-        message: reason || "Your account has been deactivated. Contact support for more information.",
+        message: validated.reason || "Your account has been deactivated. Contact support for more information.",
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.USER_DEACTIVATED,
         entityType: ENTITY_TYPE.USER,
         entityId: userId,
         description: `Deactivated user: ${user.email}`,
-        metadata: { reason, userEmail: user.email },
-      });
+        metadata: { reason: validated.reason, userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
 
       return updated;
     } catch (error) {
@@ -385,15 +371,15 @@ class UserService extends BaseService {
         message: "Your account has been activated. You can now access the platform.",
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.USER_ACTIVATED,
         entityType: ENTITY_TYPE.USER,
         entityId: userId,
         description: `Activated user: ${user.email}`,
         metadata: { userEmail: user.email },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return updated;
     } catch (error) {
@@ -441,7 +427,18 @@ class UserService extends BaseService {
    */
   async searchUsers(searchTerm, page = 1, limit = 20, options = {}) {
     try {
-      return await this.repository.searchUsers(searchTerm, page, limit, options);
+      // Validate search parameters
+      const validated = this.validate(
+        { search_term: searchTerm, page, limit },
+        UserValidation.searchSchema
+      );
+
+      return await this.repository.searchUsers(
+        validated.search_term,
+        validated.page,
+        validated.limit,
+        options
+      );
     } catch (error) {
       throw new Error(`Search users failed: ${error.message}`);
     }
@@ -530,4 +527,6 @@ class UserService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { UserService };
 export default new UserService();

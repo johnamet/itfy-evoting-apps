@@ -4,8 +4,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
-import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants";
+import { BaseModel } from "../shared/base.model.js";
+import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.js";
 import crypto from "crypto";
 
 class Payment extends BaseModel {

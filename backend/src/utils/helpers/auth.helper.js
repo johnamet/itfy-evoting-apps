@@ -9,7 +9,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { JWT_CONFIG } from "../../config/jwt.config.js";
 import { SALT_ROUNDS, JWT_EXPIRATION } from "../../utils/constants.js";
-import { cache } from "../../utils/cache/cache.util.js";
+import cache from "../../utils/cache/cache.utils.js";
 import { ROLES } from "../constants/user.constants.js";
 const jwtLibrary = jwt;
 

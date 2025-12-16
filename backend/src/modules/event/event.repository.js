@@ -4,9 +4,9 @@
  * It contains event-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import EventModel from "../models/event.model";
-import { STATUS } from "../../utils/constants/event.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import EventModel from "./event.model.js";
+import { STATUS } from "../../utils/constants/event.constants.js";
 
 class EventRepository extends BaseRepository {
   constructor() {

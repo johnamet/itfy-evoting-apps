@@ -4,9 +4,9 @@
  * It contains payment-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import PaymentModel from "../models/payment.model";
-import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constant";
+import { BaseRepository } from "../shared/base.repository.js";
+import PaymentModel from "./payment.model.js";
+import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.js";
 
 class PaymentRepository extends BaseRepository {
   constructor() {

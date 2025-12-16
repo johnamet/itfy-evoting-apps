@@ -3,24 +3,29 @@
  * Handles business logic for vote bundle management
  */
 
-import { BaseService } from "../../shared/base.service";
-import BundleRepository from "./bundle.repository";
-import EventRepository from "../../event/event.repository";
-import CategoryRepository from "../../category/category.repository";
-import PaymentRepository from "../../payment/payment.repository";
-import ActivityService from "../../activity/activity.service";
+import BaseService from "../../shared/base.service.js";
+import BundleRepository from "./bundle.repository.js";
+import EventRepository from "../../event/event.repository.js";
+import CategoryRepository from "../../category/category.repository.js";
+import PaymentRepository from "../../payment/payment.repository.js";
+import ActivityService from "../../activity/activity.service.js";
 import BundleValidation from "./bundle.validation.js";
-import { BUNDLE_STATUS as STATUS } from "../../../utils/constants/vote.constants";
-import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants";
-import { EVENT_STATUS } from "../../../utils/constants/event.constants";
-import { slugify } from "../../../utils/helpers/string.helper";
+import { BUNDLE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
+import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants.js";
+import { STATUS as EVENT_STATUS } from "../../../utils/constants/event.constants.js";
+import { slugify } from "../../../utils/helpers/string.helper.js";
+
+// Set validation schemas for BaseService.validate()
+BaseService.setValidation(BundleValidation);
 
 class BundleService extends BaseService {
-  constructor() {
-    super(BundleRepository);
-    this.eventRepository = EventRepository;
-    this.categoryRepository = CategoryRepository;
-    this.paymentRepository = PaymentRepository;
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || BundleRepository;
+    this.eventRepository = dependencies.eventRepository || EventRepository;
+    this.categoryRepository = dependencies.categoryRepository || CategoryRepository;
+    this.paymentRepository = dependencies.paymentRepository || PaymentRepository;
+    this.activityService = dependencies.activityService || ActivityService;
   }
 
   /**
@@ -31,18 +36,12 @@ class BundleService extends BaseService {
    */
   async createBundle(bundleData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = BundleValidation.createBundleSchema.validate(
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(
         { ...bundleData, created_by: adminId },
-        { abortEarly: false, stripUnknown: true }
+        BundleValidation.createBundleSchema
       );
 
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
       // Validate event exists
       const event = await this.eventRepository.findById(bundleData.event);
       if (!event) {
@@ -101,8 +100,8 @@ class BundleService extends BaseService {
 
       const bundle = await this.repository.create(bundleToCreate);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget - don't block on non-critical operation)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -115,7 +114,7 @@ class BundleService extends BaseService {
           price: bundle.price,
           currency: bundle.currency,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return bundle;
     } catch (error) {
@@ -132,18 +131,12 @@ class BundleService extends BaseService {
    */
   async updateBundle(bundleId, updateData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = BundleValidation.updateBundleSchema.validate(
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(
         { ...updateData, updated_by: adminId },
-        { abortEarly: false, stripUnknown: true }
+        BundleValidation.updateBundleSchema
       );
 
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
       const bundle = await this.repository.findById(bundleId);
       if (!bundle) {
         throw new Error("Bundle not found");
@@ -200,8 +193,8 @@ class BundleService extends BaseService {
 
       const updatedBundle = await this.repository.updateById(bundleId, updateData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -212,7 +205,7 @@ class BundleService extends BaseService {
           bundleName: bundle.name,
           changes: Object.keys(updateData),
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedBundle;
     } catch (error) {
@@ -241,8 +234,8 @@ class BundleService extends BaseService {
 
       const deletedBundle = await this.repository.delete({ _id: bundleId });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.DELETE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -254,7 +247,7 @@ class BundleService extends BaseService {
           voteCount: bundle.vote_count,
           price: bundle.price,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return deletedBundle;
     } catch (error) {
@@ -287,8 +280,8 @@ class BundleService extends BaseService {
 
       const activatedBundle = await this.repository.updateById(bundleId, { status: STATUS.ACTIVE });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -296,7 +289,7 @@ class BundleService extends BaseService {
         eventId: bundle.event,
         description: `Activated bundle: ${bundle.name}`,
         metadata: { bundleName: bundle.name },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return activatedBundle;
     } catch (error) {
@@ -323,8 +316,8 @@ class BundleService extends BaseService {
 
       const deactivatedBundle = await this.repository.updateById(bundleId, { status: STATUS.INACTIVE });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -332,7 +325,7 @@ class BundleService extends BaseService {
         eventId: bundle.event,
         description: `Deactivated bundle: ${bundle.name}`,
         metadata: { bundleName: bundle.name },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return deactivatedBundle;
     } catch (error) {
@@ -355,8 +348,8 @@ class BundleService extends BaseService {
 
       const updatedBundle = await this.repository.toggleFeatured(bundleId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -364,7 +357,7 @@ class BundleService extends BaseService {
         eventId: bundle.event,
         description: `${updatedBundle.is_featured ? "Featured" : "Unfeatured"} bundle: ${bundle.name}`,
         metadata: { bundleName: bundle.name, isFeatured: updatedBundle.is_featured },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedBundle;
     } catch (error) {
@@ -387,8 +380,8 @@ class BundleService extends BaseService {
 
       const updatedBundle = await this.repository.togglePopular(bundleId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -396,7 +389,7 @@ class BundleService extends BaseService {
         eventId: bundle.event,
         description: `${updatedBundle.is_popular ? "Marked popular" : "Unmarked popular"} bundle: ${bundle.name}`,
         metadata: { bundleName: bundle.name, isPopular: updatedBundle.is_popular },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedBundle;
     } catch (error) {
@@ -764,8 +757,8 @@ class BundleService extends BaseService {
 
       const updatedBundles = await Promise.all(updatePromises);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -775,7 +768,7 @@ class BundleService extends BaseService {
           bundleCount: bundleIds.length,
           bundleIds,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updatedBundles;
     } catch (error) {
@@ -817,8 +810,8 @@ class BundleService extends BaseService {
 
       const clonedBundle = await this.createBundle(cloneData, adminId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.CREATE,
         entityType: ENTITY_TYPE.BUNDLE,
@@ -830,7 +823,7 @@ class BundleService extends BaseService {
           originalBundleName: bundle.name,
           newBundleName: clonedBundle.name,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return clonedBundle;
     } catch (error) {
@@ -921,4 +914,6 @@ class BundleService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { BundleService };
 export default new BundleService();

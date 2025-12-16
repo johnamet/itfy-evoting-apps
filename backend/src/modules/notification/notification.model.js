@@ -4,13 +4,12 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_CHANNEL,
   NOTIFICATION_STATUS,
   NOTIFICATION_PRIORITY,
-} from "../../utils/constants/notification.constants";
+} from "../../utils/constants/notification.constants.js";
 
 const { Schema } = mongoose;
 
@@ -652,10 +651,4 @@ NotificationSchema.pre("save", function (next) {
 
 // ==================== Export Model ====================
 
-class NotificationModel extends BaseModel {
-  constructor() {
-    super("notification", NotificationSchema);
-  }
-}
-
-export default new NotificationModel().getModel("Notification");
+export default mongoose.model("Notification", NotificationSchema);

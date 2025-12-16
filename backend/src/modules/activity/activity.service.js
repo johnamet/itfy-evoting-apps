@@ -3,8 +3,8 @@
  * Business logic for activity logging and audit trails
  */
 
-import ActivityRepository from "./activity.repository";
-import { ACTION_TYPE, ENTITY_TYPE, SEVERITY } from "../../utils/constants/activity.constants";
+import ActivityRepository from "./activity.repository.js";
+import { ACTION_TYPE, ENTITY_TYPE, SEVERITY } from "../../utils/constants/activity.constants.js";
 
 class ActivityService {
   /**
@@ -234,4 +234,6 @@ class ActivityService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { ActivityService };
 export default new ActivityService();

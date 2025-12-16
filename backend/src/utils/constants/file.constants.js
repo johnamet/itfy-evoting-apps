@@ -188,18 +188,5 @@ export const FILE_ERROR_CODES = {
   TOO_MANY_FILES: "TOO_MANY_FILES",
 };
 
-// Export all constants with named exports
-export {
-  FILE_SIZE_LIMITS,
-  MAX_FILE_SIZE_MB,
-  ALLOWED_FILE_TYPES,
-  UPLOAD_DIRECTORIES,
-  IMAGE_OPTIMIZATION,
-  FILE_VALIDATION,
-  CLOUD_STORAGE,
-  CLEANUP_SETTINGS,
-  FILE_ERROR_CODES,
-};
-
 // Default export for primary constant
 export default FILE_SIZE_LIMITS;

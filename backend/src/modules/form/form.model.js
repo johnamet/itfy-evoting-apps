@@ -4,7 +4,7 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
+import { BaseModel } from "../shared/base.model.js";
 import {
   FORM_TYPE,
   FORM_STATUS as STATUS,
@@ -12,7 +12,7 @@ import {
   VALIDATION_RULE,
   SUBMISSION_STATUS,
   DUPLICATE_CHECK_METHOD,
-} from "../../utils/constants/form.constants";
+} from "../../utils/constants/form.constants.js";
 
 class Form extends BaseModel {
   constructor() {

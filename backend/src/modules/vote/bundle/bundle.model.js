@@ -3,9 +3,9 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../../shared/base.model";
-import { BUNDLE_STATUS as STATUS} from "../../../utils/constants/vote.constants";
-import { CURRENCY } from "../../../utils/constants/event.constants";
+import { BaseModel } from "../../shared/base.model.js";
+import { BUNDLE_STATUS as STATUS} from "../../../utils/constants/vote.constants.js";
+import { CURRENCY } from "../../../utils/constants/event.constants.js";
 
 class Bundle extends BaseModel {
   constructor() {

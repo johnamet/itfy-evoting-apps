@@ -4,7 +4,7 @@
 
 import Joi from "joi";
 import JoiObjectId from "joi-objectid";
-import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constant.js";
+import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.js";
 
 const ObjectId = JoiObjectId(Joi);
 

@@ -4,7 +4,7 @@
 
 import Joi from "joi";
 import JoiObjectId from "joi-objectid";
-import { VOTE_STATUS as STATUS } from "../../utils/constants/vote.constants.js";
+import { VOTE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
 
 const ObjectId = JoiObjectId(Joi);
 

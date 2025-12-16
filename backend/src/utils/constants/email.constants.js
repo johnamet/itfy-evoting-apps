@@ -172,13 +172,5 @@ export const EMAIL_PRIORITY = {
   URGENT: "urgent", // Security alerts, password resets
 };
 
-// Export all constants
-export {
-  EMAIL_TEMPLATES,
-  EMAIL_SUBJECTS,
-  EMAIL_CATEGORY,
-  EMAIL_PRIORITY,
-};
-
 // Default export
 export default EMAIL_TEMPLATES;

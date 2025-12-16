@@ -3,14 +3,14 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
+import { BaseModel } from "../shared/base.model.js";
 import {
   SLIDE_STATUS,
   SLIDE_TYPE,
   SLIDE_POSITION,
   ANIMATION_TYPE,
   BUTTON_STYLE,
-} from "../../utils/constants/slide.constants";
+} from "../../utils/constants/slide.constants.js";
 
 class Slide extends BaseModel {
   constructor() {

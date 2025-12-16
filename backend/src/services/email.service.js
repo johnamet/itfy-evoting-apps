@@ -12,8 +12,8 @@ import nodemailer from "nodemailer";
 import path from "path";
 import fs from "fs/promises";
 import handlebars from "handlebars";
-import { EMAIL_TEMPLATES, EMAIL_SUBJECTS } from "../constants/email.constants";
-import { NOTIFICATION_CHANNEL } from "../constants/notification.constants";
+import { EMAIL_TEMPLATES, EMAIL_SUBJECTS } from "../utils/constants/email.constants.js";
+import { NOTIFICATION_CHANNEL } from "../utils/constants/notification.constants.js";
 
 class EmailService {
   constructor() {

@@ -4,16 +4,16 @@
   "description": "The backend for the itfy-evoting software",
   "main": "app.js",
   "directories": {
-	  "doc":"docs"
+    "doc": "docs"
   },
   "scripts": {
-	  "dev": "nodemon",
-	  "start": "babel-node src/app.js",
-	  "build": "babel src -d dist",
-	  "test": "jest",
-	  "prelint": "eslint src",
-	  "lint": "eslint src --fix",
-	  "seed": "babel-node src/database/seeders/app.seeder.js" 
+    "dev": "nodemon",
+    "start": "babel-node src/app.js",
+    "build": "babel src -d dist",
+    "test": "jest",
+    "prelint": "eslint src",
+    "lint": "eslint src --fix",
+    "seed": "babel-node src/database/seeders/app.seeder.js"
   },
   "jest": {
     "testEnvironment": "node",
@@ -39,7 +39,9 @@
   "license": "ISC",
   "dependencies": {
     "agenda": "^5.0.0",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "handlebars": "^4.7.8",

@@ -4,9 +4,9 @@
  * It contains coupon-specific data access methods
  */
 
-import { BaseRepository } from "../../shared/base.repository";
-import CouponModel from "../models/coupon.model";
-import { STATUS } from "../../utils/constants/coupon.constants";
+import { BaseRepository } from "../../shared/base.repository.js";
+import CouponModel from "./coupon.model.js";
+import { COUPON_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
 
 class CouponRepository extends BaseRepository {
   constructor() {

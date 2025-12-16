@@ -4,8 +4,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../shared/base.model";
-import { SUBMISSION_STATUS as STATUS } from "../../utils/constants/form.constants";
+import { BaseModel } from "../shared/base.model.js";
+import { SUBMISSION_STATUS as STATUS } from "../../utils/constants/form.constants.js";
 
 class FormSubmission extends BaseModel {
   constructor() {

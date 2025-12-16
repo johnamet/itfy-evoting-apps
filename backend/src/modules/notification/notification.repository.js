@@ -4,14 +4,14 @@
  * It contains notification-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import NotificationModel from "../models/notification.model";
+import { BaseRepository } from "../shared/base.repository.js";
+import NotificationModel from "./notification.model.js";
 import {
   NOTIFICATION_STATUS,
   NOTIFICATION_CHANNEL,
   NOTIFICATION_PRIORITY,
   NOTIFICATION_TYPE,
-} from "../../utils/constants/notification.constants";
+} from "../../utils/constants/notification.constants.js";
 
 class NotificationRepository extends BaseRepository {
   constructor() {

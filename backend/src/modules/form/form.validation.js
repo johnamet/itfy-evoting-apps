@@ -1,18 +1,20 @@
 /**
- * Form module validation schemas using Joi
+ * Form Validation Schemas
+ * Validates all form-related requests for dynamic form management
  */
 
 import Joi from "joi";
 import JoiObjectId from "joi-objectid";
 import {
   FORM_TYPE,
-  FORM_STATUS as STATUS,
+  FORM_STATUS,
   FIELD_TYPE,
-  SUBMISSION_STATUS,
   DUPLICATE_CHECK_METHOD,
 } from "../../utils/constants/form.constants.js";
 
 const ObjectId = JoiObjectId(Joi);
+
+// ==================== REUSABLE SUB-SCHEMAS ====================
 
 // Field option schema
 const fieldOptionSchema = Joi.object({
@@ -97,81 +99,220 @@ const submissionLimitsSchema = Joi.object({
   }).optional(),
 }).optional();
 
-// Create form validation
-export const createFormSchema = Joi.object({
-  name: Joi.string().trim().min(3).max(200).required(),
-  description: Joi.string().trim().max(2000).optional(),
-  slug: Joi.string().lowercase().trim().optional(),
-  form_type: Joi.string().valid(...Object.values(FORM_TYPE)).required(),
-  event: ObjectId().required(),
-  categories: Joi.array().items(ObjectId()).default([]),
-  fields: Joi.array().items(formFieldSchema).min(1).required(),
-  duplicate_detection: duplicateDetectionSchema,
-  multi_category_nomination: multiCategoryNominationSchema,
-  settings: formSettingsSchema,
-  submission_limits: submissionLimitsSchema,
-  status: Joi.string().valid(...Object.values(STATUS)).default(STATUS.DRAFT),
-  open_date: Joi.date().optional(),
-  close_date: Joi.date().when("open_date", {
-    is: Joi.exist(),
-    then: Joi.date().greater(Joi.ref("open_date")),
-    otherwise: Joi.date(),
-  }).optional(),
-  is_published: Joi.boolean().default(false),
+// Field mapping schema (for nomination forms)
+const fieldMappingItemSchema = Joi.object({
+  form_field_id: Joi.string().trim().required()
+    .messages({
+      "string.empty": "Form field ID is required",
+    }),
+  candidate_field: Joi.string().trim().required()
+    .messages({
+      "string.empty": "Candidate field is required",
+    }),
+  transform: Joi.string().valid("uppercase", "lowercase", "trim", "capitalize").optional(),
 });
 
-// Update form validation
-export const updateFormSchema = Joi.object({
-  name: Joi.string().trim().min(3).max(200),
-  description: Joi.string().trim().max(2000),
-  slug: Joi.string().lowercase().trim(),
-  form_type: Joi.string().valid(...Object.values(FORM_TYPE)),
-  categories: Joi.array().items(ObjectId()),
-  fields: Joi.array().items(formFieldSchema).min(1),
-  duplicate_detection: duplicateDetectionSchema,
-  multi_category_nomination: multiCategoryNominationSchema,
-  settings: formSettingsSchema,
-  submission_limits: submissionLimitsSchema,
-  status: Joi.string().valid(...Object.values(STATUS)),
-  open_date: Joi.date(),
-  close_date: Joi.date(),
-  is_published: Joi.boolean(),
-}).min(1);
+// Candidate field mapping schema
+const candidateFieldMappingSchema = Joi.object({
+  enabled: Joi.boolean().default(false),
+  mappings: Joi.array().items(fieldMappingItemSchema).default([]),
+  auto_create_candidate: Joi.boolean().default(true),
+  send_welcome_email: Joi.boolean().default(true),
+}).optional();
 
-// Form ID parameter validation
-export const formIdSchema = Joi.object({
-  id: ObjectId().required(),
-});
+class FormValidation {
+  // ==================== FORM CRUD ====================
 
-// Query parameters validation
-export const formQuerySchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(100).default(10),
-  event: ObjectId(),
-  form_type: Joi.string().valid(...Object.values(FORM_TYPE)),
-  status: Joi.string().valid(...Object.values(STATUS)),
-  is_published: Joi.boolean(),
-  search: Joi.string().trim().max(100),
-  sort: Joi.string().valid(
-    "name", "total_submissions", "created_at", "-name", "-total_submissions", "-created_at"
-  ).default("-created_at"),
-});
+  /**
+   * Create form validation
+   */
+  static createFormSchema = Joi.object({
+    name: Joi.string().trim().min(3).max(200).required()
+      .messages({
+        "string.empty": "Form name is required",
+        "string.min": "Form name must be at least 3 characters",
+        "string.max": "Form name cannot exceed 200 characters",
+      }),
+    description: Joi.string().trim().max(2000).optional()
+      .messages({
+        "string.max": "Description cannot exceed 2000 characters",
+      }),
+    slug: Joi.string().lowercase().trim().optional(),
+    form_type: Joi.string().valid(...Object.values(FORM_TYPE)).required()
+      .messages({
+        "any.only": `Form type must be one of: ${Object.values(FORM_TYPE).join(", ")}`,
+        "string.empty": "Form type is required",
+      }),
+    event: ObjectId().required()
+      .messages({
+        "string.empty": "Event ID is required",
+      }),
+    categories: Joi.array().items(ObjectId()).default([]),
+    fields: Joi.array().items(formFieldSchema).min(1).required()
+      .messages({
+        "array.min": "At least one field is required",
+        "any.required": "Form fields are required",
+      }),
+    candidate_field_mapping: candidateFieldMappingSchema,
+    duplicate_detection: duplicateDetectionSchema,
+    multi_category_nomination: multiCategoryNominationSchema,
+    settings: formSettingsSchema,
+    submission_limits: submissionLimitsSchema,
+    status: Joi.string().valid(...Object.values(FORM_STATUS)).default(FORM_STATUS.DRAFT),
+    open_date: Joi.date().optional(),
+    close_date: Joi.date().when("open_date", {
+      is: Joi.exist(),
+      then: Joi.date().greater(Joi.ref("open_date"))
+        .messages({
+          "date.greater": "Close date must be after open date",
+        }),
+      otherwise: Joi.date(),
+    }).optional(),
+    is_published: Joi.boolean().default(false),
+  });
 
-// Update form status validation
-export const updateFormStatusSchema = Joi.object({
-  status: Joi.string().valid(...Object.values(STATUS)).required(),
-});
+  /**
+   * Update form validation
+   */
+  static updateFormSchema = Joi.object({
+    name: Joi.string().trim().min(3).max(200)
+      .messages({
+        "string.min": "Form name must be at least 3 characters",
+        "string.max": "Form name cannot exceed 200 characters",
+      }),
+    description: Joi.string().trim().max(2000)
+      .messages({
+        "string.max": "Description cannot exceed 2000 characters",
+      }),
+    slug: Joi.string().lowercase().trim(),
+    form_type: Joi.string().valid(...Object.values(FORM_TYPE))
+      .messages({
+        "any.only": `Form type must be one of: ${Object.values(FORM_TYPE).join(", ")}`,
+      }),
+    categories: Joi.array().items(ObjectId()),
+    fields: Joi.array().items(formFieldSchema).min(1)
+      .messages({
+        "array.min": "At least one field is required",
+      }),
+    candidate_field_mapping: candidateFieldMappingSchema,
+    duplicate_detection: duplicateDetectionSchema,
+    multi_category_nomination: multiCategoryNominationSchema,
+    settings: formSettingsSchema,
+    submission_limits: submissionLimitsSchema,
+    status: Joi.string().valid(...Object.values(FORM_STATUS)),
+    open_date: Joi.date(),
+    close_date: Joi.date(),
+    is_published: Joi.boolean(),
+  }).min(1)
+    .messages({
+      "object.min": "At least one field must be provided for update",
+    });
 
-// Publish form validation
-export const publishFormSchema = Joi.object({
-  is_published: Joi.boolean().required(),
-});
+  // ==================== FIELD MAPPING ====================
 
-export default {
-  createFormSchema,
-  updateFormSchema,
-  formIdSchema,
-  formQuerySchema,
-  updateFormStatusSchema,
-  publishFormSchema,
-};
+  /**
+   * Update field mapping validation
+   */
+  static updateFieldMappingSchema = Joi.object({
+    mappings: Joi.array().items(fieldMappingItemSchema).min(1).required()
+      .messages({
+        "array.min": "At least one field mapping is required",
+        "any.required": "Mappings are required",
+      }),
+    auto_create_candidate: Joi.boolean().default(true),
+    send_welcome_email: Joi.boolean().default(true),
+  });
+
+  // ==================== QUERY & PARAMETERS ====================
+
+  /**
+   * Form ID parameter validation
+   */
+  static formIdSchema = Joi.object({
+    id: ObjectId().required()
+      .messages({
+        "string.empty": "Form ID is required",
+      }),
+  });
+
+  /**
+   * Query parameters validation
+   */
+  static formQuerySchema = Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    event: ObjectId(),
+    form_type: Joi.string().valid(...Object.values(FORM_TYPE)),
+    status: Joi.string().valid(...Object.values(FORM_STATUS)),
+    is_published: Joi.boolean(),
+    search: Joi.string().trim().max(100),
+    sort: Joi.string().valid(
+      "name", "total_submissions", "created_at", "-name", "-total_submissions", "-created_at"
+    ).default("-created_at"),
+  });
+
+  /**
+   * Get forms by event validation
+   */
+  static getFormsByEventSchema = Joi.object({
+    eventId: ObjectId().required()
+      .messages({
+        "string.empty": "Event ID is required",
+      }),
+    filters: Joi.object({
+      form_type: Joi.string().valid(...Object.values(FORM_TYPE)),
+      status: Joi.string().valid(...Object.values(FORM_STATUS)),
+      is_published: Joi.boolean(),
+    }).optional(),
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+  });
+
+  // ==================== STATUS MANAGEMENT ====================
+
+  /**
+   * Update form status validation
+   */
+  static updateFormStatusSchema = Joi.object({
+    status: Joi.string().valid(...Object.values(FORM_STATUS)).required()
+      .messages({
+        "any.only": `Status must be one of: ${Object.values(FORM_STATUS).join(", ")}`,
+        "string.empty": "Status is required",
+      }),
+  });
+
+  /**
+   * Publish form validation
+   */
+  static publishFormSchema = Joi.object({
+    is_published: Joi.boolean().required()
+      .messages({
+        "any.required": "is_published field is required",
+      }),
+  });
+
+  // ==================== VALIDATION HELPERS ====================
+
+  /**
+   * Validate data against schema
+   * @param {Object} data - Data to validate
+   * @param {Joi.Schema} schema - Joi schema
+   * @returns {Object} - Validated data
+   * @throws {Error} - Validation error
+   */
+  static validate(data, schema) {
+    const { error, value } = schema.validate(data, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+
+    if (error) {
+      const messages = error.details.map((detail) => detail.message).join(", ");
+      throw new Error(messages);
+    }
+
+    return value;
+  }
+}
+
+export default FormValidation;

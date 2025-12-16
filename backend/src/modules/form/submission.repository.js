@@ -4,9 +4,9 @@
  * It contains submission-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import FormSubmissionModel from "../models/submission.model";
-import { SUBMISSION_STATUS as STATUS } from "../../utils/constants/form.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import FormSubmissionModel from "./submission.model.js";
+import { SUBMISSION_STATUS as STATUS } from "../../utils/constants/form.constants.js";
 
 class FormSubmissionRepository extends BaseRepository {
   constructor() {

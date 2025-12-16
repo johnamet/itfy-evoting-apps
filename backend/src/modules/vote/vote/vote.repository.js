@@ -4,9 +4,9 @@
  * It contains vote-specific data access methods
  */
 
-import { BaseRepository } from "../../shared/base.repository";
-import VoteModel from "../models/vote.model";
-import { STATUS } from "../../../utils/constants/vote.constants";
+import { BaseRepository } from "../../shared/base.repository.js";
+import VoteModel from "./vote.model.js";
+import { VOTE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
 
 class VoteRepository extends BaseRepository {
   constructor() {

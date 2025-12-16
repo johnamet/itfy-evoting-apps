@@ -7,15 +7,15 @@
  * - Future: SMS, Push notifications, WebSocket
  */
 
-import NotificationRepository from "../modules/notification/notification.repository";
-import emailService from "./email.service";
+import NotificationRepository from "../modules/notification/notification.repository.js";
+import emailService from "./email.service.js";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_CHANNEL,
   NOTIFICATION_STATUS,
   NOTIFICATION_PRIORITY,
-} from "../utils/constants/notification.constants";
-import { EMAIL_TEMPLATES } from "../utils/constants/email.constants";
+} from "../utils/constants/notification.constants.js";
+import { EMAIL_TEMPLATES } from "../utils/constants/email.constants.js";
 
 class NotificationService {
   constructor() {

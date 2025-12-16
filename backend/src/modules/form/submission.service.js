@@ -3,8 +3,9 @@ import SubmissionRepository from "./submission.repository.js";
 import FormRepository from "./form.repository.js";
 import FormService from "./form.service.js";
 import CandidateService from "../candidate/candidate.service.js";
-import { SUBMISSION_STATUS as STATUS, FORM_TYPE } from "../../utils/constants/form.constants.js";
 import ActivityService from "../activity/activity.service.js";
+import { IPHelper } from "../../utils/helpers/ip.helper.js";
+import { SUBMISSION_STATUS as STATUS, FORM_TYPE } from "../../utils/constants/form.constants.js";
 import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
 import crypto from "crypto";
 
@@ -13,10 +14,13 @@ import crypto from "crypto";
  * Handles nomination/registration form submissions, duplicate detection, and approval workflows
  */
 class SubmissionService extends BaseService {
-  constructor() {
+  constructor(dependencies = {}) {
     super();
-    this.repository = SubmissionRepository;
-    this.formRepository = FormRepository;
+    this.repository = dependencies.repository || SubmissionRepository;
+    this.formRepository = dependencies.formRepository || FormRepository;
+    this.formService = dependencies.formService || FormService;
+    this.candidateService = dependencies.candidateService || CandidateService;
+    this.activityService = dependencies.activityService || ActivityService;
   }
 
   // ==================== SUBMISSION MANAGEMENT ====================
@@ -67,10 +71,8 @@ class SubmissionService extends BaseService {
           .digest("hex");
       }
 
-      // Hash IP address for privacy
-      const ipHash = metadata.ip_address
-        ? crypto.createHash("sha256").update(metadata.ip_address).digest("hex")
-        : null;
+      // Hash IP address for privacy using IPHelper
+      const ipHash = IPHelper.hash(metadata.ip_address);
 
       // Generate submission number
       const submissionNumber = await this.generateSubmissionNumber(formId);
@@ -106,8 +108,8 @@ class SubmissionService extends BaseService {
         // TODO: Send confirmation email
       }
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: metadata.submitted_by || null,
         action: ACTION_TYPE.FORM_SUBMISSION,
         entityType: ENTITY_TYPE.FORM_SUBMISSION,
@@ -120,7 +122,7 @@ class SubmissionService extends BaseService {
           hasDuplicates: duplicateCheckResult?.is_duplicate || false,
         },
         ipAddress: metadata.ip_address,
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return {
         submission,
@@ -292,8 +294,8 @@ class SubmissionService extends BaseService {
         }
       }
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.SUBMISSION_APPROVED,
         entityType: ENTITY_TYPE.FORM_SUBMISSION,
@@ -305,7 +307,7 @@ class SubmissionService extends BaseService {
           candidateCreated: !!candidate,
           candidateId: candidate?._id,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return {
         submission: approved,
@@ -336,8 +338,8 @@ class SubmissionService extends BaseService {
 
       const rejected = await this.repository.reject(submissionId, adminId, reason);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.SUBMISSION_REJECTED,
         entityType: ENTITY_TYPE.FORM_SUBMISSION,
@@ -348,7 +350,7 @@ class SubmissionService extends BaseService {
           formId: submission.form._id,
           reason,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return rejected;
     } catch (error) {
@@ -410,8 +412,8 @@ class SubmissionService extends BaseService {
             submission.duplicate_check.similarity_score
           );
 
-          // Log merge activity
-          await ActivityService.log({
+          // Log merge activity (fire-and-forget)
+          this.activityService.log({
             userId: adminId,
             action: ACTION_TYPE.SUBMISSION_MERGED,
             entityType: ENTITY_TYPE.FORM_SUBMISSION,
@@ -421,7 +423,7 @@ class SubmissionService extends BaseService {
               mergedWith: resolution.mergeWith,
               notes: resolution.notes,
             },
-          });
+          }).catch(err => console.error("Activity log failed:", err));
           break;
 
         default:
@@ -576,8 +578,8 @@ class SubmissionService extends BaseService {
     try {
       const result = await this.repository.bulkApprove(submissionIds, adminId, options.notes || "");
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.BULK_SUBMISSION_APPROVAL,
         entityType: ENTITY_TYPE.FORM_SUBMISSION,
@@ -586,7 +588,7 @@ class SubmissionService extends BaseService {
           count: result.modified,
           submissionIds,
         },
-      });
+      }).catch(err => console.error("Activity log failed:", err));
 
       return result;
     } catch (error) {
@@ -595,4 +597,6 @@ class SubmissionService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { SubmissionService };
 export default new SubmissionService();

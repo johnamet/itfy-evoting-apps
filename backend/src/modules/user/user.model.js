@@ -2,9 +2,9 @@
  * The user model definition for the user module
  */
 
-import { AuthHelpers } from "../.../..utils/helpers/auth.helper.js"
-import { BaseModel } from "../shared/base.model.js"
-import  { ROLES, PERMSSIONS, STATUS }  from "../../utils/constants/user.constants.js"
+import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
+import { BaseModel } from "../shared/base.model.js";
+import { ROLES, PERMISSIONS, STATUS } from "../../utils/constants/user.constants.js";
 
 class User extends BaseModel {
     constructor() {
@@ -17,13 +17,13 @@ class User extends BaseModel {
             role: {
                 type: String,
                 required: true,
-                enum: [Object.values(ROLES)]
+                enum: Object.values(ROLES)
             },
             permissions: {
                 type: [String],
                 required: true,
-                default: [PERMSSIONS.READ],
-                enum: Object.values(PERMSSIONS)
+                default: [PERMISSIONS.READ],
+                enum: Object.values(PERMISSIONS)
             },
             email: {
                 type: String,

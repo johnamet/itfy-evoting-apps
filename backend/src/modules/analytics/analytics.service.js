@@ -3,16 +3,16 @@
  * Cross-module reporting, dashboards, and time-series analysis
  */
 
-import EventRepository from "../event/event.repository";
-import CandidateRepository from "../candidate/candidate.repository";
-import CategoryRepository from "../category/category.repository";
-import VoteRepository from "../vote/vote/vote.repository";
-import BundleRepository from "../vote/bundle/bundle.repository";
-import CouponRepository from "../vote/coupon/coupon.repository";
-import FormRepository from "../form/form.repository";
-import FormSubmissionRepository from "../form/submission.repository";
-import ActivityRepository from "../activity/activity.repository";
-import PaymentModel from "../models/payment.model";
+import EventRepository from "../event/event.repository.js";
+import CandidateRepository from "../candidate/candidate.repository.js";
+import CategoryRepository from "../category/category.repository.js";
+import VoteRepository from "../vote/vote/vote.repository.js";
+import BundleRepository from "../vote/bundle/bundle.repository.js";
+import CouponRepository from "../vote/coupon/coupon.repository.js";
+import FormRepository from "../form/form.repository.js";
+import FormSubmissionRepository from "../form/submission.repository.js";
+import ActivityRepository from "../activity/activity.repository.js";
+import PaymentModel from "./payment.model.js";
 
 class AnalyticsService {
   /**
@@ -366,4 +366,6 @@ class AnalyticsService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { AnalyticsService };
 export default new AnalyticsService();

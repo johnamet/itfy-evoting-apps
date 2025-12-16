@@ -4,9 +4,9 @@
  * It contains candidate-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import CandidateModel from "../models/candidate.model";
-import { STATUS } from "../../utils/constants/candidate.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import CandidateModel from "./candidate.model.js";
+import { STATUS } from "../../utils/constants/candidate.constants.js";
 
 class CandidateRepository extends BaseRepository {
   constructor() {

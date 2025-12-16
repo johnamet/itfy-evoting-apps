@@ -129,7 +129,7 @@ class AgendaManager {
         try {
           console.log("📊 Aggregating vote counts for event:", eventId);
 
-          const { default: VoteService } = await import("../modules/vote/vote.service.js");
+          const { default: VoteService } = await import("../modules/vote/vote/vote.service.js");
 
           await VoteService.aggregateVoteCounts(eventId);
 

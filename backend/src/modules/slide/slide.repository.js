@@ -4,9 +4,9 @@
  * It contains slide-specific data access methods
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import SlideModel from "../models/slide.model";
-import { SLIDE_STATUS, SLIDE_TYPE } from "../../utils/constants/slide.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import SlideModel from "./slide.model.js";
+import { SLIDE_STATUS, SLIDE_TYPE } from "../../utils/constants/slide.constants.js";
 
 class SlideRepository extends BaseRepository {
   constructor() {
@@ -35,20 +35,7 @@ class SlideRepository extends BaseRepository {
     }
   }
 
-  /**
-   * Update a slide
-   * @param {string|mongoose.Types.ObjectId} slideId - Slide ID
-   * @param {Object} updates - Update data
-   * @param {Object} [options] - Query options
-   * @returns {Promise<Object>} - Updated slide
-   */
-  async update(slideId, updates, options = {}) {
-    try {
-      return await this.updateById(slideId, updates, options);
-    } catch (error) {
-      throw new Error(`Update slide failed: ${error.message}`);
-    }
-  }
+  // Note: Use inherited updateById(slideId, updates, options) for updates
 
   /**
    * Soft delete a slide

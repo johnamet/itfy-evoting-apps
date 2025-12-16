@@ -3,9 +3,9 @@
  * Data access layer for activity/audit logs
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import ActivityModel from "./activity.model";
-import { ACTION_TYPE,  SEVERITY } from "../../utils/constants/activity.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import ActivityModel from "./activity.model.js";
+import { ACTION_TYPE,  SEVERITY } from "../../utils/constants/activity.constants.js";
 
 class ActivityRepository extends BaseRepository {
   constructor() {

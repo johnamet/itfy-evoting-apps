@@ -7,7 +7,7 @@ export const ROLES = {
 }
 
 // User permissions
-const PERMSSIONS = {
+export const PERMISSIONS = {
     READ: "read",
     WRITE: "write",
     UPDATE: "update", //update includes soft deleting
@@ -16,7 +16,7 @@ const PERMSSIONS = {
 
 }
 
-const STATUS = {
+export const STATUS = {
     ACTIVE: "active",
     INACTIVE: "inactive",
     SUSPENDED: "suspended",
@@ -24,4 +24,3 @@ const STATUS = {
 }
 
 export default ROLES
-export { PERMSSIONS, ROLES, STATUS }

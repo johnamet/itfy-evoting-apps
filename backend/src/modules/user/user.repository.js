@@ -4,10 +4,10 @@
  * It extends BaseRepository and adds user-specific business logic
  */
 
-import { BaseRepository } from "../shared/base.repository";
-import User from "./user.model";
-import { ERROR_MESSAGES } from "../../utils/constants/error.constants";
-import { STATUS } from "../../utils/constants/user.constants";
+import { BaseRepository } from "../shared/base.repository.js";
+import User from "./user.model.js";
+import { ERROR_MESSAGES } from "../../utils/constants/error.constants.js";
+import { STATUS } from "../../utils/constants/user.constants.js";
 
 
 class UserRepository extends BaseRepository{

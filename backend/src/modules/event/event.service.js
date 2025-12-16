@@ -6,19 +6,26 @@
 import BaseService from "../shared/base.service.js";
 import EventRepository from "./event.repository.js";
 import CategoryRepository from "../category/category.repository.js";
+import CandidateRepository from "../candidate/candidate.repository.js";
 import FormRepository from "../form/form.repository.js";
 import ActivityService from "../activity/activity.service.js";
 import NotificationService from "../../services/notification.service.js";
 import agendaManager from "../../services/agenda.service.js";
 import EventValidation from "./event.validation.js";
-import { STATUS, VISIBILITY } from "../../utils/constants/event.constants.js";
+import { STATUS } from "../../utils/constants/event.constants.js";
 import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
 
+// Set validation schemas for BaseService.validate()
+BaseService.setValidation(EventValidation);
+
 class EventService extends BaseService {
-  constructor() {
-    super(EventRepository);
-    this.categoryRepository = new CategoryRepository();
-    this.formRepository = new FormRepository();
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || EventRepository;
+    this.categoryRepository = dependencies.categoryRepository || CategoryRepository;
+    this.candidateRepository = dependencies.candidateRepository || CandidateRepository;
+    this.formRepository = dependencies.formRepository || FormRepository;
+    this.activityService = dependencies.activityService || ActivityService;
   }
 
   // ==================== EVENT LIFECYCLE ====================
@@ -31,19 +38,8 @@ class EventService extends BaseService {
    */
   async createEvent(eventData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = EventValidation.createEventSchema.validate(eventData, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      // Use validated data
-      const validatedData = value;
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(eventData, EventValidation.createEventSchema);
 
       // Set created_by
       validatedData.created_by = adminId;
@@ -59,8 +55,8 @@ class EventService extends BaseService {
       // Create event
       const event = await this.repository.create(validatedData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_CREATED,
         entityType: ENTITY_TYPE.EVENT,
@@ -68,7 +64,7 @@ class EventService extends BaseService {
         eventId: event._id,
         description: `Created event: ${event.name}`,
         metadata: { eventName: event.name },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return event;
     } catch (error) {
@@ -85,18 +81,8 @@ class EventService extends BaseService {
    */
   async updateEvent(eventId, updateData, adminId) {
     try {
-      // Validate input data
-      const { error, value } = EventValidation.updateEventSchema.validate(updateData, {
-        abortEarly: false,
-        stripUnknown: true,
-      });
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
-
-      const validatedData = value;
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(updateData, EventValidation.updateEventSchema);
 
       const event = await this.repository.findById(eventId);
       
@@ -107,8 +93,8 @@ class EventService extends BaseService {
       // Update event with validated data
       const updated = await this.repository.updateById(eventId, validatedData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_UPDATED,
         entityType: ENTITY_TYPE.EVENT,
@@ -116,7 +102,7 @@ class EventService extends BaseService {
         eventId,
         description: `Updated event: ${updated.name}`,
         metadata: { changes: Object.keys(updateData) },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updated;
     } catch (error) {
@@ -152,15 +138,15 @@ class EventService extends BaseService {
         published_at: new Date(),
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_PUBLISHED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Published event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       // Schedule event reminder emails
       const eventDate = new Date(event.end_date);
@@ -198,15 +184,15 @@ class EventService extends BaseService {
         is_published: false,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_UNPUBLISHED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Unpublished event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return unpublished;
     } catch (error) {
@@ -237,15 +223,15 @@ class EventService extends BaseService {
         is_published: false,
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_ARCHIVED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Archived event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       // Schedule results publishing if not already published
       if (!event.results_published) {
@@ -301,8 +287,8 @@ class EventService extends BaseService {
 
       const clonedEvent = await this.repository.create(newEventData);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.EVENT_CREATED,
         entityType: ENTITY_TYPE.EVENT,
@@ -310,7 +296,7 @@ class EventService extends BaseService {
         eventId: clonedEvent._id,
         description: `Cloned event from: ${originalEvent.name}`,
         metadata: { originalEventId: eventId, originalEventName: originalEvent.name },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return clonedEvent;
     } catch (error) {
@@ -349,15 +335,15 @@ class EventService extends BaseService {
       // Notify all candidates
       await NotificationService.notifyEventVotingStarted(eventId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.VOTING_STARTED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Started voting for event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updated;
     } catch (error) {
@@ -388,15 +374,15 @@ class EventService extends BaseService {
         voting_end: new Date(),
       });
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.VOTING_ENDED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Stopped voting for event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updated;
     } catch (error) {
@@ -434,15 +420,15 @@ class EventService extends BaseService {
       // Notify all participants
       await NotificationService.notifyEventResultsPublished(eventId);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.RESULTS_PUBLISHED,
         entityType: ENTITY_TYPE.EVENT,
         entityId: eventId,
         eventId,
         description: `Published results for event: ${event.name}`,
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return updated;
     } catch (error) {
@@ -658,6 +644,408 @@ class EventService extends BaseService {
       throw new Error(`Get event statistics failed: ${error.message}`);
     }
   }
+
+  // ==================== QUERY PROXY METHODS ====================
+
+  /**
+   * List events with filters and options
+   * @param {Object} filters - Query filters
+   * @param {Object} options - Query options (skip, limit, sort, etc.)
+   * @returns {Promise<Array>} - List of events
+   */
+  async listEvents(filters = {}, options = {}) {
+    try {
+      const { skip = 0, limit = 10, sort = '-created_at', ...queryOptions } = options;
+      const page = Math.floor(skip / limit) + 1;
+      
+      const result = await this.repository.findAll(filters, page, limit, { sort, ...queryOptions });
+      return result.data;
+    } catch (error) {
+      throw new Error(`List events failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count events matching filters
+   * @param {Object} filters - Query filters
+   * @returns {Promise<number>} - Count of events
+   */
+  async countEvents(filters = {}) {
+    try {
+      return await this.repository.count(filters);
+    } catch (error) {
+      throw new Error(`Count events failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete an event (soft delete)
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Deleted event
+   */
+  async deleteEvent(eventId, adminId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      await this.repository.delete(eventId);
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.EVENT_DELETED,
+        entityType: ENTITY_TYPE.EVENT,
+        entityId: eventId,
+        eventId,
+        description: `Deleted event: ${event.name}`,
+      }).catch(err => console.error("Activity log error:", err));
+
+      return event;
+    } catch (error) {
+      throw new Error(`Delete event failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update event status
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {string} status - New status
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Updated event
+   */
+  async updateEventStatus(eventId, status, adminId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      const updated = await this.repository.updateStatus(eventId, status);
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.EVENT_UPDATED,
+        entityType: ENTITY_TYPE.EVENT,
+        entityId: eventId,
+        eventId,
+        description: `Updated event status to: ${status}`,
+        metadata: { previousStatus: event.status, newStatus: status },
+      }).catch(err => console.error("Activity log error:", err));
+
+      return updated;
+    } catch (error) {
+      throw new Error(`Update event status failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Cancel an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {string} reason - Cancellation reason
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Cancelled event
+   */
+  async cancelEvent(eventId, reason, adminId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      if (event.status === STATUS.CANCELLED) {
+        throw new Error("Event is already cancelled");
+      }
+
+      const cancelled = await this.repository.updateById(eventId, {
+        status: STATUS.CANCELLED,
+        is_published: false,
+        cancellation_reason: reason,
+        cancelled_at: new Date(),
+      });
+
+      // Notify participants about cancellation
+      NotificationService.notifyEventCancelled(eventId, reason).catch(err => 
+        console.error("Notification error:", err)
+      );
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.EVENT_CANCELLED,
+        entityType: ENTITY_TYPE.EVENT,
+        entityId: eventId,
+        eventId,
+        description: `Cancelled event: ${event.name}`,
+        metadata: { reason },
+      }).catch(err => console.error("Activity log error:", err));
+
+      return cancelled;
+    } catch (error) {
+      throw new Error(`Cancel event failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Complete an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Completed event
+   */
+  async completeEvent(eventId, adminId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      if (event.status === STATUS.COMPLETED) {
+        throw new Error("Event is already completed");
+      }
+
+      const completed = await this.repository.updateById(eventId, {
+        status: STATUS.COMPLETED,
+        voting_active: false,
+        completed_at: new Date(),
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.EVENT_COMPLETED,
+        entityType: ENTITY_TYPE.EVENT,
+        entityId: eventId,
+        eventId,
+        description: `Completed event: ${event.name}`,
+      }).catch(err => console.error("Activity log error:", err));
+
+      return completed;
+    } catch (error) {
+      throw new Error(`Complete event failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Toggle featured status for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Updated event
+   */
+  async toggleFeatured(eventId, adminId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      const updated = await this.repository.toggleFeatured(eventId);
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: updated.is_featured ? ACTION_TYPE.EVENT_FEATURED : ACTION_TYPE.EVENT_UNFEATURED,
+        entityType: ENTITY_TYPE.EVENT,
+        entityId: eventId,
+        eventId,
+        description: updated.is_featured ? `Featured event: ${event.name}` : `Unfeatured event: ${event.name}`,
+      }).catch(err => console.error("Activity log error:", err));
+
+      return updated;
+    } catch (error) {
+      throw new Error(`Toggle featured failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count upcoming events
+   * @returns {Promise<number>} - Count of upcoming events
+   */
+  async countUpcomingEvents() {
+    try {
+      const now = new Date();
+      return await this.repository.count({
+        start_date: { $gt: now },
+        is_published: true,
+        status: STATUS.UPCOMING,
+      });
+    } catch (error) {
+      throw new Error(`Count upcoming events failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get categories for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @returns {Promise<Array>} - List of categories
+   */
+  async getEventCategories(eventId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      const result = await this.categoryRepository.findAll({ event: eventId }, 1, 100, { lean: true });
+      return result.data;
+    } catch (error) {
+      throw new Error(`Get event categories failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get candidates for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {Object} filters - Additional filters
+   * @param {Object} options - Query options
+   * @returns {Promise<Array>} - List of candidates
+   */
+  async getEventCandidates(eventId, filters = {}, options = {}) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      const { skip = 0, limit = 10 } = options;
+      const page = Math.floor(skip / limit) + 1;
+
+      const result = await this.candidateRepository.findAll(
+        { event: eventId, ...filters },
+        page,
+        limit,
+        { lean: true }
+      );
+      return result.data;
+    } catch (error) {
+      throw new Error(`Get event candidates failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count candidates for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @param {Object} filters - Additional filters
+   * @returns {Promise<number>} - Count of candidates
+   */
+  async countEventCandidates(eventId, filters = {}) {
+    try {
+      return await this.candidateRepository.count({ event: eventId, ...filters });
+    } catch (error) {
+      throw new Error(`Count event candidates failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get vote summary for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @returns {Promise<Object>} - Vote summary
+   */
+  async getEventVoteSummary(eventId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      // Get candidates with vote counts
+      const candidates = await this.candidateRepository.findAll(
+        { event: eventId },
+        1,
+        100,
+        { lean: true, sort: { vote_count: -1 } }
+      );
+
+      const totalVotes = candidates.data.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+
+      return {
+        eventId: event._id,
+        eventName: event.name,
+        totalVotes,
+        votingActive: event.voting_active,
+        resultsPublished: event.results_published,
+        candidates: candidates.data.map(c => ({
+          candidateId: c._id,
+          name: c.name,
+          voteCount: c.vote_count || 0,
+          percentage: totalVotes > 0 ? ((c.vote_count || 0) / totalVotes * 100).toFixed(2) : 0,
+        })),
+      };
+    } catch (error) {
+      throw new Error(`Get event vote summary failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get results for an event
+   * @param {string|mongoose.Types.ObjectId} eventId - Event ID
+   * @returns {Promise<Object>} - Event results
+   */
+  async getEventResults(eventId) {
+    try {
+      const event = await this.repository.findById(eventId);
+      
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      // Get categories with their candidates and vote counts
+      const categoriesResult = await this.categoryRepository.findAll(
+        { event: eventId },
+        1,
+        100,
+        { lean: true }
+      );
+
+      const results = await Promise.all(
+        categoriesResult.data.map(async (category) => {
+          const candidatesResult = await this.candidateRepository.findAll(
+            { event: eventId, category: category._id },
+            1,
+            100,
+            { lean: true, sort: { vote_count: -1 } }
+          );
+
+          return {
+            category: {
+              id: category._id,
+              name: category.name,
+            },
+            candidates: candidatesResult.data.map(c => ({
+              id: c._id,
+              name: c.name,
+              voteCount: c.vote_count || 0,
+              position: c.position,
+            })),
+            winner: candidatesResult.data[0] || null,
+          };
+        })
+      );
+
+      return {
+        eventId: event._id,
+        eventName: event.name,
+        status: event.status,
+        resultsPublished: event.results_published,
+        resultsPublishedAt: event.results_published_at,
+        categories: results,
+      };
+    } catch (error) {
+      throw new Error(`Get event results failed: ${error.message}`);
+    }
+  }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { EventService };
 export default new EventService();

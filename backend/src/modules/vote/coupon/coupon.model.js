@@ -3,8 +3,8 @@
  */
 
 import mongoose from "mongoose";
-import { BaseModel } from "../../shared/base.model";
-import { COUPON_STATUS as STATUS , DISCOUNT_TYPE } from "../../../utils/constants/vote.constants";
+import { BaseModel } from "../../shared/base.model.js";
+import { COUPON_STATUS as STATUS , DISCOUNT_TYPE } from "../../../utils/constants/vote.constants.js";
 
 class Coupon extends BaseModel {
   constructor() {

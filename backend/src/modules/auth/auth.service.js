@@ -847,5 +847,6 @@ class AuthService extends BaseService {
   }
 }
 
-// Export singleton
+// Export both for testability (class) and convenience (singleton instance)
+export { AuthService };
 export default new AuthService();

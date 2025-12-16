@@ -3,29 +3,35 @@
  * Handles business logic for vote casting and management
  */
 
-import { BaseService } from "../../shared/base.service";
-import VoteRepository from "./vote.repository";
-import PaymentService from "../../payment/payment.service";
-import CandidateRepository from "../../candidate/candidate.repository";
-import CategoryRepository from "../../category/category.repository";
-import EventRepository from "../../event/event.repository";
-import ActivityService from "../../activity/activity.service";
-import NotificationService from "../../../services/notification.service";
-import EmailService from "../../../services/email.service";
+import mongoose from "mongoose";
+import BaseService from "../../shared/base.service.js";
+import VoteRepository from "./vote.repository.js";
+import PaymentService from "../../payment/payment.service.js";
+import CandidateRepository from "../../candidate/candidate.repository.js";
+import CategoryRepository from "../../category/category.repository.js";
+import EventRepository from "../../event/event.repository.js";
+import ActivityService from "../../activity/activity.service.js";
+import NotificationService from "../../../services/notification.service.js";
 import agendaManager from "../../../services/agenda.service.js";
 import VoteValidation from "./vote.validation.js";
-import { VOTE_STATUS as STATUS } from "../../../utils/constants/vote.constants";
-import { CATEGORY_STATUS } from "../../../utils/constants/category.constants";
-import { CANDIDATE_STATUS } from "../../../utils/constants/candidate.constants";
-import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants";
-import crypto from "crypto";
+import { VOTE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
+import { STATUS as CATEGORY_STATUS } from "../../../utils/constants/category.constants.js";
+import { STATUS as CANDIDATE_STATUS } from "../../../utils/constants/candidate.constants.js";
+import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants.js";
+import { IPHelper } from "../../../utils/helpers/ip.helper.js";
+
+// Set validation schemas for BaseService.validate()
+BaseService.setValidation(VoteValidation);
 
 class VoteService extends BaseService {
-  constructor() {
-    super(VoteRepository);
-    this.candidateRepository = CandidateRepository;
-    this.categoryRepository = CategoryRepository;
-    this.eventRepository = EventRepository;
+  constructor(dependencies = {}) {
+    super();
+    this.repository = dependencies.repository || VoteRepository;
+    this.candidateRepository = dependencies.candidateRepository || CandidateRepository;
+    this.categoryRepository = dependencies.categoryRepository || CategoryRepository;
+    this.eventRepository = dependencies.eventRepository || EventRepository;
+    this.activityService = dependencies.activityService || ActivityService;
+    this.paymentService = dependencies.paymentService || PaymentService;
   }
 
   /**
@@ -35,8 +41,8 @@ class VoteService extends BaseService {
    */
   async castVote(voteData) {
     try {
-      // Validate input data
-      const { error, value } = VoteValidation.createVoteSchema.validate(
+      // Validate input data using BaseService.validate()
+      const validatedData = this.validate(
         {
           vote_code: voteData.voteCode,
           candidate: voteData.candidateId,
@@ -47,18 +53,13 @@ class VoteService extends BaseService {
           user_agent: voteData.userAgent,
           metadata: voteData.metadata || {},
         },
-        { abortEarly: false, stripUnknown: true }
+        VoteValidation.createVoteSchema
       );
-
-      if (error) {
-        const errorMessages = error.details.map(detail => detail.message).join(", ");
-        throw new Error(`Validation failed: ${errorMessages}`);
-      }
 
       const { voteCode, candidateId, categoryId, ipAddress, userAgent, metadata = {} } = voteData;
 
       // Validate vote code and payment
-      const voteCodeValidation = await PaymentService.validateVoteCode(voteCode);
+      const voteCodeValidation = await this.paymentService.validateVoteCode(voteCode);
       if (!voteCodeValidation.isValid) {
         throw new Error(voteCodeValidation.reason);
       }
@@ -106,10 +107,8 @@ class VoteService extends BaseService {
         throw new Error("You have already voted in this category");
       }
 
-      // Hash IP address for privacy
-      const ipHash = ipAddress
-        ? crypto.createHash("sha256").update(ipAddress).digest("hex")
-        : null;
+      // Hash IP address for privacy using standardized utility
+      const ipHash = IPHelper.hash(ipAddress);
 
       // Create vote
       const vote = await this.repository.create({
@@ -126,7 +125,7 @@ class VoteService extends BaseService {
       });
 
       // Decrement remaining votes in payment
-      await PaymentService.useVote(voteCode);
+      await this.paymentService.useVote(voteCode);
 
       // Increment candidate vote count
       await this.candidateRepository.incrementVoteCount(candidateId);
@@ -162,8 +161,8 @@ class VoteService extends BaseService {
         },
       });
 
-      // Log activity
-      await ActivityService.logVote(
+      // Log activity (fire-and-forget)
+      this.activityService.logVote(
         null, // No userId for anonymous voting
         vote._id,
         payment.event,
@@ -175,7 +174,7 @@ class VoteService extends BaseService {
           categoryName: populatedVote.category.name,
         },
         ipAddress
-      );
+      ).catch(err => console.error("Activity log error:", err));
 
       return populatedVote;
     } catch (error) {
@@ -212,13 +211,13 @@ class VoteService extends BaseService {
       });
 
       // Restore vote in payment
-      await PaymentService.restoreVote(vote.vote_code);
+      await this.paymentService.restoreVote(vote.vote_code);
 
       // Decrement candidate vote count
       await this.candidateRepository.decrementVoteCount(vote.candidate._id);
 
-      // Log activity
-      await ActivityService.log({
+      // Log activity (fire-and-forget)
+      this.activityService.log({
         userId: adminId,
         action: ACTION_TYPE.UPDATE,
         entityType: ENTITY_TYPE.VOTE,
@@ -231,7 +230,7 @@ class VoteService extends BaseService {
           voteCode: vote.vote_code,
           reason,
         },
-      });
+      }).catch(err => console.error("Activity log error:", err));
 
       return refundedVote;
     } catch (error) {
@@ -497,9 +496,9 @@ class VoteService extends BaseService {
         minutes
       );
 
-      // Log suspicious activity
+      // Log suspicious activity (fire-and-forget)
       if (patterns.length > 0) {
-        await ActivityService.log({
+        this.activityService.log({
           action: ACTION_TYPE.WARNING,
           entityType: ENTITY_TYPE.VOTE,
           eventId,
@@ -510,7 +509,7 @@ class VoteService extends BaseService {
             patternsCount: patterns.length,
             patterns: patterns.slice(0, 5), // Log first 5 patterns
           },
-        });
+        }).catch(err => console.error("Activity log error:", err));
       }
 
       return patterns;
@@ -528,7 +527,7 @@ class VoteService extends BaseService {
   async validateVoteEligibility(voteCode, categoryId) {
     try {
       // Validate vote code
-      const voteCodeValidation = await PaymentService.validateVoteCode(voteCode);
+      const voteCodeValidation = await this.paymentService.validateVoteCode(voteCode);
       if (!voteCodeValidation.isValid) {
         return { isEligible: false, reason: voteCodeValidation.reason };
       }
@@ -574,7 +573,7 @@ class VoteService extends BaseService {
    */
   async getVoterHistory(voteCode) {
     try {
-      const validation = await PaymentService.validateVoteCode(voteCode);
+      const validation = await this.paymentService.validateVoteCode(voteCode);
       if (!validation.payment) {
         throw new Error("Invalid vote code");
       }
@@ -603,6 +602,71 @@ class VoteService extends BaseService {
       throw new Error(`Failed to get voter history: ${error.message}`);
     }
   }
+
+  /**
+   * Aggregate vote counts and update candidate/category totals
+   * Used by scheduled job to keep vote counts in sync
+   * @param {string} [eventId] - Event ID (optional, aggregates all if not provided)
+   * @returns {Promise<Object>} - Aggregation results
+   */
+  async aggregateVoteCounts(eventId) {
+    try {
+      const matchStage = { status: STATUS.ACTIVE };
+      if (eventId) {
+        matchStage.event = new mongoose.Types.ObjectId(eventId);
+      }
+
+      // Aggregate vote counts per candidate
+      const candidateCounts = await this.repository.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: "$candidate",
+            vote_count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Aggregate vote counts per category
+      const categoryCounts = await this.repository.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: "$category",
+            total_votes: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Update candidate vote counts
+      const candidateUpdates = await Promise.all(
+        candidateCounts.map(async ({ _id, vote_count }) => {
+          return this.candidateRepository.updateById(_id, { vote_count });
+        })
+      );
+
+      // Update category vote counts
+      const categoryUpdates = await Promise.all(
+        categoryCounts.map(async ({ _id, total_votes }) => {
+          return this.categoryRepository.updateById(_id, { total_votes });
+        })
+      );
+
+      const result = {
+        candidatesUpdated: candidateUpdates.filter(Boolean).length,
+        categoriesUpdated: categoryUpdates.filter(Boolean).length,
+        aggregatedAt: new Date(),
+      };
+
+      console.log(`✅ Vote counts aggregated: ${result.candidatesUpdated} candidates, ${result.categoriesUpdated} categories`);
+
+      return result;
+    } catch (error) {
+      throw new Error(`Failed to aggregate vote counts: ${error.message}`);
+    }
+  }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { VoteService };
 export default new VoteService();

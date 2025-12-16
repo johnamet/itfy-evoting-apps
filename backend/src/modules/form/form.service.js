@@ -1,6 +1,9 @@
 import BaseService from "../shared/base.service.js";
 import FormRepository from "./form.repository.js";
+import FormValidation from "./form.validation.js";
 import { FORM_TYPE, FORM_STATUS } from "../../utils/constants/form.constants.js";
+
+BaseService.setValidation(FormValidation);
 
 /**
  * Form Service
@@ -22,17 +25,20 @@ class FormService extends BaseService {
    */
   async createForm(formData, createdBy) {
     try {
+      // Validate input
+      const validated = this.validate(formData, FormValidation.createFormSchema);
+
       const data = {
-        ...formData,
+        ...validated,
         created_by: createdBy,
       };
 
       // Validate nomination form field mappings if provided
       if (
-        formData.form_type === FORM_TYPE.NOMINATION &&
-        formData.candidate_field_mapping?.enabled
+        validated.form_type === FORM_TYPE.NOMINATION &&
+        validated.candidate_field_mapping?.enabled
       ) {
-        this.validateFieldMapping(formData.candidate_field_mapping.mappings);
+        this.validateFieldMapping(validated.candidate_field_mapping.mappings);
       }
 
       return await this.repository.create(data);
@@ -50,13 +56,16 @@ class FormService extends BaseService {
    */
   async updateForm(formId, updateData, updatedBy) {
     try {
+      // Validate input
+      const validated = this.validate(updateData, FormValidation.updateFormSchema);
+
       // Validate field mappings if being updated
-      if (updateData.candidate_field_mapping?.enabled) {
-        this.validateFieldMapping(updateData.candidate_field_mapping.mappings);
+      if (validated.candidate_field_mapping?.enabled) {
+        this.validateFieldMapping(validated.candidate_field_mapping.mappings);
       }
 
       const data = {
-        ...updateData,
+        ...validated,
         updated_by: updatedBy,
       };
 
@@ -153,6 +162,9 @@ class FormService extends BaseService {
    */
   async updateFieldMapping(formId, mappingData) {
     try {
+      // Validate input
+      const validated = this.validate(mappingData, FormValidation.updateFieldMappingSchema);
+
       // Validate the form is a nomination form
       const form = await this.repository.findById(formId);
 
@@ -165,15 +177,15 @@ class FormService extends BaseService {
       }
 
       // Validate mappings
-      this.validateFieldMapping(mappingData.mappings);
+      this.validateFieldMapping(validated.mappings);
 
       // Update the field mapping
       return await this.repository.updateById(formId, {
         candidate_field_mapping: {
           enabled: true,
-          mappings: mappingData.mappings,
-          auto_create_candidate: mappingData.auto_create_candidate ?? true,
-          send_welcome_email: mappingData.send_welcome_email ?? true,
+          mappings: validated.mappings,
+          auto_create_candidate: validated.auto_create_candidate ?? true,
+          send_welcome_email: validated.send_welcome_email ?? true,
         },
       });
     } catch (error) {
@@ -361,4 +373,6 @@ class FormService extends BaseService {
   }
 }
 
+// Export both for testability (class) and convenience (singleton instance)
+export { FormService };
 export default new FormService();
