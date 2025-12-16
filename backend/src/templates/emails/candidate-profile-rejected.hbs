@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Update Required</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .header .icon {
+      font-size: 64px;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 40px 30px;
+      color: #333333;
+      line-height: 1.8;
+    }
+
+    .alert-box {
+      background-color: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 5px;
+    }
+
+    .reason-box {
+      background-color: #ffebee;
+      border: 2px solid #ef5350;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+    }
+
+    .reason-box h3 {
+      margin-top: 0;
+      color: #c62828;
+      font-size: 16px;
+    }
+
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 25px 0;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .action-steps {
+      background-color: #f0f7ff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+
+    .action-steps h3 {
+      margin-top: 0;
+      color: #1976d2;
+      font-size: 18px;
+    }
+
+    .action-steps ol {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+
+    .action-steps li {
+      margin: 10px 0;
+      color: #555;
+    }
+
+    .footer {
+      background-color: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      color: #666666;
+      font-size: 13px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer a {
+      color: #ff9800;
+      text-decoration: none;
+    }
+
+    .highlight {
+      color: #ff9800;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="icon">⚠️</div>
+      <h1>Profile Update Required</h1>
+    </div>
+
+    <div class="content">
+      <div class="alert-box">
+        <p style="margin:0; font-size: 16px;">
+          <strong>Hi {{name}},</strong>
+        </p>
+        <p style="margin: 10px 0 0 0;">
+          Your candidate profile requires some updates before it can be approved.
+        </p>
+      </div>
+
+      <p>
+        Our review team has identified some issues that need to be addressed. Please review the feedback below and
+        update your profile accordingly.
+      </p>
+
+      {{#if reason}}
+      <div class="reason-box">
+        <h3>📝 Feedback from Review Team:</h3>
+        <p style="margin: 10px 0 0 0; line-height: 1.6;">{{reason}}</p>
+      </div>
+      {{/if}}
+
+      <div class="action-steps">
+        <h3>✅ What You Need to Do:</h3>
+        <ol>
+          <li><strong>Log in</strong> to your candidate portal</li>
+          <li><strong>Review the feedback</strong> provided above carefully</li>
+          <li><strong>Update your profile</strong> with the necessary corrections</li>
+          <li><strong>Submit for re-review</strong> - our team will review it promptly</li>
+        </ol>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="{{profileUrl}}" class="button">Update Your Profile</a>
+      </div>
+
+      <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 25px 0; border-radius: 5px;">
+        <p style="margin: 0; font-size: 14px;">
+          <strong>💡 Tip:</strong> Make sure all required fields are filled out completely and accurately. High-quality
+          photos and detailed descriptions increase your chances of approval.
+        </p>
+      </div>
+
+      <p style="margin-top: 30px;">
+        If you have any questions about the feedback or need assistance with your profile, please don't hesitate to
+        contact our support team at <a href="mailto:{{supportEmail}}" style="color: #ff9800;">{{supportEmail}}</a>.
+      </p>
+
+      <p style="margin-top: 30px; color: #999; font-size: 13px;">
+        Best regards,<br>
+        <strong>The ITFY E-Voting Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>This is an automated email from <strong>ITFY E-Voting Platform</strong></p>
+      <p>
+        <a href="{{profileUrl}}">Candidate Portal</a> |
+        <a href="mailto:{{supportEmail}}">Contact Support</a>
+      </p>
+      <p style="margin-top: 15px; color: #999;">
+        © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

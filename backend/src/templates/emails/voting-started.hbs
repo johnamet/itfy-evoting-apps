@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voting Started</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🗳️</div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Voting Has Started!</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong>{{name}}</strong>,
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                Great news! Voting is now open for <strong>{{eventName}}</strong>. Cast your vote now and make your voice heard!
+              </p>
+
+              <!-- Event Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Event</span>
+                          <span style="color: #111827; font-size: 18px; font-weight: 700; display: block; margin-top: 4px;">{{eventName}}</span>
+                        </td>
+                      </tr>
+                      {{#if eventDescription}}
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Description</span>
+                          <span style="color: #111827; font-size: 15px; display: block; margin-top: 4px; line-height: 1.5;">{{eventDescription}}</span>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Voting Started</span>
+                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime startDate}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Voting Ends</span>
+                          <span style="color: #EF4444; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime endDate}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Box -->
+              <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin-bottom: 30px; border-radius: 4px;">
+                <p style="color: #1E40AF; font-size: 14px; margin: 0; line-height: 1.6;">
+                  <strong>ℹ️ Note:</strong> {{#if categoriesCount}}Browse through <strong>{{categoriesCount}} categories</strong> and{{else}}Browse through available categories and{{/if}} vote for your favorite candidates. Don't miss this opportunity!
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{eventUrl}}" style="display: inline-block; background-color: #8B5CF6; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      Vote Now
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
+                Good luck to all candidates!<br>
+                <strong>The {{appName}} Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
+                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #8B5CF6; text-decoration: none;">{{supportEmail}}</a>
+              </p>
+              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+                © {{currentYear}} {{appName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

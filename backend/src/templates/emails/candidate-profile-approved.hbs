@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Approved</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .header .icon {
+      font-size: 64px;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 40px 30px;
+      color: #333333;
+      line-height: 1.8;
+    }
+
+    .success-box {
+      background-color: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 5px;
+    }
+
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 25px 0;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .next-steps {
+      background-color: #f0f7ff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+
+    .next-steps h3 {
+      margin-top: 0;
+      color: #1976d2;
+      font-size: 18px;
+    }
+
+    .next-steps ul {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+
+    .next-steps li {
+      margin: 10px 0;
+      color: #555;
+    }
+
+    .footer {
+      background-color: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      color: #666666;
+      font-size: 13px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer a {
+      color: #4caf50;
+      text-decoration: none;
+    }
+
+    .highlight {
+      color: #4caf50;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: #4caf50;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 15px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .info-value {
+      color: #333;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="icon">✅</div>
+      <h1>Profile Approved!</h1>
+    </div>
+
+    <div class="content">
+      <div class="success-box">
+        <p style="margin:0; font-size: 16px;">
+          <strong>Hi {{name}},</strong>
+        </p>
+        <p style="margin: 10px 0 0 0;">
+          Great news! Your candidate profile has been approved and is now <span class="badge">LIVE</span>
+        </p>
+      </div>
+
+      <p>
+        Your profile for <strong class="highlight">{{eventName}}</strong> has been reviewed and approved by our
+        administration team. Voters can now view your profile and cast their votes!
+      </p>
+
+      <div style="background-color: #f9f9f9; border-radius: 8px; padding: 20px; margin: 25px 0;">
+        <div class="info-row">
+          <span class="info-label">Event:</span>
+          <span class="info-value">{{eventName}}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Approval Date:</span>
+          <span class="info-value">{{formatDate approvalDate}}</span>
+        </div>
+        <div class="info-row" style="border-bottom: none;">
+          <span class="info-label">Status:</span>
+          <span class="info-value"><span class="badge">Approved</span></span>
+        </div>
+      </div>
+
+      <div class="next-steps">
+        <h3>🎯 What's Next?</h3>
+        <ul>
+          <li><strong>Monitor your progress</strong> - Check your vote count and statistics in your portal</li>
+          <li><strong>Update campaign materials</strong> - Keep your profile fresh and engaging</li>
+          <li><strong>Engage with voters</strong> - Your profile is now visible to all voters</li>
+          <li><strong>Stay informed</strong> - We'll notify you of any important updates</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="{{profileUrl}}" class="button">View Your Profile</a>
+      </div>
+
+      <div style="background-color: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin: 25px 0; border-radius: 5px;">
+        <p style="margin: 0; font-size: 14px;">
+          <strong>⚠️ Important:</strong> Any changes you make to your profile will require re-approval. Your profile
+          will be temporarily unpublished during the review process.
+        </p>
+      </div>
+
+      <p style="margin-top: 30px;">
+        Good luck with your campaign! We're here to support you every step of the way.
+      </p>
+
+      <p style="margin-top: 30px; color: #999; font-size: 13px;">
+        Best regards,<br>
+        <strong>The ITFY E-Voting Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>This is an automated email from <strong>ITFY E-Voting Platform</strong></p>
+      <p>
+        <a href="{{profileUrl}}">Candidate Portal</a> |
+        <a href="{{eventUrl}}">View Event</a>
+      </p>
+      <p style="margin-top: 15px; color: #999;">
+        © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

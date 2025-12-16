@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candidate Profile Updated - Review Required</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .header .icon {
+      font-size: 64px;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 40px 30px;
+      color: #333333;
+      line-height: 1.8;
+    }
+
+    .alert-box {
+      background-color: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 5px;
+    }
+
+    .info-box {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #666;
+    }
+
+    .info-value {
+      color: #333;
+    }
+
+    .changes-box {
+      background-color: #fff3e0;
+      border: 2px solid #ff9800;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+    }
+
+    .changes-box h3 {
+      margin-top: 0;
+      color: #f57c00;
+      font-size: 16px;
+    }
+
+    .field-list {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .field-list li {
+      margin: 8px 0;
+      color: #555;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 25px 0;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .footer {
+      background-color: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      color: #666666;
+      font-size: 13px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer a {
+      color: #2196f3;
+      text-decoration: none;
+    }
+
+    .highlight {
+      color: #2196f3;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: #ff9800;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="icon">🔔</div>
+      <h1>Candidate Profile Updated</h1>
+    </div>
+
+    <div class="content">
+      <div class="alert-box">
+        <p style="margin:0; font-size: 16px;">
+          <strong>Action Required: Review Candidate Profile Update</strong>
+        </p>
+        <p style="margin: 10px 0 0 0;">
+          A candidate has updated their profile and it requires your review and approval.
+        </p>
+      </div>
+
+      <div class="info-box">
+        <div class="info-row">
+          <span class="info-label">Candidate:</span>
+          <span class="info-value"><strong>{{candidateName}}</strong></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Event:</span>
+          <span class="info-value">{{eventTitle}}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Updated At:</span>
+          <span class="info-value">{{formatDateTime updatedAt}}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status:</span>
+          <span class="info-value"><span class="badge">Pending Review</span></span>
+        </div>
+      </div>
+
+      {{#if changedFieldsList}}
+      <div class="changes-box">
+        <h3>📝 Fields Changed:</h3>
+        <ul class="field-list">
+          {{#each changedFieldsList}}
+          <li>{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+      {{else if changedFields}}
+      <div class="changes-box">
+        <h3>📝 Fields Changed:</h3>
+        <p style="margin: 10px 0 0 0;">{{changedFields}}</p>
+      </div>
+      {{/if}}
+
+      <div style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin: 25px 0; border-radius: 5px;">
+        <p style="margin: 0; font-size: 14px;">
+          <strong>⚠️ Important:</strong> The candidate's profile has been automatically unpublished and their status
+          changed to "Profile Update Pending". They will not be visible to voters until you review and approve the
+          changes.
+        </p>
+      </div>
+
+      <p>
+        Please review the updated profile to ensure all information meets your event's standards and guidelines.
+      </p>
+
+      <div style="text-align: center;">
+        <a href="{{reviewUrl}}" class="button">Review Profile Now</a>
+      </div>
+
+      <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 25px 0; border-radius: 5px;">
+        <p style="margin: 0; font-size: 14px;">
+          <strong>💡 Review Tip:</strong> Check that all updated information is accurate, appropriate, and follows your
+          event guidelines. You can approve or reject the changes, or provide feedback to the candidate.
+        </p>
+      </div>
+
+      <p style="margin-top: 30px; color: #999; font-size: 13px;">
+        This is an automated notification from ITFY E-Voting Platform<br>
+        <strong>Event Administration Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>This is an automated email from <strong>ITFY E-Voting Platform</strong></p>
+      <p>
+        <a href="{{reviewUrl}}">Admin Dashboard</a> |
+        <a href="mailto:support@itfy-evoting.com">Contact Support</a>
+      </p>
+      <p style="margin-top: 15px; color: #999;">
+        © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

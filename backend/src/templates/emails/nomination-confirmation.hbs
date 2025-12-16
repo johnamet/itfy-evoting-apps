@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Confirmed</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🎯</div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Nomination Received</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong>{{name}}</strong>,
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                Thank you for submitting your nomination! We've successfully received your nomination for the event <strong>{{eventName}}</strong>.
+              </p>
+
+              <!-- Nomination Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Event</span>
+                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{eventName}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Category</span>
+                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{categoryName}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Nominee</span>
+                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{nomineeName}}</span>
+                        </td>
+                      </tr>
+                      {{#if nomineeEmail}}
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Nominee Email</span>
+                          <span style="color: #111827; font-size: 16px; display: block; margin-top: 4px;">{{nomineeEmail}}</span>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      <tr>
+                        <td style="padding: 10px 0;">
+                          <span style="color: #6B7280; font-size: 14px; display: block;">Submitted On</span>
+                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime submittedDate}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Status Info -->
+              <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin-bottom: 30px; border-radius: 4px;">
+                <p style="color: #1E40AF; font-size: 14px; margin: 0; line-height: 1.6;">
+                  <strong>📋 What's Next?</strong> Your nomination is currently under review. We'll notify you once it has been approved or if we need any additional information.
+                </p>
+              </div>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
+                Thank you for your participation!<br>
+                <strong>The {{appName}} Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
+                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #10B981; text-decoration: none;">{{supportEmail}}</a>
+              </p>
+              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+                © {{currentYear}} {{appName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

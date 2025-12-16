@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nomination Approved</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">✓</div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Nomination Approved!</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong>{{name}}</strong>,
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                Great news! Your nomination has been approved and the candidate is now live in the voting system for <strong>{{eventName}}</strong>.
+              </p>
+
+              <!-- Approval Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ECFDF5; border-radius: 8px; border: 2px solid #10B981; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #A7F3D0;">
+                          <span style="color: #065F46; font-size: 14px; display: block;">Event</span>
+                          <span style="color: #064E3B; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{eventName}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #A7F3D0;">
+                          <span style="color: #065F46; font-size: 14px; display: block;">Category</span>
+                          <span style="color: #064E3B; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{categoryName}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #A7F3D0;">
+                          <span style="color: #065F46; font-size: 14px; display: block;">Candidate</span>
+                          <span style="color: #064E3B; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{candidateName}}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 10px 0;">
+                          <span style="color: #065F46; font-size: 14px; display: block;">Approved On</span>
+                          <span style="color: #064E3B; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime approvedDate}}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Success Message -->
+              <div style="background-color: #ECFDF5; border-left: 4px solid #10B981; padding: 16px; margin-bottom: 30px; border-radius: 4px;">
+                <p style="color: #065F46; font-size: 14px; margin: 0; line-height: 1.6;">
+                  <strong>🎉 Congratulations!</strong> The candidate is now live and eligible to receive votes. You can view their profile and share it with supporters.
+                </p>
+              </div>
+
+              <!-- CTA Button -->
+              {{#if candidateUrl}}
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{candidateUrl}}" style="display: inline-block; background-color: #10B981; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      View Candidate Profile
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              {{/if}}
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
+                Thank you for your contribution!<br>
+                <strong>The {{appName}} Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
+                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #10B981; text-decoration: none;">{{supportEmail}}</a>
+              </p>
+              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+                © {{currentYear}} {{appName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

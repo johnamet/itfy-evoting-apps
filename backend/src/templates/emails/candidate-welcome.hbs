@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Candidate Portal</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 30px;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .content {
+      padding: 40px 30px;
+      color: #333333;
+      line-height: 1.8;
+    }
+
+    .welcome-box {
+      background-color: #f8f9ff;
+      border-left: 4px solid #667eea;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 5px;
+    }
+
+    .credential-box {
+      background-color: #fff8e1;
+      border: 2px dashed #ffa726;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .credential-box .label {
+      font-size: 14px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .credential-box .code {
+      font-size: 32px;
+      font-weight: bold;
+      color: #f57c00;
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+      margin: 10px 0;
+    }
+
+    .info-text {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    .button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff;
+      text-decoration: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-weight: 600;
+      margin: 25px 0;
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+    }
+
+    .instructions {
+      background-color: #f0f7ff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+
+    .instructions h3 {
+      margin-top: 0;
+      color: #1976d2;
+      font-size: 18px;
+    }
+
+    .instructions ol {
+      margin: 15px 0;
+      padding-left: 20px;
+    }
+
+    .instructions li {
+      margin: 10px 0;
+      color: #555;
+    }
+
+    .footer {
+      background-color: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      color: #666666;
+      font-size: 13px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #ddd, transparent);
+      margin: 30px 0;
+    }
+
+    .highlight {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: #4caf50;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Welcome to the Candidate Portal!</h1>
+    </div>
+
+    <div class="content">
+      <div class="welcome-box">
+        <p style="margin:0; font-size: 16px;">
+          <strong>Hi {{name}},</strong>
+        </p>
+        <p style="margin: 10px 0 0 0;">
+          Your candidate profile has been created successfully! You now have access to your personal candidate portal.
+        </p>
+      </div>
+
+      {{#if eventName}}
+      <p>
+        You've been registered as a candidate for <strong class="highlight">{{eventName}}</strong>.
+      </p>
+      {{/if}}
+
+      <div class="credential-box">
+        <div class="label">Your Candidate Code</div>
+        <div class="code">{{candidateCode}}</div>
+        <div class="info-text">
+          ⚠️ <strong>Keep this code secure</strong> - you'll need it to log into your portal
+        </div>
+      </div>
+
+      <div class="instructions">
+        <h3>📋 Getting Started</h3>
+        <ol>
+          <li><strong>Log in</strong> to your candidate portal using your candidate code</li>
+          <li><strong>Complete your profile</strong> with all required information</li>
+          <li><strong>Upload media</strong> like photos and campaign materials</li>
+          <li><strong>Select categories</strong> you want to contest in</li>
+          <li><strong>Submit for review</strong> - our team will approve your profile</li>
+        </ol>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="{{loginUrl}}" class="button">Access Candidate Portal</a>
+      </div>
+
+      <div class="divider"></div>
+
+      <p style="font-size: 14px; color: #666;">
+        <strong>💡 Important Notes:</strong>
+      </p>
+      <ul style="font-size: 14px; color: #666; line-height: 1.8;">
+        <li>Your profile must be approved before it becomes visible to voters</li>
+        <li>Any updates to your profile will require re-approval</li>
+        <li>Admin-approved categories cannot be removed by you</li>
+        <li>You can update your profile anytime, but changes trigger a review process</li>
+      </ul>
+
+      <p style="margin-top: 30px;">
+        If you have any questions or need assistance, don't hesitate to reach out to our support team.
+      </p>
+
+      <p style="margin-top: 30px; color: #999; font-size: 13px;">
+        Best regards,<br>
+        <strong>The ITFY E-Voting Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>This is an automated email from <strong>ITFY E-Voting Platform</strong></p>
+      <p>
+        <a href="mailto:support@itfy-evoting.com">Contact Support</a> |
+        <a href="{{loginUrl}}">Candidate Portal</a>
+      </p>
+      <p style="margin-top: 15px; color: #999;">
+        © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>

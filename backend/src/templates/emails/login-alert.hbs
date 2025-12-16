@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Alert</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🔒</div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">New Login Detected</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong>{{name}}</strong>,
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                We detected a new login to your {{appName}} account. If this was you, you can safely ignore this email. If you don't recognize this activity, please secure your account immediately.
+              </p>
+
+              <!-- Login Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #FEE2E2; border-radius: 8px; border: 2px solid #EF4444; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #FECACA;">
+                          <span style="color: #7F1D1D; font-size: 14px; display: block;">Date & Time</span>
+                          <span style="color: #7F1D1D; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime loginDate}}</span>
+                        </td>
+                      </tr>
+                      {{#if ipAddress}}
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #FECACA;">
+                          <span style="color: #7F1D1D; font-size: 14px; display: block;">IP Address</span>
+                          <span style="color: #7F1D1D; font-size: 16px; font-weight: 600; display: block; margin-top: 4px; font-family: monospace;">{{ipAddress}}</span>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      {{#if location}}
+                      <tr>
+                        <td style="padding: 10px 0; border-bottom: 1px solid #FECACA;">
+                          <span style="color: #7F1D1D; font-size: 14px; display: block;">Location</span>
+                          <span style="color: #7F1D1D; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{location}}</span>
+                        </td>
+                      </tr>
+                      {{/if}}
+                      {{#if device}}
+                      <tr>
+                        <td style="padding: 10px 0;">
+                          <span style="color: #7F1D1D; font-size: 14px; display: block;">Device</span>
+                          <span style="color: #7F1D1D; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{device}}</span>
+                        </td>
+                      </tr>
+                      {{/if}}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Warning -->
+              <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 16px; margin-bottom: 30px; border-radius: 4px;">
+                <p style="color: #92400E; font-size: 14px; margin: 0 0 10px; font-weight: 600;">
+                  ⚠️ Don't recognize this login?
+                </p>
+                <p style="color: #92400E; font-size: 14px; margin: 0; line-height: 1.6;">
+                  If this wasn't you, your account may be compromised. Please change your password immediately and review your account activity.
+                </p>
+              </div>
+
+              <!-- CTA Buttons -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{secureAccountUrl}}" style="display: inline-block; background-color: #EF4444; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 0 5px;">
+                      Secure My Account
+                    </a>
+                    {{#if reviewActivityUrl}}
+                    <a href="{{reviewActivityUrl}}" style="display: inline-block; background-color: #6B7280; color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 0 5px;">
+                      Review Activity
+                    </a>
+                    {{/if}}
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
+                Stay safe,<br>
+                <strong>The {{appName}} Security Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
+                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #EF4444; text-decoration: none;">{{supportEmail}}</a>
+              </p>
+              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+                © {{currentYear}} {{appName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

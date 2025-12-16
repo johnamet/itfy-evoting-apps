@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Results Published</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Results Are In!</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
+                Hi <strong>{{name}}</strong>,
+              </p>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
+                The results for <strong>{{eventName}}</strong> are now available! Thank you for participating in this exciting event.
+              </p>
+
+              <!-- Event Info -->
+              <div style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #E5E7EB;">
+                <p style="color: #6B7280; font-size: 14px; margin: 0 0 5px;">Event</p>
+                <p style="color: #111827; font-size: 20px; font-weight: 700; margin: 0;">{{eventName}}</p>
+              </div>
+
+              {{#if winners}}
+              <!-- Winners List -->
+              <h2 style="color: #111827; font-size: 20px; font-weight: 600; margin: 0 0 20px;">🌟 Winners</h2>
+              
+              {{#each winners}}
+              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 16px; margin-bottom: 15px; border-radius: 4px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td>
+                      <p style="color: #92400E; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 5px; font-weight: 600;">{{categoryName}}</p>
+                      <p style="color: #111827; font-size: 18px; font-weight: 700; margin: 0 0 5px;">{{candidateName}}</p>
+                      <p style="color: #78350F; font-size: 14px; margin: 0;">{{formatNumber voteCount}} votes</p>
+                    </td>
+                    <td align="right" valign="middle" style="width: 60px;">
+                      <div style="background-color: #F59E0B; color: #ffffff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; text-align: center; line-height: 50px;">
+                        {{position}}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+              {{/each}}
+              {{/if}}
+
+              <!-- Statistics -->
+              {{#if totalVotes}}
+              <div style="background-color: #EFF6FF; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="text-align: center; padding: 10px;">
+                      <p style="color: #1E40AF; font-size: 28px; font-weight: 700; margin: 0;">{{formatNumber totalVotes}}</p>
+                      <p style="color: #3B82F6; font-size: 14px; margin: 5px 0 0;">Total Votes</p>
+                    </td>
+                    {{#if totalParticipants}}
+                    <td style="text-align: center; padding: 10px; border-left: 1px solid #DBEAFE;">
+                      <p style="color: #1E40AF; font-size: 28px; font-weight: 700; margin: 0;">{{formatNumber totalParticipants}}</p>
+                      <p style="color: #3B82F6; font-size: 14px; margin: 5px 0 0;">Participants</p>
+                    </td>
+                    {{/if}}
+                  </tr>
+                </table>
+              </div>
+              {{/if}}
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{resultsUrl}}" style="display: inline-block; background-color: #F59E0B; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
+                      View Full Results
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
+                Thank you for being part of this event!<br>
+                <strong>The {{appName}} Team</strong>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
+              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
+                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #F59E0B; text-decoration: none;">{{supportEmail}}</a>
+              </p>
+              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+                © {{currentYear}} {{appName}}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
