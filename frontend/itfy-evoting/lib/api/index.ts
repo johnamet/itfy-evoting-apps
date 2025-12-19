@@ -140,22 +140,10 @@ export {
   type NotificationPreferences,
 } from './notifications';
 
-// Default export with all APIs
+
+
 const apiServices = {
-  auth: authApi,
-  candidateAuth: candidateAuthApi,
-  users: usersApi,
-  events: eventsApi,
-  categories: categoriesApi,
-  candidates: candidatesApi,
-  votes: votesApi,
-  bundles: bundlesApi,
-  payments: paymentsApi,
-  forms: formsApi,
-  submissions: submissionsApi,
-  coupons: couponsApi,
-  slides: slidesApi,
-  notifications: notificationsApi,
-};
+
+}
 
 export default apiServices;

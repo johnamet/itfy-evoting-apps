@@ -1,5 +1,5 @@
 // src/lib/mocks/categories.ts
-import type { Category } from '@/types';
+import type { Category } from '@/types/index';
 
 export const mockCategories: Category[] = [
   {
@@ -7,14 +7,16 @@ export const mockCategories: Category[] = [
     name: 'Best Young Developer',
     description: 'Outstanding coding skills and innovative projects',
     icon: '/icons/code.svg',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
     slug: 'best-young-developer',
     candidates: ['1', '2', '3'],
     status: 'active',
     event: 'event1',
     is_voting_open: true,
+    voting_start_date: null,
+    voting_deadline: null,
     total_votes: 8450,
     min_candidates: 5,
+    max_candidates: null,
     display_order: 1,
     is_featured: true,
     voting_rules: 'One vote per category',
@@ -29,24 +31,40 @@ export const mockCategories: Category[] = [
     name: 'Most Innovative Startup',
     description: 'Groundbreaking tech solutions impacting Ghana',
     icon: '/icons/lightbulb.svg',
-    image: 'https://images.unsplash.com/photo-1465101178521-c1a9136a3c5a?auto=format&fit=crop&w=800&q=80',
+    slug: 'most-innovative-startup',
+    candidates: ['4', '5', '6'],
+    status: 'active',
+    event: 'event1',
+    is_voting_open: true,
+    voting_start_date: null,
+    voting_deadline: null,
     total_votes: 7200,
+    min_candidates: 5,
+    max_candidates: null,
+    display_order: 2,
     is_featured: true,
-    // ... similar
+    voting_rules: 'One vote per category',
+    allow_write_in: false,
+    require_authentication: true,
+    results_visibility: 'public',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   },
   {
     _id: 'cat3',
     name: 'Women in Tech Leader',
     description: 'Inspiring female leaders in Ghana\'s tech space',
     icon: '/icons/women-tech.svg',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80',
     slug: 'women-in-tech-leader',
     candidates: ['7', '8', '9'],
     status: 'active',
     event: 'event1',
     is_voting_open: true,
+    voting_start_date: null,
+    voting_deadline: null,
     total_votes: 6800,
     min_candidates: 5,
+    max_candidates: null,
     display_order: 3,
     is_featured: true,
     voting_rules: 'One vote per category',
@@ -56,5 +74,5 @@ export const mockCategories: Category[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
-  // Add 6-9 more categories
+  // Add more categories as needed, ensuring all required fields are present
 ];

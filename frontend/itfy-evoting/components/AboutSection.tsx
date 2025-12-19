@@ -4,8 +4,11 @@ import { Button } from '@/components/ui/button';
 import GlassCard from '@/components/ui/GlassCard';
 import Image from 'next/image';
 import { Award, Users, Rocket, Target, ArrowRight, Sparkles } from 'lucide-react';
+import { useState } from 'react';
 
 export default function AboutSection() {
+
+  const [showModal, setShowModal] = useState(false);
 
   const stats = [
     { number: "500+", label: "Young Talents", icon: Users, color: "from-purple-500 to-pink-500" },

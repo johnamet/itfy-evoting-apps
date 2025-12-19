@@ -1,4 +1,20 @@
 // ==================
+// Vote Code Types
+// ==================
+
+export interface VoteCode {
+  _id: ObjectId;
+  code: string;
+  event: ObjectId;
+  payment: ObjectId;
+  is_used: boolean;
+  votes_purchased: number;
+  votes_cast: number;
+  votes_remaining: number;
+  created_at: string;
+  updated_at: string;
+}
+// ==================
 // Common Types
 // ==================
 
@@ -181,6 +197,7 @@ export interface Event {
   is_featured: boolean;
   logo_url?: string | null;
   banner_url?: string | null;
+  cover_image?: string | null;
   gallery?: string[];
   speakers?: Record<string, unknown>[];
   sponsors?: Record<string, unknown>[];

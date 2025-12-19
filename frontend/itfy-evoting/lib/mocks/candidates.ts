@@ -1,4 +1,5 @@
 
+import { Candidate } from '@/types/index';    
 
 export const mockCandidates: Candidate[] = [
     {

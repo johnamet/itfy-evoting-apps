@@ -13,7 +13,6 @@ import type {
   ForgotPasswordRequest,
   ResetPasswordRequest,
   CandidateLoginRequest,
-  CandidateLoginResponse,
 } from '@/types';
 
 // Auth response types
