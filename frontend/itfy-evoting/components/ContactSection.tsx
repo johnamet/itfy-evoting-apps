@@ -9,22 +9,22 @@ export default function ContactSection() {
     {
       icon: Mail,
       title: "Email",
-      value: "info@itfyghana.org",
-      href: "mailto:info@itfyghana.org",
-      color: "from-purple-500 to-pink-500"
+      value: "info@itforyouthghana.org",
+      href: "mailto:info@itforyouthghana.org",
+      color: "from-itfy-primary to-itfy-600"
     },
     {
       icon: Phone,
       title: "Phone",
-      value: "+233 50 123 4567",
-      href: "tel:+233501234567",
+      value: "+233 596 244 834",
+      href: "tel:+233596244834",
       color: "from-blue-500 to-cyan-500"
     },
     {
       icon: MapPin,
       title: "Location",
-      value: "Accra Digital Centre\nRing Road West, Accra",
-      href: "#",
+      value: "Hno. L529, Gecko Street\nKwabenya-Musuku, Accra, Ghana",
+      href: "https://maps.google.com/?q=Kwabenya-Musuku,+Accra,+Ghana",
       color: "from-green-500 to-teal-500"
     }
   ];
@@ -39,20 +39,20 @@ export default function ContactSection() {
     <section className="py-32 relative overflow-hidden bg-gradient-to-b from-gray-900 via-black to-gray-900">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
-      <div className="absolute top-1/4 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 right-0 w-96 h-96 bg-itfy-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 left-0 w-96 h-96 bg-itfy-400/10 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-6 relative z-10">
         {/* Section Header */}
         <div className="text-center mb-20">
-          <div className="inline-flex items-center gap-2 bg-purple-500/10 backdrop-blur-sm px-6 py-3 rounded-full border border-purple-500/20 mb-6">
-            <MessageCircle className="w-5 h-5 text-purple-400" />
-            <span className="text-purple-300 font-medium">Get in Touch</span>
+          <div className="inline-flex items-center gap-2 bg-itfy-primary/10 backdrop-blur-sm px-6 py-3 rounded-full border border-itfy-primary/20 mb-6">
+            <MessageCircle className="w-5 h-5 text-itfy-300" />
+            <span className="text-itfy-300 font-medium">Get in Touch</span>
           </div>
           
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
             We'd Love to
-            <span className="block mt-2 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="block mt-2 bg-gradient-to-r from-itfy-300 via-itfy-primary to-itfy-light-blue bg-clip-text text-transparent">
               Hear From You
             </span>
           </h2>
@@ -82,7 +82,7 @@ export default function ContactSection() {
                         <p className="text-gray-400 text-sm mb-1">{method.title}</p>
                         <a 
                           href={method.href} 
-                          className="text-xl text-white hover:text-purple-400 transition font-medium break-words"
+                          className="text-xl text-white hover:text-itfy-300 transition font-medium break-words"
                         >
                           {method.value}
                         </a>
@@ -94,9 +94,9 @@ export default function ContactSection() {
             </div>
 
             {/* Business Hours */}
-            <GlassCard className="p-8 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border-purple-500/20">
+            <GlassCard className="p-8 bg-gradient-to-br from-itfy-primary/10 to-itfy-400/10 border-itfy-primary/20">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-itfy-primary to-itfy-600 flex items-center justify-center">
                   <Clock className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-2xl font-bold text-white">Business Hours</h3>
@@ -128,7 +128,7 @@ export default function ContactSection() {
           {/* Right Column - Contact Form */}
           <GlassCard className="p-8 lg:p-10 bg-gradient-to-br from-white/5 to-white/10">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-itfy-primary to-itfy-600 flex items-center justify-center">
                 <Send className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-3xl font-bold text-white">Send us a Message</h3>
@@ -141,7 +141,7 @@ export default function ContactSection() {
                   <input
                     type="text"
                     placeholder="John Doe"
-                    className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-itfy-primary focus:ring-2 focus:ring-itfy-primary/20 transition"
                   />
                 </div>
                 <div>
@@ -149,7 +149,7 @@ export default function ContactSection() {
                   <input
                     type="email"
                     placeholder="john@example.com"
-                    className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+                    className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-itfy-primary focus:ring-2 focus:ring-itfy-primary/20 transition"
                   />
                 </div>
               </div>
@@ -159,7 +159,7 @@ export default function ContactSection() {
                 <input
                   type="text"
                   placeholder="How can we help you?"
-                  className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition"
+                  className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-itfy-primary focus:ring-2 focus:ring-itfy-primary/20 transition"
                 />
               </div>
 
@@ -168,12 +168,12 @@ export default function ContactSection() {
                 <textarea
                   rows={6}
                   placeholder="Tell us more about your inquiry..."
-                  className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition resize-none"
+                  className="w-full px-6 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-itfy-primary focus:ring-2 focus:ring-itfy-primary/20 transition resize-none"
                 />
               </div>
 
               <Button 
-                className="w-full py-6 text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-[1.02] group"
+                className="w-full py-6 text-lg bg-gradient-to-r from-itfy-primary via-itfy-600 to-itfy-primary hover:from-itfy-600 hover:via-itfy-700 hover:to-itfy-600 shadow-2xl hover:shadow-itfy-primary/50 transition-all hover:scale-[1.02] group"
               >
                 <Send className="w-5 h-5 mr-3 group-hover:translate-x-1 transition-transform" />
                 Send Message

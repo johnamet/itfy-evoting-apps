@@ -3,42 +3,40 @@
 import { Button } from '@/components/ui/button';
 import GlassCard from '@/components/ui/GlassCard';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Award, Users, Rocket, Target, ArrowRight, Sparkles } from 'lucide-react';
-import { useState } from 'react';
 
 export default function AboutSection() {
 
-  const [showModal, setShowModal] = useState(false);
-
   const stats = [
-    { number: "500+", label: "Young Talents", icon: Users, color: "from-purple-500 to-pink-500" },
-    { number: "20+", label: "Annual Events", icon: Rocket, color: "from-blue-500 to-cyan-500" },
+    { number: "1000+", label: "Youth Empowered", icon: Users, color: "from-[#0152be] to-sky-500" },
+    { number: "20+", label: "Programs & Events", icon: Rocket, color: "from-blue-500 to-cyan-500" },
     { number: "15+", label: "Award Categories", icon: Award, color: "from-yellow-500 to-orange-500" },
   ];
 
   const features = [
     {
       icon: Target,
-      title: "Recognition Platform",
-      description: "Spotlight exceptional young tech talent across Ghana's digital ecosystem"
+      title: "Skills Development",
+      description: "Empower underserved youth with essential coding and digital skills for the future"
     },
     {
       icon: Rocket,
       title: "Career Acceleration",
-      description: "Connect innovators with opportunities, mentorship, and industry leaders"
+      description: "Connect young talents with opportunities, mentorship, and industry leaders"
     },
     {
       icon: Award,
-      title: "Community Building",
-      description: "Foster a thriving community of next-generation tech professionals"
+      title: "Recognition & Awards",
+      description: "Celebrate and spotlight exceptional young tech talent across Ghana"
     }
   ];
 
   return (
-    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
+    <section className="relative py-32 overflow-hidden bg-gradient-to-b from-gray-900 via-[#0c2d5a]/20 to-gray-900">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-white/[0.02]" />
-      <div className="absolute top-1/4 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 left-0 w-96 h-96 bg-[#0152be]/10 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-6 relative z-10">
@@ -51,13 +49,13 @@ export default function AboutSection() {
           
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
             Empowering Ghana&apos;s
-            <span className="block mt-2 bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent">
+            <span className="block mt-2 bg-gradient-to-r from-[#0152be] via-sky-400 to-cyan-400 bg-clip-text text-transparent">
               Digital Future
             </span>
           </h2>
           
           <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            IT For Youth Ghana celebrates and nurtures the brightest minds driving innovation across our nation&apos;s technology landscape
+            IT for Youth Ghana empowers underserved youth with essential technology skills, building the next generation of tech leaders across our nation
           </p>
         </div>
 
@@ -66,13 +64,10 @@ export default function AboutSection() {
           <div className="space-y-8">
             <div className="space-y-6">
               <p className="text-xl text-gray-300 leading-relaxed">
-                We&apos;re building a platform where young tech talent doesn&apos;t just participate—they lead. 
-                From software developers to AI innovators, we recognize excellence and create pathways 
-                to success.
+                IT for Youth Ghana empowers underserved youth with essential technology skills. We believe every young person deserves access to digital education and the opportunity to become a tech leader.
               </p>
               <p className="text-xl text-gray-300 leading-relaxed">
-                Through our awards, events, and community initiatives, we&apos;re shaping the narrative 
-                of Ghana&apos;s tech ecosystem—one brilliant mind at a time.
+                Through our programs, awards, and community initiatives, we&apos;re building the next generation of tech professionals and innovators—transforming lives one skill at a time.
               </p>
             </div>
 
@@ -96,22 +91,25 @@ export default function AboutSection() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button 
-                size="lg" 
-                onClick={() => setShowModal(true)}
-                className="group px-8 py-6 text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-purple-500/50 transition-all duration-300"
-              >
-                Our Story
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
+              <Link href="/about">
+                <Button 
+                  size="lg" 
+                  className="group px-8 py-6 text-lg bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-blue-700 hover:to-sky-600 shadow-lg hover:shadow-[#0152be]/50 transition-all duration-300"
+                >
+                  Our Story
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
               
-              <Button 
-                size="lg"
-                variant="outline"
-                className="px-8 py-6 text-lg border-white/20 text-white hover:bg-white/10 backdrop-blur-sm"
-              >
-                View Impact Report
-              </Button>
+              <Link href="/about#programs">
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  className="px-8 py-6 text-lg border-white/20 text-white hover:bg-white/10 backdrop-blur-sm"
+                >
+                  View Our Programs
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -126,7 +124,7 @@ export default function AboutSection() {
                     width={800} height={256}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 to-transparent opacity-60" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0c2d5a]/80 to-transparent opacity-60" />
                 </div>
                 <div className="relative h-48 rounded-2xl overflow-hidden group">
                   <Image 
@@ -146,7 +144,7 @@ export default function AboutSection() {
                     width={800} height={192}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-pink-900/80 to-transparent opacity-60" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-sky-900/80 to-transparent opacity-60" />
                 </div>
                 <div className="relative h-64 rounded-2xl overflow-hidden group">
                   <Image 
@@ -175,8 +173,8 @@ export default function AboutSection() {
               key={i}
               className="group p-8 hover:scale-105 transition-all duration-300 cursor-pointer"
             >
-              <div className="w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:rotate-6 transition-transform">
-                <feature.icon className="w-8 h-8 text-purple-400" />
+              <div className="w-16 h-16 mb-6 rounded-2xl bg-gradient-to-br from-[#0152be]/20 to-sky-500/20 flex items-center justify-center group-hover:rotate-6 transition-transform">
+                <feature.icon className="w-8 h-8 text-[#0152be]" />
               </div>
               <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
               <p className="text-gray-300 leading-relaxed">{feature.description}</p>

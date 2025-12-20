@@ -24,11 +24,11 @@ export default function CandidatesSection() {
       { color: 'from-gray-300 to-gray-400', icon: Award },
       { color: 'from-amber-600 to-amber-700', icon: Award },
     ];
-    return badges[index] || { color: 'from-purple-400 to-pink-400', icon: Star };
+    return badges[index] || { color: 'from-[#0152be] to-sky-400', icon: Star };
   };
 
   return (
-    <section className="py-32 relative overflow-hidden bg-gradient-to-b from-gray-900 via-purple-900/30 to-gray-900">
+    <section className="py-32 relative overflow-hidden bg-gradient-to-b from-gray-900 via-[#0c2d5a]/30 to-gray-900">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl" />
@@ -44,7 +44,7 @@ export default function CandidatesSection() {
           
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
             Leading Nominees
-            <span className="block mt-2 bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="block mt-2 bg-gradient-to-r from-green-400 via-[#0152be] to-sky-400 bg-clip-text text-transparent">
               in the Spotlight
             </span>
           </h2>
@@ -90,17 +90,17 @@ export default function CandidatesSection() {
                     </div>
 
                     {/* Animated Ring */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-xl group-hover:blur-2xl transition-all" />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#0152be]/20 to-sky-500/20 blur-xl group-hover:blur-2xl transition-all" />
                   </div>
 
                   {/* Candidate Info */}
-                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-400 group-hover:to-pink-400 group-hover:bg-clip-text transition-all">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-[#0152be] group-hover:to-sky-400 group-hover:bg-clip-text transition-all">
                     {candidate.first_name} {candidate.last_name}
                   </h3>
                   
-                  <div className="inline-flex items-center gap-2 bg-purple-500/20 px-3 py-1 rounded-full mb-4 border border-purple-500/30">
-                    <Trophy className="w-3 h-3 text-purple-400" />
-                    <p className="text-purple-300 text-xs font-medium">Best Young Developer</p>
+                  <div className="inline-flex items-center gap-2 bg-[#0152be]/20 px-3 py-1 rounded-full mb-4 border border-[#0152be]/30">
+                    <Trophy className="w-3 h-3 text-[#0152be]" />
+                    <p className="text-sky-300 text-xs font-medium">Best Young Developer</p>
                   </div>
                   
                   <p className="text-gray-300 text-sm mb-6 line-clamp-3 leading-relaxed">
@@ -117,7 +117,7 @@ export default function CandidatesSection() {
 
                   {/* CTA */}
                   <Button 
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 group/btn"
+                    className="w-full bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-blue-700 hover:to-sky-600 group/btn"
                     variant="outline"
                   >
                     View Profile

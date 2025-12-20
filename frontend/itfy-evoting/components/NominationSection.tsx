@@ -11,7 +11,7 @@ export default function NominationSection() {
       icon: Users,
       title: "Open to All",
       description: "Anyone can nominate — friends, mentors, colleagues, family members",
-      color: "from-purple-500 to-pink-500"
+      color: "from-[#0152be] to-sky-500"
     },
     {
       icon: Clock,
@@ -30,13 +30,13 @@ export default function NominationSection() {
   return (
     <section className="py-32 relative overflow-hidden">
       {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0c2d5a] via-blue-900 to-indigo-900" />
       <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]" />
       
       {/* Animated Blobs */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-500" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#0152be]/20 rounded-full blur-3xl animate-pulse delay-500" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-5xl mx-auto">
@@ -53,7 +53,7 @@ export default function NominationSection() {
           <div className="text-center mb-12">
             <h2 className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight">
               Nominate Ghana's Next
-              <span className="block mt-4 bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="block mt-4 bg-gradient-to-r from-yellow-400 via-sky-400 to-[#0152be] bg-clip-text text-transparent">
                 Tech Superstar
               </span>
             </h2>
@@ -71,7 +71,7 @@ export default function NominationSection() {
             <Link href="/nominate">
               <Button 
                 size="lg" 
-                className="px-12 py-8 text-xl bg-gradient-to-r from-yellow-500 via-pink-500 to-purple-500 hover:from-yellow-600 hover:via-pink-600 hover:to-purple-600 shadow-2xl hover:shadow-pink-500/50 transition-all hover:scale-105 group"
+                className="px-12 py-8 text-xl bg-gradient-to-r from-yellow-500 via-sky-500 to-[#0152be] hover:from-yellow-600 hover:via-sky-600 hover:to-blue-700 shadow-2xl hover:shadow-[#0152be]/50 transition-all hover:scale-105 group"
               >
                 <Target className="mr-3 w-6 h-6 group-hover:rotate-12 transition-transform" />
                 Nominate Someone Now
@@ -113,7 +113,7 @@ export default function NominationSection() {
           <GlassCard className="p-10 bg-gradient-to-r from-white/5 to-white/10 border-white/20">
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="flex-shrink-0">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#0152be] to-sky-500 flex items-center justify-center shadow-2xl">
                   <Trophy className="w-12 h-12 text-white" />
                 </div>
               </div>

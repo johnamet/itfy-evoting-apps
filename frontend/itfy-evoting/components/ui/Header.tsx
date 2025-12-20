@@ -42,7 +42,7 @@ export default function Header() {
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-itfy-primary to-itfy-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
               <Trophy className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -60,13 +60,13 @@ export default function Header() {
                 className={cn(
                   'text-lg font-medium transition-colors relative',
                   pathname === link.href
-                    ? 'text-purple-400'
-                    : 'text-white hover:text-purple-300'
+                    ? 'text-itfy-300'
+                    : 'text-white hover:text-itfy-300'
                 )}
               >
                 {link.label}
                 {pathname === link.href && (
-                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-purple-400 to-pink-400" />
+                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-itfy-300 to-itfy-primary" />
                 )}
               </Link>
             ))}
@@ -74,7 +74,7 @@ export default function Header() {
             {/* CTA Buttons */}
             <div className="flex items-center gap-4 ml-8">
               <Link href="/nominate">
-                <Button className="bg-gradient-to-r from-pink-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 shadow-lg px-6 py-3 text-lg">
+                <Button className="bg-gradient-to-r from-itfy-primary to-itfy-600 hover:from-itfy-600 hover:to-itfy-700 shadow-lg px-6 py-3 text-lg">
                   Nominate Now
                 </Button>
               </Link>
@@ -109,7 +109,7 @@ export default function Header() {
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   'text-2xl font-medium transition-colors',
-                  pathname === link.href ? 'text-purple-400' : 'text-white'
+                  pathname === link.href ? 'text-itfy-300' : 'text-white'
                 )}
               >
                 {link.label}
@@ -118,7 +118,7 @@ export default function Header() {
 
             <div className="pt-6 border-t border-white/20 flex flex-col gap-4">
               <Link href="/nominate" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full py-6 text-xl bg-gradient-to-r from-pink-500 to-yellow-500">
+                <Button className="w-full py-6 text-xl bg-gradient-to-r from-itfy-primary to-itfy-600">
                   Nominate Now
                 </Button>
               </Link>

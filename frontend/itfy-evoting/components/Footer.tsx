@@ -60,19 +60,19 @@ export default function Footer() {
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: "#", label: "Facebook", color: "hover:bg-blue-600" },
-    { icon: Twitter, href: "#", label: "Twitter", color: "hover:bg-sky-500" },
-    { icon: Instagram, href: "#", label: "Instagram", color: "hover:bg-pink-600" },
-    { icon: Linkedin, href: "#", label: "LinkedIn", color: "hover:bg-blue-700" },
-    { icon: Youtube, href: "#", label: "YouTube", color: "hover:bg-red-600" },
+    { icon: Facebook, href: "https://www.facebook.com/itforyouthghanacollege/", label: "Facebook", color: "hover:bg-blue-600" },
+    { icon: Twitter, href: "https://x.com/ITFORYOUTHGHANA", label: "Twitter", color: "hover:bg-sky-500" },
+    { icon: Instagram, href: "https://www.instagram.com/itforyouthghana/", label: "Instagram", color: "hover:bg-itfy-primary" },
+    { icon: Linkedin, href: "https://www.linkedin.com/company/98944149/", label: "LinkedIn", color: "hover:bg-blue-700" },
+    { icon: Youtube, href: "https://www.youtube.com/@ITforYouthGhana", label: "YouTube", color: "hover:bg-red-600" },
   ];
 
   return (
     <footer className="bg-black border-t border-white/10 relative overflow-hidden">
       {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-purple-900/10" />
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-itfy-navy/10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-itfy-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-itfy-400/5 rounded-full blur-3xl" />
 
       <div className="container mx-auto px-6 py-16 relative z-10">
         {/* Top Section */}
@@ -80,16 +80,16 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-itfy-primary to-itfy-600 flex items-center justify-center shadow-lg">
                 <Trophy className="w-8 h-8 text-white" />
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-white">ITFY Ghana</h3>
-                <p className="text-purple-400 text-sm">Youth Tech Awards</p>
+                <p className="text-itfy-300 text-sm">Youth Tech Awards</p>
               </div>
             </div>
             <p className="text-gray-400 leading-relaxed mb-6">
-              Empowering the next generation of Ghanaian tech leaders through recognition, innovation, and community building.
+              IT for Youth Ghana empowers underserved youth with essential technology skills, building the next generation of tech leaders.
             </p>
             
             {/* Newsletter Signup */}
@@ -99,9 +99,9 @@ export default function Footer() {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  className="flex-1 px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-itfy-primary transition"
                 />
-                <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg text-white font-medium text-sm transition">
+                <button className="px-6 py-3 bg-gradient-to-r from-itfy-primary to-itfy-600 hover:from-itfy-600 hover:to-itfy-700 rounded-lg text-white font-medium text-sm transition">
                   Subscribe
                 </button>
               </div>
@@ -113,16 +113,16 @@ export default function Footer() {
             <div key={index}>
               <h4 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
                 {column.title}
-                <div className="h-px flex-1 bg-gradient-to-r from-purple-500/50 to-transparent" />
+                <div className="h-px flex-1 bg-gradient-to-r from-itfy-primary/50 to-transparent" />
               </h4>
               <ul className="space-y-3">
                 {column.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
                     <Link 
                       href={link.href} 
-                      className="text-gray-400 hover:text-purple-400 transition flex items-center gap-2 group"
+                      className="text-gray-400 hover:text-itfy-300 transition flex items-center gap-2 group"
                     >
-                      <span className="w-1 h-1 rounded-full bg-purple-500/0 group-hover:bg-purple-500 transition" />
+                      <span className="w-1 h-1 rounded-full bg-itfy-primary/0 group-hover:bg-itfy-primary transition" />
                       {link.label}
                     </Link>
                   </li>
@@ -157,11 +157,11 @@ export default function Footer() {
             {/* Stats */}
             <div className="flex gap-8 text-center">
               <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">500+</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-300 to-itfy-primary bg-clip-text text-transparent">500+</div>
                 <div className="text-gray-400 text-sm">Nominees</div>
               </div>
               <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">50K+</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-400 to-itfy-light-blue bg-clip-text text-transparent">50K+</div>
                 <div className="text-gray-400 text-sm">Votes</div>
               </div>
               <div>
@@ -186,11 +186,11 @@ export default function Footer() {
             </div>
 
             <div className="flex items-center gap-4 text-sm">
-              <Link href="/accessibility" className="text-gray-400 hover:text-purple-400 transition">
+              <Link href="/accessibility" className="text-gray-400 hover:text-itfy-300 transition">
                 Accessibility
               </Link>
               <span className="text-gray-600">|</span>
-              <Link href="/sitemap" className="text-gray-400 hover:text-purple-400 transition">
+              <Link href="/sitemap" className="text-gray-400 hover:text-itfy-300 transition">
                 Sitemap
               </Link>
             </div>
@@ -202,7 +202,7 @@ export default function Footer() {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 flex items-center justify-center shadow-2xl hover:scale-110 transition-all z-50 group"
+          className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-gradient-to-r from-itfy-primary to-itfy-600 hover:from-itfy-600 hover:to-itfy-700 flex items-center justify-center shadow-2xl hover:scale-110 transition-all z-50 group"
           aria-label="Scroll to top"
         >
           <ArrowUp className="w-6 h-6 text-white group-hover:-translate-y-1 transition-transform" />

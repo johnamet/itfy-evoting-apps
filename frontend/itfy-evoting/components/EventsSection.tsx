@@ -31,11 +31,11 @@ export default function EventsSection() {
   };
 
   return (
-    <section className="py-32 relative overflow-hidden bg-gradient-to-b from-gray-900 via-purple-900/20 to-gray-900">
+    <section className="py-32 relative overflow-hidden bg-gradient-to-b from-gray-900 via-itfy-navy/20 to-gray-900">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:60px_60px]" />
-      <div className="absolute top-1/4 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/4 left-0 w-96 h-96 bg-itfy-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-itfy-300/10 rounded-full blur-3xl" />
 
       {/* Optional Banner */}
       {bannerSlide && (
@@ -72,14 +72,14 @@ export default function EventsSection() {
       <div className="container mx-auto px-6 relative z-10">
         {/* Section Header */}
         <div className="text-center mb-20">
-          <div className="inline-flex items-center gap-2 bg-blue-500/10 backdrop-blur-sm px-6 py-3 rounded-full border border-blue-500/20 mb-6">
-            <Calendar className="w-5 h-5 text-blue-400" />
-            <span className="text-blue-300 font-medium">Featured Events</span>
+          <div className="inline-flex items-center gap-2 bg-itfy-primary/10 backdrop-blur-sm px-6 py-3 rounded-full border border-itfy-primary/20 mb-6">
+            <Calendar className="w-5 h-5 text-itfy-300" />
+            <span className="text-itfy-300 font-medium">Featured Events</span>
           </div>
           
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
             Upcoming Tech
-            <span className="block mt-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="block mt-2 bg-gradient-to-r from-itfy-light-blue via-itfy-300 to-itfy-primary bg-clip-text text-transparent">
               Awards & Summits
             </span>
           </h2>
@@ -100,7 +100,7 @@ export default function EventsSection() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {activeEvents.map((event) => (
-              <GlassCard key={event._id} className="group h-full flex flex-col hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500">
+              <GlassCard key={event._id} className="group h-full flex flex-col hover:shadow-2xl hover:shadow-itfy-primary/20 transition-all duration-500">
                 {/* Event Banner - Taller for impact */}
                 <div className="relative h-64 overflow-hidden rounded-t-2xl">
                   <img
@@ -125,7 +125,7 @@ export default function EventsSection() {
 
                   {/* Prominent Vote Badge - Centered at bottom */}
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 backdrop-blur-xl px-8 py-5 rounded-2xl border border-white/30 shadow-2xl">
+                    <div className="bg-gradient-to-r from-itfy-primary to-itfy-600 backdrop-blur-xl px-8 py-5 rounded-2xl border border-white/30 shadow-2xl">
                       <div className="flex items-center gap-3">
                         <Users className="w-8 h-8 text-white" />
                         <div className="text-left">
@@ -141,7 +141,7 @@ export default function EventsSection() {
 
                 {/* Card Content */}
                 <div className="p-8 flex-1 flex flex-col">
-                  <h3 className="text-2xl font-bold text-white mb-4 line-clamp-2 group-hover:text-purple-300 transition-colors">
+                  <h3 className="text-2xl font-bold text-white mb-4 line-clamp-2 group-hover:text-itfy-300 transition-colors">
                     {event.name}
                   </h3>
                   
@@ -152,15 +152,15 @@ export default function EventsSection() {
                   {/* Meta Info - More spacious */}
                   <div className="space-y-4 mb-8">
                     <div className="flex items-center gap-4 text-gray-300">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-purple-400" />
+                      <div className="w-10 h-10 rounded-xl bg-itfy-primary/20 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-itfy-300" />
                       </div>
                       <span className="text-base">{formatDate(event.start_date)} - {formatDate(event.end_date)}</span>
                     </div>
                     {event.location && (
                       <div className="flex items-center gap-4 text-gray-300">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                          <MapPin className="w-5 h-5 text-blue-400" />
+                        <div className="w-10 h-10 rounded-xl bg-itfy-400/20 flex items-center justify-center">
+                          <MapPin className="w-5 h-5 text-itfy-400" />
                         </div>
                         <span className="text-base">{event.location.city}, {event.location.country}</span>
                       </div>
@@ -169,7 +169,7 @@ export default function EventsSection() {
 
                   {/* CTA */}
                   <Link href={`/events/${event.slug}`} className="mt-auto">
-                    <Button className="w-full py-7 text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 group/btn shadow-lg">
+                    <Button className="w-full py-7 text-lg bg-gradient-to-r from-itfy-primary to-itfy-600 hover:from-itfy-600 hover:to-itfy-700 group/btn shadow-lg">
                       View Event & Vote
                       <ArrowRight className="ml-3 w-5 h-5 group-hover/btn:translate-x-2 transition-transform" />
                     </Button>

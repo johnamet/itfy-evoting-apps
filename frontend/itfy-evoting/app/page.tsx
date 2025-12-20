@@ -7,23 +7,28 @@ import CategoriesSection from '@/components/CategoriesSection';
 import CandidatesSection from '@/components/CandidatesSection';
 import NominationSection from '@/components/NominationSection';
 import ContactSection from '@/components/ContactSection';
-import Footer from '@/components/Footer';
 import Header from '@/components/Header';
+import AnnouncementBar from '@/components/AnnouncementBar';
+import PromoBanner from '@/components/PromoBanner';
 
 export default function HomePage() {
-  // Keep your backend health check here if needed
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {/* Announcement Bar - sticky at top for urgent messages */}
+      <AnnouncementBar />
+      
       <Header />
       <HeroCarousel />
       <AboutSection />
       <EventsSection />
+      
+      {/* Promotional Banner - between sections for featured events/campaigns */}
+      <PromoBanner variant="full" />
+      
       <CategoriesSection />
       <CandidatesSection />
       <NominationSection />
       <ContactSection />
-      <Footer />
     </div>
   );
 }

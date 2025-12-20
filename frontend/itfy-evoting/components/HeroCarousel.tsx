@@ -1,6 +1,8 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperType } from 'swiper';
 import { Autoplay, Pagination, Navigation, EffectFade } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -10,180 +12,336 @@ import { Button } from '@/components/ui/button';
 import { mockSlides } from '@/lib/mocks/slides';
 import { Slide } from '@/types';
 import Image from 'next/image';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Award, Users, Vote } from 'lucide-react';
 
 const heroSlides = mockSlides.filter(s => s.slide_type === 'hero' && s.status === 'active');
 
 export default function HeroCarousel() {
-  const getPositionClasses = (position: string = 'bottom-left') => {
-    const positions: { [key: string]: string } = {
-      'top': 'top-32 left-0 right-0 text-center',
-      'center': 'top-1/2 left-0 right-0 -translate-y-1/2 text-center px-6',
-      'bottom-left': 'bottom-32 md:bottom-40 left-0',
-      'center-left': 'top-1/2 left-0 -translate-y-1/2',
-      'bottom-center': 'bottom-32 md:bottom-40 left-1/2 -translate-x-1/2 text-center',
-    };
-    return positions[position] || positions['bottom-left'];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [swiperRef, setSwiperRef] = useState<SwiperType | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleSlideChange = useCallback((swiper: SwiperType) => {
+    setActiveIndex(swiper.realIndex);
+  }, []);
+
+  const scrollToContent = () => {
+    window.scrollTo({
+      top: window.innerHeight - 80,
+      behavior: 'smooth'
+    });
   };
 
   return (
-    <section className="relative h-screen overflow-hidden">
+    <section 
+      className="relative h-screen min-h-[700px] overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Main Carousel */}
       <Swiper
         modules={[Autoplay, Pagination, Navigation, EffectFade]}
         effect="fade"
+        fadeEffect={{ crossFade: true }}
         autoplay={{ 
-          delay: 6000,
+          delay: 7000,
           disableOnInteraction: false,
+          pauseOnMouseEnter: true,
         }}
-        speed={1500}
-        pagination={{ 
-          clickable: true,
-          bulletClass: 'swiper-pagination-bullet !bg-white/60 !w-3 !h-3',
-          bulletActiveClass: 'swiper-pagination-bullet-active !bg-white !w-8',
-        }}
-        navigation={{
-          nextEl: '.hero-next',
-          prevEl: '.hero-prev',
-        }}
+        speed={1200}
+        onSwiper={setSwiperRef}
+        onSlideChange={handleSlideChange}
         loop
-        className="h-full hero-swiper"
+        className="h-full w-full"
       >
         {heroSlides.map((slide: Slide, index: number) => (
           <SwiperSlide key={slide._id}>
-            <div className="relative w-full h-full group">
-              {/* Background Image with Ken Burns Effect */}
+            <div className="relative w-full h-full">
+              {/* Background Image with Parallax Effect */}
               <div className="absolute inset-0 overflow-hidden">
                 <Image
                   src={slide.image.url}
-                  alt={slide.image.alt || ''}
+                  alt={slide.image.alt || slide.title}
                   fill
-                  className="object-cover scale-105 group-hover:scale-110 transition-transform duration-[8000ms] ease-out"
+                  className="object-cover scale-110 transition-transform duration-[10000ms] ease-out"
+                  style={{ 
+                    transform: activeIndex === index ? 'scale(1)' : 'scale(1.1)',
+                  }}
                   priority={index === 0}
                   sizes="100vw"
                   quality={90}
                 />
               </div>
 
-              {/* Multi-layer Gradient Overlay */}
-              <div 
-                className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"
-                style={{ opacity: slide.overlay_opacity || 0.5 }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+              {/* Sophisticated Multi-layer Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-gray-900/70 via-gray-900/40 to-gray-900/90" />
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-900/80 via-transparent to-gray-900/30" />
               
-              {/* Animated Accent Elements */}
-              <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
-
-              {/* Content Container */}
-              <div className="container mx-auto px-6 h-full relative z-10">
-                <div 
-                  className={`absolute ${getPositionClasses(slide.position)} max-w-4xl animate-fadeInUp`}
-                  style={{ color: slide.text_color || '#ffffff' }}
-                >
-                  {/* Category Badge */}
-                  <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 mb-6 animate-slideInDown">
-                    <Sparkles className="w-4 h-4 text-yellow-400" />
-                    <span className="text-sm font-medium tracking-wide">ITFY GHANA 2025</span>
-                  </div>
-
-                  {/* Main Title */}
-                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight animate-slideInLeft">
-                    <span className="block mb-2">{slide.title.split(' ').slice(0, -2).join(' ')}</span>
-                    <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 bg-clip-text text-transparent">
-                      {slide.title.split(' ').slice(-2).join(' ')}
-                    </span>
-                  </h1>
-
-                  {/* Subtitle */}
-                  {slide.subtitle && (
-                    <p className="text-lg md:text-2xl font-light mb-4 text-gray-200 animate-slideInLeft delay-200">
-                      {slide.subtitle}
-                    </p>
-                  )}
-
-                  {/* Description */}
-                  {slide.description && (
-                    <p className="text-base md:text-lg text-gray-300 mb-6 max-w-2xl animate-slideInLeft delay-300">
-                      {slide.description}
-                    </p>
-                  )}
-
-                  {/* CTA Buttons */}
-                  {slide.button && (
-                    <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center animate-slideInUp delay-500">
-                      <Button 
-                        size="lg" 
-                        className="group px-8 py-6 text-lg bg-gradient-to-r from-purple-600 via-pink-600 to-yellow-500 hover:from-purple-700 hover:via-pink-700 hover:to-yellow-600 shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-105">
-                        {slide.button.text}
-                        <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </Button>
-                      
-                      <Button 
-                        size="lg" 
-                        variant="outline"
-                        className="px-8 py-6 text-lg border-2 border-white/40 text-white hover:bg-white/10 backdrop-blur-sm hover:border-white/60 transition-all duration-300"
-                      >
-                        Learn More
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Stats Bar */}
-                  <div className="hidden md:grid grid-cols-3 gap-4 mt-8 max-w-2xl animate-fadeIn delay-700">
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
-                      <div className="text-2xl font-bold text-purple-400">500+</div>
-                      <div className="text-xs text-gray-300">Nominees</div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
-                      <div className="text-2xl font-bold text-pink-400">15+</div>
-                      <div className="text-xs text-gray-300">Categories</div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/20">
-                      <div className="text-2xl font-bold text-yellow-400">50K+</div>
-                      <div className="text-xs text-gray-300">Votes</div>
-                    </div>
-                  </div>
-                </div>
+              {/* Decorative Elements */}
+              <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                {/* Floating Orbs */}
+                <div className="absolute top-1/4 right-[15%] w-[500px] h-[500px] bg-itfy-primary/10 rounded-full blur-[120px] animate-float-slow" />
+                <div className="absolute bottom-1/4 left-[10%] w-[400px] h-[400px] bg-itfy-300/10 rounded-full blur-[100px] animate-float-slow-reverse" />
+                <div className="absolute top-1/2 right-1/3 w-[300px] h-[300px] bg-itfy-light-blue/10 rounded-full blur-[80px] animate-pulse-slow" />
+                
+                {/* Grid Pattern Overlay */}
+                <div className="absolute inset-0 opacity-[0.02] hero-grid-pattern" />
               </div>
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
 
-      {/* Custom Navigation Buttons */}
-      <button className="hero-prev absolute left-8 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all duration-300 hover:scale-110 group">
-        <svg className="w-6 h-6 text-white group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      
-      <button className="hero-next absolute right-8 top-1/2 -translate-y-1/2 z-20 w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all duration-300 hover:scale-110 group">
-        <svg className="w-6 h-6 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
+      {/* Hero Content - Dynamic Content Based on Active Slide */}
+      <div className="absolute inset-0 z-10 flex items-center pt-20">
+        <div className="container mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-7 xl:col-span-6 mt-8 lg:mt-0">
+              {/* Animated Badge */}
+              <div key={`badge-${activeIndex}`} className="inline-flex items-center gap-3 mb-8 animate-fade-in-up-delay-1">
+                <div className="relative">
+                  <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl px-5 py-2.5 rounded-full border border-white/20 shadow-lg">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400"></span>
+                    </span>
+                    <span className="text-sm font-semibold tracking-wide text-white/90">VOTING IS LIVE</span>
+                  </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-itfy-primary/20 to-itfy-300/20 backdrop-blur-xl px-4 py-2 rounded-full border border-itfy-400/30">
+                  <Award className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-medium text-white/80">ITFY Ghana 2025</span>
+                </div>
+              </div>
 
-      {/* Scroll Indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-2">
-          <div className="w-1 h-3 bg-white rounded-full animate-scroll" />
+              {/* Dynamic Main Heading from Slide Data */}
+              <div key={`title-${activeIndex}`} className="space-y-2 mb-8">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] tracking-tight animate-fade-in-up-delay-2">
+                  {(() => {
+                    const currentSlide = heroSlides[activeIndex];
+                    const words = currentSlide?.title?.split(' ') || [];
+                    const midPoint = Math.ceil(words.length / 2);
+                    const firstPart = words.slice(0, midPoint).join(' ');
+                    const secondPart = words.slice(midPoint).join(' ');
+                    
+                    return (
+                      <>
+                        <span className="block">{firstPart}</span>
+                        <span className="block mt-2">
+                          <span className="relative inline-block">
+                            <span className="bg-gradient-to-r from-itfy-300 via-itfy-primary to-itfy-light-blue bg-clip-text text-transparent">
+                              {secondPart}
+                            </span>
+                            {/* Underline decoration */}
+                            <svg className="absolute -bottom-1 md:-bottom-2 left-0 w-full" height="12" viewBox="0 0 200 12" fill="none" preserveAspectRatio="none">
+                              <path d="M2 8C50 3 150 3 198 8" stroke={`url(#gradient-${activeIndex})`} strokeWidth="4" strokeLinecap="round"/>
+                              <defs>
+                                <linearGradient id={`gradient-${activeIndex}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                  <stop offset="0%" stopColor="#0152be"/>
+                                  <stop offset="50%" stopColor="#3a7fd4"/>
+                                  <stop offset="100%" stopColor="#d4e1f9"/>
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                          </span>
+                        </span>
+                      </>
+                    );
+                  })()}
+                </h1>
+              </div>
+
+              {/* Dynamic Subtitle from Slide Data */}
+              <div key={`subtitle-${activeIndex}`} className="animate-fade-in-up-delay-3">
+                {heroSlides[activeIndex]?.subtitle && (
+                  <p className="text-xl sm:text-2xl text-white/90 mb-4 max-w-xl leading-relaxed font-medium">
+                    {heroSlides[activeIndex].subtitle}
+                  </p>
+                )}
+                {heroSlides[activeIndex]?.description && (
+                  <p className="text-base sm:text-lg text-gray-300 mb-10 max-w-xl leading-relaxed">
+                    {heroSlides[activeIndex].description}
+                  </p>
+                )}
+              </div>
+
+              {/* Dynamic CTA Buttons from Slide Data */}
+              <div key={`cta-${activeIndex}`} className="flex flex-col sm:flex-row gap-4 mb-12 animate-fade-in-up-delay-4">
+                {heroSlides[activeIndex]?.button && (
+                  <Link href={heroSlides[activeIndex].button?.url || '/events'}>
+                    <Button 
+                      size="lg" 
+                      className="group relative px-8 py-6 text-base font-semibold bg-gradient-to-r from-itfy-primary via-itfy-600 to-itfy-primary bg-[length:200%_100%] hover:bg-[position:100%_0] shadow-2xl shadow-itfy-primary/25 transition-all duration-500 hover:shadow-itfy-primary/40 hover:scale-[1.02] rounded-xl"
+                    >
+                      <Play className="w-5 h-5 mr-2 fill-current" />
+                      {heroSlides[activeIndex].button?.text || 'Vote Now'}
+                      <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
+                )}
+                
+                <Link href="/about">
+                  <Button 
+                    size="lg" 
+                    variant="outline"
+                    className="px-8 py-6 text-base font-semibold border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm hover:border-white/50 transition-all duration-300 rounded-xl group"
+                  >
+                    <Award className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
+                    Learn More
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Stats Section */}
+              <div className="grid grid-cols-3 gap-6 max-w-lg animate-fade-in-up-delay-5">
+                <div className="group cursor-default">
+                  <div className="relative p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                    <Users className="w-5 h-5 text-itfy-300 mb-2 group-hover:scale-110 transition-transform" />
+                    <div className="text-2xl sm:text-3xl font-bold text-white mb-0.5">500<span className="text-itfy-300">+</span></div>
+                    <div className="text-xs sm:text-sm text-gray-400 font-medium">Nominees</div>
+                  </div>
+                </div>
+                <div className="group cursor-default">
+                  <div className="relative p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                    <Award className="w-5 h-5 text-itfy-400 mb-2 group-hover:scale-110 transition-transform" />
+                    <div className="text-2xl sm:text-3xl font-bold text-white mb-0.5">15<span className="text-itfy-400">+</span></div>
+                    <div className="text-xs sm:text-sm text-gray-400 font-medium">Categories</div>
+                  </div>
+                </div>
+                <div className="group cursor-default">
+                  <div className="relative p-4 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+                    <Vote className="w-5 h-5 text-yellow-400 mb-2 group-hover:scale-110 transition-transform" />
+                    <div className="text-2xl sm:text-3xl font-bold text-white mb-0.5">50K<span className="text-yellow-400">+</span></div>
+                    <div className="text-xs sm:text-sm text-gray-400 font-medium">Votes Cast</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Featured Card (Hidden on smaller screens) */}
+            <div className="hidden lg:block lg:col-span-5 xl:col-span-6 animate-fade-in-up-delay-6">
+              <div className="relative">
+                {/* Glow Effect */}
+                <div className="absolute -inset-4 bg-gradient-to-r from-itfy-primary/20 via-itfy-400/20 to-itfy-light-blue/20 rounded-3xl blur-2xl opacity-60" />
+                
+                {/* Card */}
+                <div className="relative bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-6 shadow-2xl">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <span className="px-3 py-1 bg-itfy-primary/20 text-itfy-300 rounded-full text-sm font-medium border border-itfy-400/30">
+                      Featured Category
+                    </span>
+                    <span className="text-gray-400 text-sm">2025 Edition</span>
+                  </div>
+                  
+                  {/* Category Preview */}
+                  <h3 className="text-2xl font-bold text-white mb-3">Tech Innovator of the Year</h3>
+                  <p className="text-gray-400 mb-6 text-sm leading-relaxed">
+                    Recognizing individuals who have made groundbreaking contributions to Ghana&apos;s tech ecosystem.
+                  </p>
+                  
+                  {/* Mini Nominees Preview */}
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex -space-x-3">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-itfy-400 to-itfy-primary border-2 border-gray-900 flex items-center justify-center text-xs font-bold text-white">
+                          {String.fromCharCode(64 + i)}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-gray-400 text-sm">+48 nominees</span>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Voting Progress</span>
+                      <span className="text-white font-medium">68%</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full w-[68%] bg-gradient-to-r from-itfy-primary via-itfy-400 to-itfy-light-blue rounded-full transition-all duration-1000" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <style jsx global>{`
-        .hero-swiper .swiper-pagination {
-          bottom: 2rem !important;
-        }
-        
-        .hero-swiper .swiper-pagination-bullet {
-          transition: all 0.3s ease;
-        }
+      {/* Slide Navigation Controls */}
+      <div className={`absolute left-6 lg:left-12 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 lg:opacity-60'}`}>
+        <button 
+          onClick={() => swiperRef?.slidePrev()}
+          className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all duration-300 group"
+          aria-label="Previous slide"
+        >
+          <ChevronLeft className="w-6 h-6 text-white group-hover:-translate-x-0.5 transition-transform" />
+        </button>
+      </div>
+      
+      <div className={`absolute right-6 lg:right-12 top-1/2 -translate-y-1/2 z-20 transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0 lg:opacity-60'}`}>
+        <button 
+          onClick={() => swiperRef?.slideNext()}
+          className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center hover:bg-white/20 hover:scale-110 transition-all duration-300 group"
+          aria-label="Next slide"
+        >
+          <ChevronRight className="w-6 h-6 text-white group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
 
-        @keyframes fadeInUp {
+      {/* Slide Progress Indicators */}
+      <div className="absolute bottom-24 left-6 lg:left-12 z-20">
+        <div className="flex items-center gap-3">
+          {heroSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => swiperRef?.slideToLoop(index)}
+              className={`relative h-1 rounded-full transition-all duration-500 ${
+                index === activeIndex ? 'w-12 bg-white' : 'w-6 bg-white/30 hover:bg-white/50'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            >
+              {index === activeIndex && (
+                <span className="absolute inset-0 rounded-full bg-gradient-to-r from-itfy-300 via-itfy-primary to-itfy-light-blue" />
+              )}
+            </button>
+          ))}
+          <span className="ml-4 text-sm text-gray-400 font-medium">
+            <span className="text-white">{String(activeIndex + 1).padStart(2, '0')}</span>
+            <span className="mx-1">/</span>
+            <span>{String(heroSlides.length).padStart(2, '0')}</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Scroll Indicator */}
+      <button 
+        onClick={scrollToContent}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 group cursor-pointer"
+        aria-label="Scroll down"
+      >
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-xs text-gray-400 font-medium tracking-wider uppercase group-hover:text-white transition-colors">
+            Scroll
+          </span>
+          <div className="w-6 h-10 rounded-full border-2 border-white/30 flex items-start justify-center p-1.5 group-hover:border-white/50 transition-colors">
+            <div className="w-1 h-2 bg-white rounded-full animate-scroll-indicator" />
+          </div>
+        </div>
+      </button>
+
+      {/* Bottom Gradient Fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-gray-900 via-gray-900/50 to-transparent z-[5] pointer-events-none" />
+
+      {/* Styles */}
+      <style jsx global>{`
+        @keyframes fade-in-up {
           from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(24px);
           }
           to {
             opacity: 1;
@@ -191,10 +349,92 @@ export default function HeroCarousel() {
           }
         }
 
-        @keyframes slideInLeft {
+        @keyframes float-slow {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(20px, -20px) scale(1.05);
+          }
+        }
+
+        @keyframes float-slow-reverse {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          50% {
+            transform: translate(-20px, 20px) scale(1.05);
+          }
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 0.5;
+          }
+          50% {
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes scroll-indicator {
+          0%, 100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(12px);
+            opacity: 0.3;
+          }
+        }
+
+        .hero-grid-pattern {
+          background-image: linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px);
+          background-size: 50px 50px;
+        }
+
+        .animate-fade-in-up {
+          animation: fade-in-up 0.8s ease-out forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-1 {
+          animation: fade-in-up 0.8s ease-out 0.1s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-2 {
+          animation: fade-in-up 0.8s ease-out 0.2s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-3 {
+          animation: fade-in-up 0.8s ease-out 0.3s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-4 {
+          animation: fade-in-up 0.8s ease-out 0.4s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-5 {
+          animation: fade-in-up 0.8s ease-out 0.5s forwards;
+          opacity: 0;
+        }
+
+        .animate-fade-in-up-delay-6 {
+          animation: fade-in-up 0.8s ease-out 0.6s forwards;
+          opacity: 0;
+        }
+
+        .animate-slide-content {
+          animation: slide-content-in 0.6s ease-out forwards;
+        }
+
+        @keyframes slide-content-in {
           from {
             opacity: 0;
-            transform: translateX(-50px);
+            transform: translateX(-20px);
           }
           to {
             opacity: 1;
@@ -202,88 +442,20 @@ export default function HeroCarousel() {
           }
         }
 
-        @keyframes slideInDown {
-          from {
-            opacity: 0;
-            transform: translateY(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .animate-float-slow {
+          animation: float-slow 8s ease-in-out infinite;
         }
 
-        @keyframes slideInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .animate-float-slow-reverse {
+          animation: float-slow-reverse 10s ease-in-out infinite;
         }
 
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
         }
 
-        @keyframes scroll {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(8px);
-          }
-        }
-
-        .animate-fadeInUp {
-          animation: fadeInUp 1s ease-out;
-        }
-
-        .animate-slideInLeft {
-          animation: slideInLeft 0.8s ease-out;
-        }
-
-        .animate-slideInDown {
-          animation: slideInDown 0.6s ease-out;
-        }
-
-        .animate-slideInUp {
-          animation: slideInUp 0.8s ease-out;
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 1s ease-out;
-        }
-
-        .animate-scroll {
-          animation: scroll 2s ease-in-out infinite;
-        }
-
-        .delay-200 {
-          animation-delay: 0.2s;
-        }
-
-        .delay-300 {
-          animation-delay: 0.3s;
-        }
-
-        .delay-500 {
-          animation-delay: 0.5s;
-        }
-
-        .delay-700 {
-          animation-delay: 0.7s;
-        }
-
-        .delay-1000 {
-          animation-delay: 1s;
+        .animate-scroll-indicator {
+          animation: scroll-indicator 2s ease-in-out infinite;
         }
       `}</style>
     </section>
