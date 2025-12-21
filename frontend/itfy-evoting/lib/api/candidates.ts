@@ -295,7 +295,7 @@ export const candidatesApi = {
    * Get candidate profile (for authenticated candidate)
    */
   getMyProfile: async (): Promise<ApiResponse<Candidate>> => {
-    return api.get<ApiResponse<Candidate>>('/candidates/me', {
+    return api.get<ApiResponse<Candidate>>('/candidates/profile', {
       authType: 'candidate',
     });
   },
@@ -304,7 +304,7 @@ export const candidatesApi = {
    * Update candidate profile (for authenticated candidate)
    */
   updateMyProfile: async (data: UpdateCandidateRequest): Promise<ApiResponse<Candidate>> => {
-    return api.put<ApiResponse<Candidate>>('/candidates/me', data, {
+    return api.put<ApiResponse<Candidate>>('/candidates/profile', data, {
       authType: 'candidate',
     });
   },
@@ -314,7 +314,7 @@ export const candidatesApi = {
    */
   uploadMyImage: async (file: File): Promise<ApiResponse<{ image_url: string }>> => {
     return uploadFile<ApiResponse<{ image_url: string }>>(
-      '/candidates/me/image',
+      '/candidates/profile/image',
       file,
       'image',
       undefined,
@@ -324,9 +324,10 @@ export const candidatesApi = {
 
   /**
    * Get candidate's own statistics
+   * Note: Falls back to vote count if detailed stats aren't available
    */
   getMyStats: async (): Promise<ApiResponse<CandidateStatsResponse>> => {
-    return api.get<ApiResponse<CandidateStatsResponse>>('/candidates/me/stats', {
+    return api.get<ApiResponse<CandidateStatsResponse>>('/candidates/profile/stats', {
       authType: 'candidate',
     });
   },

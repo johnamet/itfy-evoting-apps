@@ -2,7 +2,6 @@
 
 /**
  * Candidate Forgot Password Page
- * Request password reset for candidate account
  */
 
 import { useState } from 'react';
@@ -10,7 +9,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, Mail, ArrowLeft, KeyRound, CheckCircle } from 'lucide-react';
+import { Loader2, Mail, ArrowLeft, KeyRound, CheckCircle, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +19,6 @@ import { api } from '@/lib/api/client';
 import { toast } from 'sonner';
 import type { ApiResponse } from '@/types';
 
-// ==================== Validation Schema ====================
-
 const forgotPasswordSchema = z.object({
   email: z
     .string()
@@ -30,8 +27,6 @@ const forgotPasswordSchema = z.object({
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-
-// ==================== Component ====================
 
 export default function CandidateForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -44,9 +39,7 @@ export default function CandidateForgotPasswordPage() {
     formState: { errors },
   } = useForm<ForgotPasswordFormData>({
     resolver: zodResolver(forgotPasswordSchema),
-    defaultValues: {
-      email: '',
-    },
+    defaultValues: { email: '' },
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
@@ -61,131 +54,189 @@ export default function CandidateForgotPasswordPage() {
 
       setSubmittedEmail(data.email);
       setIsSubmitted(true);
-      toast.success('Email sent', {
-        description: response.message || 'Password reset email sent successfully.',
+      toast.success('Email sent!', {
+        description: response.message || 'Password reset link sent successfully.',
+        icon: <Sparkles className="h-5 w-5" />,
       });
     } catch (error) {
-      // Always show success message to prevent email enumeration
+      // Security best practice: always show success to prevent email enumeration
       setSubmittedEmail(data.email);
       setIsSubmitted(true);
-      toast.success('Request processed', {
-        description: 'If an account exists with this email, a password reset link has been sent.',
+      toast.success('Request received', {
+        description: 'If an account exists, a reset link has been sent.',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Success state
+  // Success State
   if (isSubmitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+        {/* Soft Blue Background */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800" />
+          <div 
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1557682250-33bd709cbe1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2129&q=80")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+          <div className="absolute inset-0 bg-black/30" />
+        </div>
+
+        {/* Subtle Glow Orbs */}
+        <div className="absolute inset-0 -z-5">
+          <div className="absolute top-20 left-20 w-80 h-80 bg-blue-400/30 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-pulse delay-700" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/25 rounded-full blur-3xl animate-pulse delay-300" />
+        </div>
+
+        <Card className="w-full max-w-md shadow-2xl backdrop-blur-xl bg-white/95 border-white/20">
+          <CardHeader className="text-center pb-8">
+            <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
+              <CheckCircle className="h-10 w-10 text-white" />
             </div>
-            <CardTitle className="text-2xl font-bold">Check your email</CardTitle>
-            <CardDescription>
-              We&apos;ve sent a password reset link to
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Check Your Inbox
+            </CardTitle>
+            <CardDescription className="text-lg mt-4">
+              We&apos;ve sent a password reset link to:
             </CardDescription>
-            <p className="font-medium text-foreground">{submittedEmail}</p>
+            <p className="text-xl font-semibold mt-2">{submittedEmail}</p>
           </CardHeader>
 
-          <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Click the link in the email to reset your password. If you don&apos;t see the email, 
-              check your spam folder.
+          <CardContent className="space-y-5 text-center">
+            <p className="text-muted-foreground">
+              Click the link in the email to create a new password.<br />
+              If you don&apos;t see it, please check your spam folder.
             </p>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-5 pt-6">
             <Button
               variant="outline"
-              className="w-full"
+              size="lg"
+              className="w-full h-12 text-base border-blue-300 hover:bg-blue-50"
               onClick={() => {
                 setIsSubmitted(false);
                 setSubmittedEmail('');
               }}
             >
-              Try a different email
+              Try another email
             </Button>
 
             <Link href="/candidate/login" className="w-full">
-              <Button variant="ghost" className="w-full">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to login
+              <Button variant="ghost" size="lg" className="w-full h-12 text-base">
+                <ArrowLeft className="mr-3 h-5 w-5" />
+                Back to Login
               </Button>
             </Link>
           </CardFooter>
         </Card>
+
+        <div className="absolute bottom-8 left-8 text-white/60 text-sm">
+          © 2025 IT For Youth Ghana
+        </div>
       </div>
     );
   }
 
+  // Initial Form State
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <KeyRound className="h-8 w-8 text-primary" />
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden p-4">
+      {/* Elegant Blue Background */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800" />
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: 'url("https://images.unsplash.com/photo-1557682250-33bd709cbe1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2129&q=80")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <div className="absolute inset-0 bg-black/30" />
+      </div>
+
+      {/* Soft Glow Orbs */}
+      <div className="absolute inset-0 -z-5">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-500/25 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
+
+      {/* Form Card */}
+      <Card className="w-full max-w-md shadow-2xl backdrop-blur-xl bg-white/95 border-white/20">
+        <CardHeader className="text-center pb-8">
+          <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl">
+            <KeyRound className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">Forgot password?</CardTitle>
-          <CardDescription>
-            Enter your email address and we&apos;ll send you a link to reset your password
+          <CardTitle className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Forgot Password?
+          </CardTitle>
+          <CardDescription className="text-lg mt-4">
+            No worries — we&apos;ll send you a link to reset it
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
-            {/* Email Field */}
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-base font-medium">Email Address</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="candidate@example.com"
-                  className="pl-10"
+                  placeholder="you@example.com"
+                  className="pl-12 h-12 text-base border-muted focus:border-blue-500 transition-colors"
                   disabled={isLoading}
                   {...register('email')}
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
               )}
             </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-6 pt-6">
             <Button
               type="submit"
-              className="w-full"
+              size="lg"
+              className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
+                  <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                  Sending Link...
                 </>
               ) : (
                 <>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Send reset link
+                  <Mail className="mr-3 h-5 w-5" />
+                  Send Reset Link
                 </>
               )}
             </Button>
 
             <Link href="/candidate/login" className="w-full">
-              <Button variant="ghost" className="w-full">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to login
+              <Button variant="ghost" size="lg" className="w-full h-12 text-base">
+                <ArrowLeft className="mr-3 h-5 w-5" />
+                Back to Login
               </Button>
             </Link>
           </CardFooter>
         </form>
       </Card>
+
+      <div className="absolute bottom-8 left-8 text-white/60 text-sm">
+        © 2025 IT For Youth Ghana
+      </div>
     </div>
   );
 }

@@ -140,10 +140,46 @@ export {
   type NotificationPreferences,
 } from './notifications';
 
+// Analytics service
+export {
+  analyticsApi,
+  type DashboardOverview,
+  type VotingAnalytics,
+  type PaymentAnalytics,
+  type EventAnalytics,
+  type ActivityHeatmap,
+  type ConversionFunnel,
+  type RealTimeMetrics,
+  type AnalyticsQueryParams,
+} from './analytics';
 
+// Activities service
+export {
+  activitiesApi,
+  type Activity,
+  type ActivityType,
+  type ActivityAction,
+  type ActivityFilters,
+  type ActivityStats,
+  type ActivitiesListResponse,
+} from './activities';
 
 const apiServices = {
-
-}
+  auth: () => import('./auth'),
+  users: () => import('./users'),
+  events: () => import('./events'),
+  categories: () => import('./categories'),
+  candidates: () => import('./candidates'),
+  votes: () => import('./votes'),
+  bundles: () => import('./bundles'),
+  payments: () => import('./payments'),
+  forms: () => import('./forms'),
+  submissions: () => import('./submissions'),
+  coupons: () => import('./coupons'),
+  slides: () => import('./slides'),
+  notifications: () => import('./notifications'),
+  analytics: () => import('./analytics'),
+  activities: () => import('./activities'),
+};
 
 export default apiServices;

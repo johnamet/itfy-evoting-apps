@@ -15,6 +15,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { RegistrationFormDialog } from '@/components/RegistrationFormDialog';
 import { mockEvents } from '@/lib/mocks/events';
 import { mockCategories } from '@/lib/mocks/categories';
 import { mockCandidates } from '@/lib/mocks/candidates';
@@ -31,6 +32,7 @@ export default function EventDetailPage() {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
+  const [isRegistrationDialogOpen, setIsRegistrationDialogOpen] = useState(false);
 
   // Find the event by slug
   const event = mockEvents.find(e => e.slug === slug);
@@ -863,6 +865,7 @@ export default function EventDetailPage() {
                         cursor: isFull || !isRegistrationOpen ? 'not-allowed' : 'pointer'
                       }}
                       disabled={isFull || !isRegistrationOpen}
+                      onClick={() => isRegistrationOpen && !isFull && setIsRegistrationDialogOpen(true)}
                     >
                       {isFull ? (
                         <>
@@ -1659,6 +1662,13 @@ export default function EventDetailPage() {
           )}
         </div>
       )}
+
+      {/* Registration Form Dialog */}
+      <RegistrationFormDialog 
+        event={event}
+        open={isRegistrationDialogOpen}
+        onOpenChange={setIsRegistrationDialogOpen}
+      />
 
       <Footer />
     </div>

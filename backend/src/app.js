@@ -8,7 +8,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import dotenv from "dotenv";
+import dotenv, { configDotenv } from "dotenv";
 import db from "./database/app.database.js"
 import agendaManager from "./services/agenda.service.js";
 import cache from "./utils/cache/cache.utils.js";
@@ -20,7 +20,10 @@ import Joi from "joi";
 // Load environment variables
 dotenv.config();
 
+configDotenv();
+
 BaseController.setValidation(Joi)
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

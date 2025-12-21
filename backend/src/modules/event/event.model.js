@@ -113,6 +113,11 @@ class Event extends BaseModel {
         type: [Object],
         default: [],
       },
+      color_theme: {
+        type: String,
+        required: false,
+        trim: true,
+      },
       related_events: [
         {
           type: mongoose.Schema.Types.ObjectId,

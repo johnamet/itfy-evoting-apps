@@ -100,7 +100,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
-  logActivity(ACTION_TYPE.EVENT_DELETED, ENTITY_TYPE.EVENT, {
+  logActivity(ACTION_TYPE.EVENT_DELETE, ENTITY_TYPE.EVENT, {
     getEntityId: (req) => req.params.id,
   }),
   EventController.delete.bind(EventController)
@@ -117,7 +117,7 @@ router.put(
   "/:id/publish",
   authenticate,
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER),
-  logActivity(ACTION_TYPE.EVENT_PUBLISHED, ENTITY_TYPE.EVENT, {
+  logActivity(ACTION_TYPE.EVENT_PUBLISH, ENTITY_TYPE.EVENT, {
     getEntityId: (req) => req.params.id,
     getDescription: (req) => `Published event ${req.params.id}`,
   }),
@@ -133,7 +133,7 @@ router.put(
   "/:id/unpublish",
   authenticate,
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER),
-  logActivity(ACTION_TYPE.EVENT_UNPUBLISHED, ENTITY_TYPE.EVENT, {
+  logActivity(ACTION_TYPE.EVENT_UNPUBLISH, ENTITY_TYPE.EVENT, {
     getEntityId: (req) => req.params.id,
     getDescription: (req) => `Unpublished event ${req.params.id}`,
   }),
@@ -181,7 +181,7 @@ router.put(
   "/:id/complete",
   authenticate,
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER),
-  logActivity(ACTION_TYPE.EVENT_COMPLETED, ENTITY_TYPE.EVENT, {
+  logActivity(ACTION_TYPE.EVENT_COMPLETE, ENTITY_TYPE.EVENT, {
     getEntityId: (req) => req.params.id,
     getDescription: (req) => `Completed event ${req.params.id}`,
   }),
@@ -303,7 +303,7 @@ router.post(
   "/:id/duplicate",
   authenticate,
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER),
-  logActivity(ACTION_TYPE.EVENT_DUPLICATED, ENTITY_TYPE.EVENT, {
+  logActivity(ACTION_TYPE.EVENT_DUPLICATE, ENTITY_TYPE.EVENT, {
     getEntityId: (req) => req.params.id,
     getDescription: (req) => `Duplicated event ${req.params.id}`,
   }),

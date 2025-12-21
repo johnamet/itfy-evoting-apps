@@ -218,15 +218,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ isCandidateLoading: true, candidateError: null });
 
         try {
-          // First request OTP
-          const otpResponse = await candidateAuthApi.requestOtp(credentials);
+          const response = await candidateAuthApi.login(credentials);
 
-          if (otpResponse.success) {
-            set({ isCandidateLoading: false });
+          if (response.success && response.data) {
+            set({
+              candidate: response.data.candidate,
+              isCandidateAuthenticated: true,
+              isCandidateLoading: false,
+              candidateError: null,
+            });
             return { success: true };
           }
 
-          throw new Error(otpResponse.message || 'Failed to send verification code');
+          throw new Error(response.message || 'Login failed');
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
           set({
@@ -239,13 +243,18 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      logoutCandidate: () => {
-        candidateAuthApi.logout();
-        set({
-          candidate: null,
-          isCandidateAuthenticated: false,
-          candidateError: null,
-        });
+      logoutCandidate: async () => {
+        try {
+          await candidateAuthApi.logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          set({
+            candidate: null,
+            isCandidateAuthenticated: false,
+            candidateError: null,
+          });
+        }
       },
 
       fetchCurrentCandidate: async () => {

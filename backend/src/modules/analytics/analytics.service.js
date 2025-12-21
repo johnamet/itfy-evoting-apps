@@ -12,7 +12,7 @@ import CouponRepository from "../vote/coupon/coupon.repository.js";
 import FormRepository from "../form/form.repository.js";
 import FormSubmissionRepository from "../form/submission.repository.js";
 import ActivityRepository from "../activity/activity.repository.js";
-import PaymentModel from "./payment.model.js";
+import PaymentModel from "../payment/payment.model.js";
 
 class AnalyticsService {
   /**

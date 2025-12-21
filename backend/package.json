@@ -13,7 +13,9 @@
     "test": "jest",
     "prelint": "eslint src",
     "lint": "eslint src --fix",
-    "seed": "babel-node src/database/seeders/app.seeder.js"
+    "seed": "babel-node src/database/seeders/app.seeder.js",
+    "console": "babel-node src/console/index.js",
+    "setup": "babel-node src/console/index.js --setup"
   },
   "jest": {
     "testEnvironment": "node",

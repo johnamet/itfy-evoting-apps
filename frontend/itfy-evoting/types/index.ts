@@ -169,17 +169,68 @@ export interface CandidateLoginRequest {
 export type EventType = 'conference' | 'workshop' | 'seminar' | 'networking' | 'webinar' | 'hybrid' | 'other';
 export type EventVisibility = 'public' | 'private' | 'unlisted';
 export type EventStatus = 'active' | 'upcoming' | 'archived' | 'cancelled' | 'deleted' | 'pending';
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'GHS' | 'NGN';
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'GHS' | 'NGN' | 'ZAR' | 'INR' | 'JPY' | 'CNY';
 
 export interface EventLocation {
   name?: string;
   address?: string;
   city?: string;
   country?: string;
+  zipCode?: string;
+  website?: string;
+  phone?: string;
+  venueInfo?: string[];
+  directions?: string[];
   coordinates?: {
     lat: number;
     lng: number;
   };
+}
+
+export interface EventTimelineItem {
+  title: string;
+  description?: string;
+  time: string;
+}
+
+export interface EventOrganizer {
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface EventRegistrationFee {
+  amount: number;
+  currency: string;
+  is_free: boolean;
+}
+
+export interface EventSocialLinks {
+  facebook?: string;
+  twitter?: string;
+  linkedin?: string;
+  instagram?: string;
+}
+
+export interface EventSpeaker {
+  name: string;
+  title?: string;
+  bio?: string;
+  photo_url?: string;
+}
+
+export interface EventSponsor {
+  name: string;
+  logo_url?: string;
+  website?: string;
+  tier?: string;
+}
+
+export interface EventGuestOfHonor {
+  name: string;
+  title?: string;
+  bio?: string;
+  photo_url?: string;
 }
 
 export interface Event {
@@ -199,13 +250,41 @@ export interface Event {
   banner_url?: string | null;
   cover_image?: string | null;
   gallery?: string[];
-  speakers?: Record<string, unknown>[];
-  sponsors?: Record<string, unknown>[];
+  speakers?: EventSpeaker[];
+  sponsors?: EventSponsor[];
+  guestOfHonor?: EventGuestOfHonor[];
+  timeline?: EventTimelineItem[];
+  related_events?: ObjectId[];
+  categories?: ObjectId[];
+  registration_form?: ObjectId;
+  max_attendees?: number;
+  current_attendees?: number;
+  registration_deadline?: string;
+  registration_fee?: EventRegistrationFee;
+  tags?: string[];
+  organizer?: EventOrganizer;
+  contact_email?: string;
+  social_links?: EventSocialLinks;
+  requirements?: string[];
+  cancellation_policy?: string;
+  created_by?: ObjectId;
+  updated_by?: ObjectId;
   currency: Currency;
   total_votes: number;
-  total_revenue: number;
+  color_theme?: string | null;
   created_at: string;
   updated_at: string;
+  
+  // Virtuals from backend
+  isRegistrationOpen?: boolean;
+  isFull?: boolean;
+  duration?: number;
+  durationInHours?: number;
+  spotsRemaining?: number | null;
+  isUpcoming?: boolean;
+  isActive?: boolean;
+  hasEnded?: boolean;
+  daysUntilStart?: number;
 }
 
 export interface CreateEventRequest {
@@ -239,7 +318,6 @@ export interface EventStats {
   totalCategories: number;
   totalCandidates: number;
   totalVotes: number;
-  totalRevenue: number;
 }
 
 // ==================
@@ -270,6 +348,9 @@ export interface Category {
   allow_write_in: boolean;
   require_authentication: boolean;
   results_visibility: ResultsVisibility;
+  show_results_before_deadline: boolean;
+  color_theme?: string | null;
+  image?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -356,6 +437,29 @@ export interface CandidateEducation {
   end_date?: string;
 }
 
+export interface CandidateExperience {
+  company: string;
+  position: string;
+  start_date?: string;
+  end_date?: string;
+  current?: boolean;
+  description?: string;
+}
+
+export interface CandidateAchievement {
+  title: string;
+  description?: string;
+  date?: string;
+  organization?: string;
+}
+
+export interface CandidateEndorsement {
+  name: string;
+  position?: string;
+  message?: string;
+  image?: string;
+}
+
 export interface CandidateSocialLinks {
   facebook?: string;
   twitter?: string;
@@ -364,6 +468,8 @@ export interface CandidateSocialLinks {
   youtube?: string;
   website?: string;
   tiktok?: string;
+  github?: string;
+  portfolio?: string;
 }
 
 export interface Candidate {
@@ -382,14 +488,25 @@ export interface Candidate {
   projects?: CandidateProject[];
   skills?: string[];
   education?: CandidateEducation[];
+  experience?: CandidateExperience[];
+  achievements?: CandidateAchievement[];
   social_links?: CandidateSocialLinks;
   status: CandidateStatus;
   event: ObjectId;
   categories: ObjectId[];
+  admin_verified_categories?: ObjectId[];
   vote_count: number;
+  view_count?: number;
   is_featured: boolean;
   is_published: boolean;
   display_order: number;
+  why_nominate_me?: string;
+  impact_statement?: string;
+  endorsements?: CandidateEndorsement[];
+  tags?: string[];
+  nomination_date?: string;
+  approval_date?: string;
+  rejection_reason?: string;
   created_at: string;
   updated_at: string;
 }
@@ -589,9 +706,11 @@ export interface Payment {
 
 export interface InitializePaymentRequest {
   bundle: ObjectId;
+  quantity?: number;
   voter_email: string;
   voter_name?: string;
   voter_phone?: string;
+  candidate?: ObjectId;
   coupon_code?: string;
   callback_url?: string;
 }

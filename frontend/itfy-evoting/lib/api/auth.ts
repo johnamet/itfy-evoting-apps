@@ -180,31 +180,16 @@ export const authApi = {
  */
 export const candidateAuthApi = {
   /**
-   * Request OTP for candidate login
+   * Login candidate with identifier (code or email) and password
    */
-  requestOtp: async (data: CandidateLoginRequest): Promise<ApiResponse<{ message: string }>> => {
-    return api.post<ApiResponse<{ message: string }>>(
-      '/candidate-auth/request-otp',
-      data,
-      { skipAuth: true }
-    );
-  },
-
-  /**
-   * Verify OTP and login candidate
-   */
-  verifyOtp: async (data: {
-    email: string;
-    otp: string;
-    event_id: string;
-  }): Promise<ApiResponse<CandidateAuthResponse>> => {
+  login: async (data: CandidateLoginRequest): Promise<ApiResponse<CandidateAuthResponse>> => {
     const response = await api.post<ApiResponse<CandidateAuthResponse>>(
-      '/candidate-auth/verify-otp',
+      '/auth/candidate/login',
       data,
       { skipAuth: true }
     );
 
-    // Store candidate token on successful verification
+    // Store candidate token on successful login
     if (response.data?.token) {
       tokenManager.setCandidateToken(response.data.token);
     }
@@ -217,16 +202,46 @@ export const candidateAuthApi = {
    */
   getCurrentCandidate: async (): Promise<ApiResponse<Candidate>> => {
     return api.get<ApiResponse<Candidate>>(
-      '/candidate-auth/me',
+      '/auth/candidate/me',
       { authType: 'candidate' }
+    );
+  },
+
+  /**
+   * Request password reset for candidate
+   */
+  forgotPassword: async (data: { email: string; eventId?: string }): Promise<ApiResponse<{ message: string }>> => {
+    return api.post<ApiResponse<{ message: string }>>(
+      '/auth/candidate/forgot-password',
+      data,
+      { skipAuth: true }
+    );
+  },
+
+  /**
+   * Reset candidate password with token
+   */
+  resetPassword: async (data: { token: string; password: string }): Promise<ApiResponse<{ message: string }>> => {
+    return api.post<ApiResponse<{ message: string }>>(
+      '/auth/candidate/reset-password',
+      data,
+      { skipAuth: true }
     );
   },
 
   /**
    * Logout candidate
    */
-  logout: (): void => {
-    tokenManager.clearCandidateToken();
+  logout: async (): Promise<void> => {
+    try {
+      await api.post<ApiResponse<{ message: string }>>(
+        '/auth/candidate/logout',
+        {},
+        { authType: 'candidate' }
+      );
+    } finally {
+      tokenManager.clearCandidateToken();
+    }
   },
 
   /**

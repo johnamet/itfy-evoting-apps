@@ -15,6 +15,9 @@ const ACTION_TYPE = {
   EVENT_DELETE: "event_delete",
   EVENT_PUBLISH: "event_publish",
   EVENT_ARCHIVE: "event_archive",
+  EVENT_COMPLETE: "event_complete",
+  EVENT_DUPLICATE: "event_duplicate",
+  EVENT_UNPUBLISH: "event_unpublish",
   
   // Candidate actions
   CANDIDATE_CREATE: "candidate_create",

@@ -14,6 +14,9 @@ import fs from "fs/promises";
 import handlebars from "handlebars";
 import { EMAIL_TEMPLATES, EMAIL_SUBJECTS } from "../utils/constants/email.constants.js";
 import { NOTIFICATION_CHANNEL } from "../utils/constants/notification.constants.js";
+import { configDotenv } from "dotenv";
+
+configDotenv(); // Load .env variables
 
 class EmailService {
   constructor() {
