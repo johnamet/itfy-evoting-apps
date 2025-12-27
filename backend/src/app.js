@@ -11,8 +11,9 @@ import morgan from "morgan";
 import dotenv, { configDotenv } from "dotenv";
 import db from "./database/app.database.js"
 import agendaManager from "./services/agenda.service.js";
+import { healthService } from "./services/health.service.js";
 import cache from "./utils/cache/cache.utils.js";
-import router from "./middleware/routes/app.routes.js";
+import router from "./routes/app.routes.js";
 import { setupAPIDocs } from "./config/swagger.config.js";
 import BaseController from "./modules/shared/base.controller.js";
 import Joi from "joi";
@@ -46,6 +47,9 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Static file serving for uploads
+app.use("/uploads", express.static("uploads"));
+
 // Logging
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
@@ -63,21 +67,26 @@ setupAPIDocs(app);
 // ROUTES
 // ========================================
 
-// Health check
-app.get("/api/v1/health", (req, res) => {
-  const agendaStatus = agendaManager.getStatus();
-  
-  res.json({
-    status: "ok",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
-    services: {
-      database: "connected",
-      cache: cache ? "connected" : "disconnected",
-      agenda: agendaStatus.isReady ? "ready" : "initializing",
-    },
-  });
+// Quick health check (for load balancers, etc.)
+app.get("/api/v1/health", async (req, res) => {
+  const health = await healthService.getQuickHealth();
+  res.json(health);
+});
+
+// Comprehensive system health check
+app.get("/api/v1/health/detailed", async (req, res) => {
+  try {
+    const health = await healthService.getSystemHealth();
+    const statusCode = health.status === "healthy" ? 200 : 
+                       health.status === "degraded" ? 200 : 503;
+    res.status(statusCode).json(health);
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // API routes

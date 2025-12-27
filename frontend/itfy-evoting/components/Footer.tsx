@@ -3,10 +3,15 @@
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, Heart, Trophy, ArrowUp } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useFooterStats, useFooterCategories } from '@/hooks/useFooterData';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
   const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  // Fetch real data from API
+  const { data: stats, isLoading: statsLoading } = useFooterStats();
+  const { data: categoriesData, isLoading: categoriesLoading } = useFooterCategories();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,12 +37,20 @@ export default function Footer() {
     },
     {
       title: "Categories",
-      links: [
-        { label: "Best Developer", href: "/categories/developer" },
-        { label: "Tech Innovator", href: "/categories/innovator" },
-        { label: "Rising Star", href: "/categories/rising-star" },
-        { label: "View All", href: "/categories" },
-      ]
+      links: categoriesLoading || !categoriesData?.data?.length
+        ? [
+            { label: "Best Developer", href: "/categories/developer" },
+            { label: "Tech Innovator", href: "/categories/innovator" },
+            { label: "Rising Star", href: "/categories/rising-star" },
+            { label: "View All", href: "/categories" },
+          ]
+        : [
+            ...categoriesData.data.slice(0, 3).map((cat) => ({
+              label: cat.name,
+              href: `/categories/${cat.slug || cat._id}`,
+            })),
+            { label: "View All", href: "/categories" },
+          ]
     },
     {
       title: "Support",
@@ -157,15 +170,21 @@ export default function Footer() {
             {/* Stats */}
             <div className="flex gap-8 text-center">
               <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-300 to-itfy-primary bg-clip-text text-transparent">500+</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-300 to-itfy-primary bg-clip-text text-transparent">
+                  {statsLoading ? '...' : `${stats?.totalCandidates || 500}+`}
+                </div>
                 <div className="text-gray-400 text-sm">Nominees</div>
               </div>
               <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-400 to-itfy-light-blue bg-clip-text text-transparent">50K+</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-itfy-400 to-itfy-light-blue bg-clip-text text-transparent">
+                  {statsLoading ? '...' : `${Math.floor((stats?.totalVotes || 50000) / 1000)}K+`}
+                </div>
                 <div className="text-gray-400 text-sm">Votes</div>
               </div>
               <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">15+</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                  {statsLoading ? '...' : `${stats?.totalCategories || 15}+`}
+                </div>
                 <div className="text-gray-400 text-sm">Categories</div>
               </div>
             </div>

@@ -12,6 +12,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/a
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const CANDIDATE_TOKEN_KEY = 'candidate_token';
+const CANDIDATE_REFRESH_TOKEN_KEY = 'candidate_refresh_token';
 
 // Token types for different authentication contexts
 export type AuthType = 'user' | 'candidate';
@@ -58,9 +59,20 @@ export const tokenManager = {
     localStorage.setItem(CANDIDATE_TOKEN_KEY, token);
   },
 
+  getCandidateRefreshToken: (): string | null => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(CANDIDATE_REFRESH_TOKEN_KEY);
+  },
+
+  setCandidateRefreshToken: (token: string): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(CANDIDATE_REFRESH_TOKEN_KEY, token);
+  },
+
   clearCandidateToken: (): void => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(CANDIDATE_TOKEN_KEY);
+    localStorage.removeItem(CANDIDATE_REFRESH_TOKEN_KEY);
   },
 
   // Clear all tokens
@@ -176,6 +188,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
  * Refresh access token
  */
 let refreshPromise: Promise<boolean> | null = null;
+let isLoggingOut = false; // Flag to prevent recursive logout
 
 async function refreshAccessToken(): Promise<boolean> {
   // Prevent multiple simultaneous refresh requests
@@ -262,25 +275,40 @@ export async function apiRequest<T>(
 
   let response = await fetch(url, config);
 
-  // Handle 401 - attempt token refresh for user auth
-  if (response.status === 401 && !skipAuth && authType === 'user') {
-    const refreshed = await refreshAccessToken();
+  // Handle 401 - attempt token refresh for user auth only
+  if (response.status === 401 && !skipAuth) {
+    // Prevent recursive logout attempts
+    const isLogoutRequest = endpoint.includes('/logout');
     
-    if (refreshed) {
-      // Retry request with new token
-      const newHeaders = {
-        ...headers,
-        ...getAuthHeader(authType),
-      };
+    if (authType === 'user') {
+      const refreshed = await refreshAccessToken();
       
-      response = await fetch(url, {
-        ...config,
-        headers: newHeaders,
-      });
-    } else {
-      // Trigger logout event for UI to handle
+      if (refreshed) {
+        // Retry request with new token
+        const newHeaders = {
+          ...headers,
+          ...getAuthHeader(authType),
+        };
+        
+        response = await fetch(url, {
+          ...config,
+          headers: newHeaders,
+        });
+      } else if (!isLoggingOut && !isLogoutRequest) {
+        // Trigger logout event for UI to handle (only once and not for logout requests)
+        isLoggingOut = true;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:logout'));
+        }
+        // Reset flag after a delay to allow for future logout attempts
+        setTimeout(() => { isLoggingOut = false; }, 1000);
+      }
+    } else if (authType === 'candidate' && !isLogoutRequest) {
+      // For candidates, clear token and trigger candidate logout event
+      // Don't attempt refresh or recursive logout
+      tokenManager.clearCandidateToken();
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:logout'));
+        window.dispatchEvent(new CustomEvent('candidate:unauthorized'));
       }
     }
   }

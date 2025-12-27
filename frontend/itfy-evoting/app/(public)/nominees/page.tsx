@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -18,10 +18,10 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
-import { mockCandidates } from '@/lib/mocks/candidates';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockEvents } from '@/lib/mocks/events';
-import { Candidate } from '@/types';
+import { candidatesApi } from '@/lib/api/candidates';
+import { eventsApi } from '@/lib/api/events';
+import { categoriesApi } from '@/lib/api/categories';
+import { Candidate, Event, Category } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Header from '@/components/Header';
@@ -31,14 +31,21 @@ import PromoBanner from '@/components/PromoBanner';
 
 const ITEMS_PER_PAGE = 12;
 
-// Stats for the hero section
-function getStats() {
-  const publishedCandidates = mockCandidates.filter(c => c.is_published && c.status === 'approved');
+// Stats calculation interface
+interface Stats {
+  totalNominees: number;
+  totalVotes: number;
+  featuredNominees: number;
+  totalViews: number;
+}
+
+// Calculate stats from candidates
+function calculateStats(candidates: Candidate[]): Stats {
   return {
-    totalNominees: publishedCandidates.length,
-    totalVotes: publishedCandidates.reduce((sum, c) => sum + c.vote_count, 0),
-    featuredNominees: publishedCandidates.filter(c => c.is_featured).length,
-    totalViews: publishedCandidates.reduce((sum, c) => sum + (c.view_count || 0), 0),
+    totalNominees: candidates.length,
+    totalVotes: candidates.reduce((sum, c) => sum + c.vote_count, 0),
+    featuredNominees: candidates.filter(c => c.is_featured).length,
+    totalViews: candidates.reduce((sum, c) => sum + (c.view_count || 0), 0),
   };
 }
 
@@ -201,9 +208,9 @@ function Pagination({
 }
 
 // Nominee card component for grid view
-function NomineeCard({ nominee }: { nominee: Candidate }) {
-  const event = mockEvents.find(e => e._id === nominee.event);
-  const categories = mockCategories.filter(c => nominee.categories.includes(c._id));
+function NomineeCard({ nominee, events, categories }: { nominee: Candidate; events: Event[]; categories: Category[] }) {
+  const event = events.find(e => e._id === nominee.event);
+  const nomineeCategories = categories.filter(c => nominee.categories.includes(c._id));
   
   return (
     <Link href={`/nominees/${nominee.slug}`}>
@@ -275,7 +282,7 @@ function NomineeCard({ nominee }: { nominee: Candidate }) {
           
           {/* Categories */}
           <div className="flex flex-wrap gap-1 mb-3">
-            {categories.slice(0, 2).map(cat => (
+            {nomineeCategories.slice(0, 2).map(cat => (
               <span 
                 key={cat._id}
                 className="px-2 py-0.5 text-xs bg-[#0152be]/20 text-[#0152be] rounded-full"
@@ -283,9 +290,9 @@ function NomineeCard({ nominee }: { nominee: Candidate }) {
                 {cat.name}
               </span>
             ))}
-            {categories.length > 2 && (
+            {nomineeCategories.length > 2 && (
               <span className="px-2 py-0.5 text-xs bg-gray-800 text-gray-400 rounded-full">
-                +{categories.length - 2} more
+                +{nomineeCategories.length - 2} more
               </span>
             )}
           </div>
@@ -330,9 +337,9 @@ function NomineeCard({ nominee }: { nominee: Candidate }) {
 }
 
 // Nominee row component for list view
-function NomineeRow({ nominee }: { nominee: Candidate }) {
-  const event = mockEvents.find(e => e._id === nominee.event);
-  const categories = mockCategories.filter(c => nominee.categories.includes(c._id));
+function NomineeRow({ nominee, events, categories }: { nominee: Candidate; events: Event[]; categories: Category[] }) {
+  const event = events.find(e => e._id === nominee.event);
+  const nomineeCategories = categories.filter(c => nominee.categories.includes(c._id));
   
   return (
     <Link href={`/nominees/${nominee.slug}`}>
@@ -382,7 +389,7 @@ function NomineeRow({ nominee }: { nominee: Candidate }) {
             
             {/* Categories and Skills */}
             <div className="flex flex-wrap gap-1">
-              {categories.slice(0, 2).map(cat => (
+              {nomineeCategories.slice(0, 2).map(cat => (
                 <span 
                   key={cat._id}
                   className="px-2 py-0.5 text-xs bg-[#0152be]/20 text-[#0152be] rounded-full"
@@ -438,17 +445,45 @@ export default function NomineesPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isLoading, _setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const stats = getStats();
+  // State for data from backend
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [stats, setStats] = useState<Stats>({ totalNominees: 0, totalVotes: 0, featuredNominees: 0, totalViews: 0 });
+  
+  // Fetch data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch all data in parallel
+        const [candidatesResponse, eventsResponse, categoriesResponse] = await Promise.all([
+          candidatesApi.listPublic({ page: 1, limit: 1000 }), // Get all candidates
+          eventsApi.getPublicEvents({ page: 1, limit: 100 }),
+          categoriesApi.list({ page: 1, limit: 100 }),
+        ]);
+        
+        const candidates = candidatesResponse.data || [];
+        setAllCandidates(candidates);
+        setEvents(eventsResponse.data || []);
+        setCategories(categoriesResponse.data || []);
+        setStats(calculateStats(candidates));
+      } catch (error) {
+        console.error('Failed to fetch nominees data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
   
   // Filter and sort nominees using useMemo for performance
   const filteredNominees = useMemo(() => {
-    let nominees = [...mockCandidates];
-    
-    // Filter by published status (for public view, only show published and approved)
-    nominees = nominees.filter(n => n.is_published && n.status === 'approved');
+    let nominees = [...allCandidates];
     
     // Search
     if (searchQuery) {
@@ -473,7 +508,7 @@ export default function NomineesPage() {
       nominees = nominees.filter(n => n.categories.includes(selectedCategory));
     }
     
-    // Filter by status
+    // Filter by status (not used for public view, but kept for compatibility)
     if (selectedStatus !== 'all') {
       nominees = nominees.filter(n => n.status === selectedStatus);
     }
@@ -500,7 +535,7 @@ export default function NomineesPage() {
     }
     
     return nominees;
-  }, [searchQuery, selectedEvent, selectedCategory, selectedStatus, showFeaturedOnly, sortBy]);
+  }, [allCandidates, searchQuery, selectedEvent, selectedCategory, selectedStatus, showFeaturedOnly, sortBy]);
   
   // Calculate pagination
   const totalPages = Math.ceil(filteredNominees.length / ITEMS_PER_PAGE);
@@ -526,12 +561,12 @@ export default function NomineesPage() {
   };
   
   // Get unique events and categories from candidates
-  const availableEvents = mockEvents.filter(e => 
-    mockCandidates.some(c => c.event === e._id)
+  const availableEvents = events.filter(e => 
+    allCandidates.some(c => c.event === e._id)
   );
   
-  const availableCategories = mockCategories.filter(c => 
-    mockCandidates.some(cand => cand.categories.includes(c._id))
+  const availableCategories = categories.filter(c => 
+    allCandidates.some(cand => cand.categories.includes(c._id))
   );
   
   return (
@@ -774,13 +809,13 @@ export default function NomineesPage() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedNominees.map(nominee => (
-                <NomineeCard key={nominee._id} nominee={nominee} />
+                <NomineeCard key={nominee._id} nominee={nominee} events={events} categories={categories} />
               ))}
             </div>
           ) : (
             <div className="space-y-4">
               {paginatedNominees.map(nominee => (
-                <NomineeRow key={nominee._id} nominee={nominee} />
+                <NomineeRow key={nominee._id} nominee={nominee} events={events} categories={categories} />
               ))}
             </div>
           )}

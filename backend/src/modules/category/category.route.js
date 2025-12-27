@@ -19,6 +19,12 @@ const router = Router();
  */
 router.get("/featured", CategoryController.getFeatured.bind(CategoryController));
 
+/**
+ * GET /api/categories/slug/:slug
+ * Get category by slug (public)
+ */
+router.get("/slug/:slug", CategoryController.getBySlug.bind(CategoryController));
+
 // ==================== ADMIN ROUTES ====================
 
 /**
@@ -37,12 +43,11 @@ router.post(
 /**
  * GET /api/categories
  * List all categories with filters
- * Requires: Admin
+ * Public access (returns only active/published categories for non-admin users)
  */
 router.get(
   "/",
-  authenticate,
-  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR),
+  optionalAuth,
   CategoryController.list.bind(CategoryController)
 );
 

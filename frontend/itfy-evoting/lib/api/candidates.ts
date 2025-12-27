@@ -39,6 +39,8 @@ export interface CandidateStatsResponse {
     date: string;
     count: number;
   }>;
+  view_count?: number;
+  profile_completeness?: number;
 }
 
 // Candidate with vote count
@@ -53,6 +55,38 @@ export interface CandidateWithVotes extends Candidate {
  */
 export const candidatesApi = {
   // ==================== Public Endpoints ====================
+
+  /**
+   * Get all published and approved candidates (public)
+   */
+  listPublic: async (
+    params?: PaginationParams & { 
+      event?: string; 
+      category?: string;
+      search?: string;
+      sort?: string;
+    }
+  ): Promise<CandidatesListResponse> => {
+    return api.get<CandidatesListResponse>('/candidates/public', {
+      params: {
+        ...buildPaginationParams(params),
+        event: params?.event,
+        category: params?.category,
+        search: params?.search,
+        sort: params?.sort,
+      },
+      skipAuth: true,
+    });
+  },
+
+  /**
+   * Get candidate by slug (public)
+   */
+  getBySlug: async (slug: string): Promise<ApiResponse<Candidate>> => {
+    return api.get<ApiResponse<Candidate>>(`/candidates/slug/${slug}`, {
+      skipAuth: true,
+    });
+  },
 
   /**
    * Get candidates for an event (public)
@@ -330,6 +364,119 @@ export const candidatesApi = {
     return api.get<ApiResponse<CandidateStatsResponse>>('/candidates/profile/stats', {
       authType: 'candidate',
     });
+  },
+
+  /**
+   * Request to be added to additional category (for authenticated candidate)
+   * This will trigger admin approval workflow
+   */
+  requestCategoryAddition: async (categoryId: string): Promise<ApiResponse<Candidate>> => {
+    return api.post<ApiResponse<Candidate>>(
+      '/candidates/profile/categories',
+      { categoryId },
+      {
+        authType: 'candidate',
+      }
+    );
+  },
+
+  /**
+   * Upload candidate's own profile image (authenticated candidate)
+   */
+  uploadMyProfileImage: async (file: File): Promise<ApiResponse<{ image_url: string }>> => {
+    return uploadFile<ApiResponse<{ image_url: string }>>(
+      '/candidates/profile/image',
+      file,
+      'image',
+      undefined,
+      { authType: 'candidate' }
+    );
+  },
+
+  /**
+   * Delete candidate's own profile image (authenticated candidate)
+   */
+  deleteMyProfileImage: async (): Promise<ApiResponse<{ message: string }>> => {
+    return api.delete<ApiResponse<{ message: string }>>('/candidates/profile/image', {
+      authType: 'candidate',
+    });
+  },
+
+  /**
+   * Upload candidate's own cover image (authenticated candidate)
+   */
+  uploadMyCoverImage: async (file: File): Promise<ApiResponse<{ image_url: string }>> => {
+    return uploadFile<ApiResponse<{ image_url: string }>>(
+      '/candidates/profile/cover',
+      file,
+      'image',
+      undefined,
+      { authType: 'candidate' }
+    );
+  },
+
+  /**
+   * Upload candidate's own gallery images (authenticated candidate)
+   */
+  uploadMyGalleryImages: async (files: File[]): Promise<ApiResponse<{ gallery: string[] }>> => {
+    return uploadFiles<ApiResponse<{ gallery: string[] }>>(
+      '/candidates/profile/gallery',
+      files,
+      'images',
+      undefined, // No additional form data
+      { authType: 'candidate' } // Pass authType in options (5th parameter)
+    );
+  },
+
+  /**
+   * Delete candidate's own gallery image (authenticated candidate)
+   */
+  deleteMyGalleryImage: async (imageUrl: string): Promise<ApiResponse<{ message: string }>> => {
+    return api.delete<ApiResponse<{ message: string }>>(
+      '/candidates/profile/gallery',
+      { 
+        params: { image_url: imageUrl },
+        authType: 'candidate',
+      }
+    );
+  },
+
+  /**
+   * Get candidate profile update history (authenticated candidate)
+   */
+  getMyProfileHistory: async (): Promise<ApiResponse<Array<{
+    _id: string;
+    field_name: string;
+    old_value: any;
+    new_value: any;
+    changed_at: string;
+    changed_by: string;
+  }>>> => {
+    return api.get<ApiResponse<Array<{
+      _id: string;
+      field_name: string;
+      old_value: any;
+      new_value: any;
+      changed_at: string;
+      changed_by: string;
+    }>>>('/candidates/profile/history', {
+      authType: 'candidate',
+    });
+  },
+
+  /**
+   * Change candidate's password (authenticated candidate)
+   */
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<ApiResponse<{ message: string }>> => {
+    return api.post<ApiResponse<{ message: string }>>(
+      '/auth/candidate/change-password',
+      data,
+      { authType: 'candidate' }
+    );
   },
 };
 

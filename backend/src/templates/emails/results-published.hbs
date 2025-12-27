@@ -5,53 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Results Published</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 20px 60px rgba(245, 158, 11, 0.2);">
           
-          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Results Are In!</h1>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #EF4444 50%, #8B5CF6 100%); padding: 50px 40px; text-align: center;">
+              <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; backdrop-filter: blur(10px); border: 4px solid rgba(255,255,255,0.4); line-height: 100px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <span style="font-size: 50px;">🏆</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0 0 10px; font-size: 36px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Results Are In!</h1>
+              <p style="color: rgba(255,255,255,0.95); margin: 0; font-size: 16px; font-weight: 600;">See who won</p>
             </td>
           </tr>
 
-          <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Hi <strong>{{name}}</strong>,
+            <td style="padding: 50px 40px;">
+              <p style="color: #F1F5F9; font-size: 18px; font-weight: 600;">Hi <span style="background: linear-gradient(90deg, #F59E0B, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{name}}</span>,</p>
+
+              <p style="color: #CBD5E1; font-size: 16px; line-height: 1.8; margin: 0 0 35px;">
+                The results for <strong style="color: #F59E0B;">{{eventName}}</strong> are now available! Thank you for being part of this exciting event.
               </p>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                The results for <strong>{{eventName}}</strong> are now available! Thank you for participating in this exciting event.
-              </p>
-
-              <!-- Event Info -->
-              <div style="background-color: #F9FAFB; border-radius: 8px; padding: 20px; margin-bottom: 30px; border: 1px solid #E5E7EB;">
-                <p style="color: #6B7280; font-size: 14px; margin: 0 0 5px;">Event</p>
-                <p style="color: #111827; font-size: 20px; font-weight: 700; margin: 0;">{{eventName}}</p>
+              <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%); border-radius: 16px; padding: 25px; margin-bottom: 35px; text-align: center;">
+                <p style="color: #FCD34D; font-size: 14px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Event</p>
+                <p style="color: #F1F5F9; font-size: 24px; font-weight: 800; margin: 0;">{{eventName}}</p>
               </div>
 
               {{#if winners}}
-              <!-- Winners List -->
-              <h2 style="color: #111827; font-size: 20px; font-weight: 600; margin: 0 0 20px;">🌟 Winners</h2>
+              <h2 style="color: #F1F5F9; font-size: 24px; font-weight: 700; margin: 0 0 30px; text-align: center;">🌟 Winners</h2>
               
               {{#each winners}}
-              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 16px; margin-bottom: 15px; border-radius: 4px;">
+              <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%); border-left: 4px solid #F59E0B; padding: 20px; margin-bottom: 20px; border-radius: 12px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td>
-                      <p style="color: #92400E; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 5px; font-weight: 600;">{{categoryName}}</p>
-                      <p style="color: #111827; font-size: 18px; font-weight: 700; margin: 0 0 5px;">{{candidateName}}</p>
-                      <p style="color: #78350F; font-size: 14px; margin: 0;">{{formatNumber voteCount}} votes</p>
+                    <td style="width: 70%;">
+                      <p style="color: #FCD34D; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px; font-weight: 700;">{{categoryName}}</p>
+                      <p style="color: #F1F5F9; font-size: 20px; font-weight: 800; margin: 0 0 8px;">{{candidateName}}</p>
+                      <p style="color: #FBBF24; font-size: 15px; margin: 0; font-weight: 600;">{{formatNumber voteCount}} votes</p>
                     </td>
-                    <td align="right" valign="middle" style="width: 60px;">
-                      <div style="background-color: #F59E0B; color: #ffffff; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; text-align: center; line-height: 50px;">
-                        {{position}}
+                    <td style="width: 30%; text-align: right; vertical-align: middle;">
+                      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #F59E0B, #EF4444); border-radius: 50%; margin-left: auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);">
+                        <span style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 60px;">{{position}}</span>
                       </div>
                     </td>
                   </tr>
@@ -60,19 +57,18 @@
               {{/each}}
               {{/if}}
 
-              <!-- Statistics -->
               {{#if totalVotes}}
-              <div style="background-color: #EFF6FF; border-radius: 8px; padding: 20px; margin: 30px 0;">
+              <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%); border-radius: 16px; padding: 30px; margin: 35px 0;">
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
-                    <td style="text-align: center; padding: 10px;">
-                      <p style="color: #1E40AF; font-size: 28px; font-weight: 700; margin: 0;">{{formatNumber totalVotes}}</p>
-                      <p style="color: #3B82F6; font-size: 14px; margin: 5px 0 0;">Total Votes</p>
+                    <td style="text-align: center; padding: 15px;">
+                      <p style="color: #93C5FD; font-size: 36px; font-weight: 900; margin: 0;">{{formatNumber totalVotes}}</p>
+                      <p style="color: #DBEAFE; font-size: 14px; margin: 8px 0 0; text-transform: uppercase; letter-spacing: 1px;">Total Votes</p>
                     </td>
                     {{#if totalParticipants}}
-                    <td style="text-align: center; padding: 10px; border-left: 1px solid #DBEAFE;">
-                      <p style="color: #1E40AF; font-size: 28px; font-weight: 700; margin: 0;">{{formatNumber totalParticipants}}</p>
-                      <p style="color: #3B82F6; font-size: 14px; margin: 5px 0 0;">Participants</p>
+                    <td style="text-align: center; padding: 15px; border-left: 1px solid rgba(139, 92, 246, 0.2);">
+                      <p style="color: #C4B5FD; font-size: 36px; font-weight: 900; margin: 0;">{{formatNumber totalParticipants}}</p>
+                      <p style="color: #DDD6FE; font-size: 14px; margin: 8px 0 0; text-transform: uppercase; letter-spacing: 1px;">Participants</p>
                     </td>
                     {{/if}}
                   </tr>
@@ -80,33 +76,29 @@
               </div>
               {{/if}}
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
                 <tr>
                   <td align="center">
-                    <a href="{{resultsUrl}}" style="display: inline-block; background-color: #F59E0B; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      View Full Results
+                    <a href="{{resultsUrl}}" style="display: inline-block; background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%); color: #ffffff; text-decoration: none; padding: 20px 60px; border-radius: 50px; font-weight: 700; font-size: 17px; box-shadow: 0 15px 40px rgba(245, 158, 11, 0.4); text-transform: uppercase; letter-spacing: 1px;">
+                      View Full Results →
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
-                Thank you for being part of this event!<br>
-                <strong>The {{appName}} Team</strong>
+              <p style="color: #CBD5E1; font-size: 16px; margin: 40px 0 0;">
+                Thank you for participating!<br>
+                <strong style="background: linear-gradient(90deg, #F59E0B, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">The {{appName}} Team</strong>
               </p>
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
-            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
-              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
-                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #F59E0B; text-decoration: none;">{{supportEmail}}</a>
+            <td style="background: rgba(0,0,0,0.3); padding: 30px 40px; text-align: center; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+              <p style="color: #94A3B8; font-size: 14px; margin: 0 0 10px;">
+                Need help? <a href="mailto:{{supportEmail}}" style="color: #F59E0B; text-decoration: none; font-weight: 600;">{{supportEmail}}</a>
               </p>
-              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
-                © {{currentYear}} {{appName}}. All rights reserved.
-              </p>
+              <p style="color: #64748B; font-size: 12px; margin: 10px 0 0;">© {{currentYear}} {{appName}}. All rights reserved.</p>
             </td>
           </tr>
 

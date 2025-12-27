@@ -69,14 +69,14 @@ export const notificationsApi = {
    * Get unread notification count
    */
   getUnreadCount: async (): Promise<ApiResponse<{ count: number }>> => {
-    return api.get<ApiResponse<{ count: number }>>('/notifications/me/unread-count');
+    return api.get<ApiResponse<{ count: number }>>('/notifications/me/unread/count');
   },
 
   /**
    * Mark notification as read
    */
   markAsRead: async (notificationId: string): Promise<ApiResponse<Notification>> => {
-    return api.post<ApiResponse<Notification>>(
+    return api.put<ApiResponse<Notification>>(
       `/notifications/${notificationId}/read`
     );
   },
@@ -85,7 +85,7 @@ export const notificationsApi = {
    * Mark all notifications as read
    */
   markAllAsRead: async (): Promise<ApiResponse<{ updated: number }>> => {
-    return api.post<ApiResponse<{ updated: number }>>('/notifications/me/mark-all-read');
+    return api.put<ApiResponse<{ updated: number }>>('/notifications/me/read-all');
   },
 
   /**

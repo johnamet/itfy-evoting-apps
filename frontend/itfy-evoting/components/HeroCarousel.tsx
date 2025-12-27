@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import { Autoplay, Pagination, Navigation, EffectFade } from 'swiper/modules';
@@ -9,18 +9,73 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import 'swiper/css/effect-fade';
 import { Button } from '@/components/ui/button';
-import { mockSlides } from '@/lib/mocks/slides';
-import { Slide } from '@/types';
+import { useSlidesByType, useFeaturedCategories } from '@/hooks/usePublicData';
+import { Slide, Category } from '@/types';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Award, Users, Vote } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Award, Users, Vote, Loader2 } from 'lucide-react';
 
-const heroSlides = mockSlides.filter(s => s.slide_type === 'hero' && s.status === 'active');
+// Fallback slides when API fails or is loading
+const fallbackSlides: Slide[] = [
+  {
+    _id: 'fallback-1',
+    title: "Celebrating Ghana's Tech Innovators",
+    subtitle: 'Empowering the next generation of digital leaders',
+    description: "Join us in recognizing outstanding young talent shaping Ghana's tech future",
+    slide_type: 'hero',
+    status: 'active',
+    image: {
+      url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+      alt: 'Young African tech professionals collaborating',
+    },
+    button: { text: 'Explore Nominees', url: '/nominees' },
+    text_color: '#ffffff',
+    overlay_opacity: 0.5,
+    order: 1,
+    position: 'top',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
 
 export default function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [swiperRef, setSwiperRef] = useState<SwiperType | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [featuredCategoryIndex, setFeaturedCategoryIndex] = useState(0);
+
+  // Fetch hero slides from API
+  const { data: apiSlides, isLoading, error } = useSlidesByType('hero');
+  
+  // Fetch featured categories (limit 3)
+  const { data: featuredCategoriesData } = useFeaturedCategories({ limit: 3 });
+  
+  // Get featured categories array
+  const featuredCategories = useMemo(() => {
+    return featuredCategoriesData?.data || [];
+  }, [featuredCategoriesData]);
+  
+  // Current featured category to display
+  const currentFeaturedCategory: Category | null = featuredCategories[featuredCategoryIndex] || null;
+  
+  // Rotate through featured categories every 5 seconds
+  useEffect(() => {
+    if (featuredCategories.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setFeaturedCategoryIndex((prev) => (prev + 1) % featuredCategories.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [featuredCategories.length]);
+
+  // Use API slides if available, otherwise fallback
+  const heroSlides = useMemo(() => {
+    if (apiSlides && apiSlides.length > 0) {
+      return apiSlides.filter(s => s.status === 'active');
+    }
+    return fallbackSlides;
+  }, [apiSlides]);
 
   const handleSlideChange = useCallback((swiper: SwiperType) => {
     setActiveIndex(swiper.realIndex);
@@ -32,6 +87,24 @@ export default function HeroCarousel() {
       behavior: 'smooth'
     });
   };
+
+  // Loading skeleton
+  if (isLoading) {
+    return (
+      <section className="relative h-screen min-h-[700px] overflow-hidden bg-gray-900">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-itfy-primary animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Loading...</p>
+          </div>
+        </div>
+        {/* Background placeholder */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-800 via-gray-900 to-gray-900" />
+        <div className="absolute top-1/4 right-[15%] w-[500px] h-[500px] bg-itfy-primary/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 left-[10%] w-[400px] h-[400px] bg-itfy-300/5 rounded-full blur-[100px] animate-pulse" />
+      </section>
+    );
+  }
 
   return (
     <section 
@@ -52,7 +125,7 @@ export default function HeroCarousel() {
         speed={1200}
         onSwiper={setSwiperRef}
         onSlideChange={handleSlideChange}
-        loop
+        loop={heroSlides.length > 1}
         className="h-full w-full"
       >
         {heroSlides.map((slide: Slide, index: number) => (
@@ -220,7 +293,8 @@ export default function HeroCarousel() {
               </div>
             </div>
 
-            {/* Right Side - Featured Card (Hidden on smaller screens) */}
+            {/* Right Side - Featured Card (Hidden on smaller screens, only show if featured categories exist) */}
+            {currentFeaturedCategory && (
             <div className="hidden lg:block lg:col-span-5 xl:col-span-6 animate-fade-in-up-delay-6">
               <div className="relative">
                 {/* Glow Effect */}
@@ -233,13 +307,31 @@ export default function HeroCarousel() {
                     <span className="px-3 py-1 bg-itfy-primary/20 text-itfy-300 rounded-full text-sm font-medium border border-itfy-400/30">
                       Featured Category
                     </span>
-                    <span className="text-gray-400 text-sm">2025 Edition</span>
+                    <div className="flex items-center gap-2">
+                      {featuredCategories.length > 1 && (
+                        <div className="flex gap-1">
+                          {featuredCategories.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setFeaturedCategoryIndex(idx)}
+                              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                idx === featuredCategoryIndex ? 'bg-itfy-primary w-4' : 'bg-white/30 hover:bg-white/50'
+                              }`}
+                              aria-label={`View category ${idx + 1}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <span className="text-gray-400 text-sm">2025 Edition</span>
+                    </div>
                   </div>
                   
                   {/* Category Preview */}
-                  <h3 className="text-2xl font-bold text-white mb-3">Tech Innovator of the Year</h3>
-                  <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-                    Recognizing individuals who have made groundbreaking contributions to Ghana&apos;s tech ecosystem.
+                  <h3 className="text-2xl font-bold text-white mb-3 transition-all duration-300">
+                    {currentFeaturedCategory.name}
+                  </h3>
+                  <p className="text-gray-400 mb-6 text-sm leading-relaxed line-clamp-2">
+                    {currentFeaturedCategory.description || 'Vote for your favorite nominees in this category.'}
                   </p>
                   
                   {/* Mini Nominees Preview */}
@@ -251,22 +343,50 @@ export default function HeroCarousel() {
                         </div>
                       ))}
                     </div>
-                    <span className="text-gray-400 text-sm">+48 nominees</span>
+                    <span className="text-gray-400 text-sm">
+                      {currentFeaturedCategory.candidates?.length 
+                        ? `${currentFeaturedCategory.candidates.length} nominees` 
+                        : 'Nominees pending'}
+                    </span>
                   </div>
                   
-                  {/* Progress Bar */}
+                  {/* Voting Status & Progress */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Voting Progress</span>
-                      <span className="text-white font-medium">68%</span>
+                      <span className="text-gray-400">
+                        {currentFeaturedCategory.is_voting_open ? 'Voting Progress' : 'Voting Status'}
+                      </span>
+                      <span className={`font-medium ${currentFeaturedCategory.is_voting_open ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {currentFeaturedCategory.is_voting_open ? 'Live' : 'Coming Soon'}
+                      </span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full w-[68%] bg-gradient-to-r from-itfy-primary via-itfy-400 to-itfy-light-blue rounded-full transition-all duration-1000" />
-                    </div>
+                    {currentFeaturedCategory.is_voting_open && (
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-itfy-primary via-itfy-400 to-itfy-light-blue rounded-full transition-all duration-1000 animate-pulse" 
+                          style={{ width: '68%' }}
+                        />
+                      </div>
+                    )}
+                    {currentFeaturedCategory.total_votes > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {currentFeaturedCategory.total_votes.toLocaleString()} votes cast
+                      </p>
+                    )}
                   </div>
+                  
+                  {/* View Category Link */}
+                  <Link 
+                    href={`/categories/${currentFeaturedCategory.slug || currentFeaturedCategory._id}`}
+                    className="mt-4 inline-flex items-center gap-2 text-itfy-300 hover:text-itfy-200 text-sm font-medium transition-colors group"
+                  >
+                    View Category
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

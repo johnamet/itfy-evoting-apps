@@ -220,6 +220,36 @@ class UserController extends BaseController {
     });
   }
 
+  /**
+   * Reactivate user (admin only)
+   * PUT /api/users/:id/reactivate
+   */
+  async reactivate(req, res) {
+    const { id } = req.params;
+    const adminId = this.getUserId(req);
+    const user = await this.service("userService").reactivateUser(id, adminId);
+
+    return this.success(res, {
+      data: user,
+      message: "User reactivated successfully",
+    });
+  }
+
+  /**
+   * Force verify user email (admin only)
+   * PUT /api/users/:id/verify-email
+   */
+  async forceVerifyEmail(req, res) {
+    const { id } = req.params;
+    const adminId = this.getUserId(req);
+    const user = await this.service("userService").forceVerifyEmail(id, adminId);
+
+    return this.success(res, {
+      data: user,
+      message: "User email verified successfully",
+    });
+  }
+
   // ==================== BULK OPERATIONS ====================
 
   /**

@@ -8,6 +8,14 @@ import { ACTION_TYPE, ENTITY_TYPE, SEVERITY } from "../../utils/constants/activi
 
 class ActivityService {
   /**
+   * Get the repository instance
+   * @returns {ActivityRepository} - The activity repository
+   */
+  get repository() {
+    return ActivityRepository;
+  }
+
+  /**
    * Log an activity with automatic enrichment
    * @param {Object} params - Activity parameters
    * @param {mongoose.Types.ObjectId} [params.userId] - User ID

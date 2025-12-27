@@ -314,12 +314,18 @@ components:
       required:
         - currentPassword
         - newPassword
+        - confirmPassword
       properties:
         currentPassword:
           type: string
           format: password
           example: "CurrentPass123!"
         newPassword:
+          type: string
+          format: password
+          minLength: 8
+          example: "NewSecurePass123!"
+        confirmPassword:
           type: string
           format: password
           minLength: 8

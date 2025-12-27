@@ -7,15 +7,11 @@ import {
   Calendar,
   Vote,
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   Activity,
-  Eye,
   ArrowUpRight,
   ArrowDownRight,
   MoreHorizontal,
   RefreshCw,
-  Clock,
 } from "lucide-react";
 import {
   AreaChart,
@@ -30,16 +26,13 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -49,7 +42,72 @@ import {
 } from "@/components/ui/select";
 
 import { analyticsApi, type DashboardOverview } from "@/lib/api/analytics";
-import { activitiesApi, type Activity as ActivityType } from "@/lib/api/activities";
+import { activitiesApi } from "@/lib/api/activities";
+
+// Backend activity type (matches what API returns)
+interface BackendActivity {
+  _id: string;
+  action: string;
+  entity_type: string;
+  description: string;
+  user?: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  severity?: string;
+  timestamp: string;
+  created_at?: string;
+}
+
+// Frontend activity type (what we use in UI)
+interface ActivityType {
+  _id: string;
+  action: string;
+  type: string;
+  description: string;
+  user?: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  status: "success" | "failed" | "pending";
+  created_at: string;
+}
+
+// Transform backend activity to frontend format
+const transformActivity = (activity: BackendActivity): ActivityType => {
+  // Map entity_type to a simpler type for icon selection
+  const typeMap: Record<string, string> = {
+    "USER": "user",
+    "EVENT": "event",
+    "VOTE": "vote",
+    "PAYMENT": "payment",
+    "CANDIDATE": "candidate",
+    "CATEGORY": "event",
+    "FORM": "user",
+    "SYSTEM": "system",
+  };
+
+  // Map action to status
+  const getStatus = (action: string): "success" | "failed" | "pending" => {
+    if (action.includes("FAILED") || action.includes("ERROR")) return "failed";
+    if (action.includes("PENDING")) return "pending";
+    return "success";
+  };
+
+  return {
+    _id: activity._id,
+    action: activity.action,
+    type: typeMap[activity.entity_type] || "system",
+    description: activity.description,
+    user: activity.user,
+    status: getStatus(activity.action),
+    created_at: activity.timestamp || activity.created_at || new Date().toISOString(),
+  };
+};
 
 // Chart colors
 const COLORS = ["#3B82F6", "#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#06B6D4"];
@@ -62,31 +120,27 @@ const GRADIENT_COLORS = {
   cyan: { start: "#06B6D4", end: "#0891B2" },
 };
 
-// Mock data for charts
-const votingTrendsData = [
-  { name: "Mon", votes: 420, revenue: 2100 },
-  { name: "Tue", votes: 380, revenue: 1900 },
-  { name: "Wed", votes: 560, revenue: 2800 },
-  { name: "Thu", votes: 490, revenue: 2450 },
-  { name: "Fri", votes: 630, revenue: 3150 },
-  { name: "Sat", votes: 780, revenue: 3900 },
-  { name: "Sun", votes: 520, revenue: 2600 },
-];
+// Types for chart data
+interface VotingTrendData {
+  name: string;
+  votes: number;
+  revenue: number;
+  [key: string]: string | number;
+}
 
-const categoryDistribution = [
-  { name: "Music", value: 35, color: "#3B82F6" },
-  { name: "Film", value: 25, color: "#8B5CF6" },
-  { name: "Sports", value: 20, color: "#10B981" },
-  { name: "Fashion", value: 15, color: "#F59E0B" },
-  { name: "Other", value: 5, color: "#6B7280" },
-];
+interface CategoryDistributionData {
+  name: string;
+  value: number;
+  color: string;
+  [key: string]: string | number;
+}
 
-const revenueData = [
-  { name: "Week 1", current: 12500, previous: 10200 },
-  { name: "Week 2", current: 15800, previous: 13400 },
-  { name: "Week 3", current: 18200, previous: 16800 },
-  { name: "Week 4", current: 22500, previous: 19600 },
-];
+interface RevenueComparisonData {
+  name: string;
+  current: number;
+  previous: number;
+  [key: string]: string | number;
+}
 
 // Stat card component
 interface StatCardProps {
@@ -178,24 +232,17 @@ function StatCard({ title, value, change, changeLabel, icon: Icon, color, loadin
 
 // Activity item component
 function ActivityItem({ activity }: { activity: ActivityType }) {
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "vote":
-        return Vote;
-      case "payment":
-        return DollarSign;
-      case "user":
-        return Users;
-      case "event":
-        return Calendar;
-      case "login":
-        return Activity;
-      default:
-        return Activity;
-    }
+  // Map activity type to icon component
+  const iconMap: Record<string, React.ElementType> = {
+    vote: Vote,
+    payment: DollarSign,
+    user: Users,
+    event: Calendar,
+    login: Activity,
+    system: Activity,
   };
 
-  const Icon = getActivityIcon(activity.type);
+  const IconComponent = iconMap[activity.type] || Activity;
 
   return (
     <motion.div
@@ -214,7 +261,7 @@ function ActivityItem({ activity }: { activity: ActivityType }) {
             : "bg-slate-700/50 text-slate-400"
         }`}
       >
-        <Icon className="w-5 h-5" />
+        <IconComponent className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-white font-medium truncate">
@@ -272,6 +319,11 @@ export default function AdminOverviewTab() {
   const [stats, setStats] = useState<DashboardOverview | null>(null);
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Chart data states
+  const [votingTrendsData, setVotingTrendsData] = useState<VotingTrendData[]>([]);
+  const [categoryDistribution, setCategoryDistribution] = useState<CategoryDistributionData[]>([]);
+  const [revenueData, setRevenueData] = useState<RevenueComparisonData[]>([]);
 
   // Animation variants
   const containerVariants = {
@@ -289,91 +341,114 @@ export default function AdminOverviewTab() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Fetch dashboard overview
-      const [overviewRes, activitiesRes] = await Promise.allSettled([
-        analyticsApi.getDashboardOverview({ period: period as any }),
+      // Fetch dashboard overview, activities, and analytics data in parallel
+      const [overviewRes, activitiesRes, votingRes, paymentRes] = await Promise.allSettled([
+        analyticsApi.getDashboardOverview({ period: period as "daily" | "weekly" | "monthly" | "yearly" }),
         activitiesApi.getRecentActivities(10),
+        analyticsApi.getVotingAnalytics({ period: period as "daily" | "weekly" | "monthly" | "yearly" }),
+        analyticsApi.getPaymentAnalytics({ period: period as "daily" | "weekly" | "monthly" | "yearly" }),
       ]);
 
-      if (overviewRes.status === "fulfilled" && overviewRes.value.success) {
+      // Handle analytics data
+      if (overviewRes.status === "fulfilled" && overviewRes.value?.data) {
         setStats(overviewRes.value.data);
       } else {
-        // Use mock data if API fails
-        setStats({
-          totalUsers: 1248,
-          totalEvents: 42,
-          totalVotes: 156780,
-          totalRevenue: 783900,
-          activeEvents: 8,
-          completedEvents: 34,
-          totalCandidates: 892,
-          totalCategories: 156,
-          overallParticipationRate: 78.5,
-          systemHealthScore: 98,
-          growthRate: {
-            users: 12.5,
-            events: 8.2,
-            votes: 24.8,
-            revenue: 18.6,
-          },
-          timestamp: new Date().toISOString(),
-        });
+        console.error("Failed to fetch analytics:", overviewRes.status === "rejected" ? overviewRes.reason : "No data");
+        // Set empty state instead of mock data
+        setStats(null);
       }
 
-      if (activitiesRes.status === "fulfilled" && activitiesRes.value.data) {
-        setActivities(activitiesRes.value.data);
+      // Handle activities data - transform from backend format to frontend format
+      if (activitiesRes.status === "fulfilled" && activitiesRes.value?.data) {
+        const backendActivities = activitiesRes.value.data as unknown as BackendActivity[];
+        const transformedActivities = backendActivities.map(transformActivity);
+        setActivities(transformedActivities);
       } else {
-        // Mock activities
-        setActivities([
-          {
-            _id: "1",
-            action: "vote",
-            type: "vote",
-            description: "User voted for John Doe in GMA Best Artist",
-            status: "success",
-            created_at: new Date().toISOString(),
-          },
-          {
-            _id: "2",
-            action: "payment",
-            type: "payment",
-            description: "Payment of GHS 50.00 received",
-            status: "success",
-            created_at: new Date(Date.now() - 300000).toISOString(),
-          },
-          {
-            _id: "3",
-            action: "create",
-            type: "event",
-            description: "New event created: Youth Awards 2025",
-            user: { _id: "u1", name: "Admin", email: "admin@itfy.com", role: "admin" },
-            status: "success",
-            created_at: new Date(Date.now() - 600000).toISOString(),
-          },
-          {
-            _id: "4",
-            action: "login",
-            type: "login",
-            description: "User login successful",
-            user: { _id: "u2", name: "Jane Smith", email: "jane@example.com", role: "organiser" },
-            status: "success",
-            created_at: new Date(Date.now() - 900000).toISOString(),
-          },
-        ]);
+        console.error("Failed to fetch activities:", activitiesRes.status === "rejected" ? activitiesRes.reason : "No data");
+        setActivities([]);
+      }
+
+      // Handle voting analytics for trends chart
+      if (votingRes.status === "fulfilled" && votingRes.value?.data) {
+        const votingData = votingRes.value.data;
+        
+        // Handle voting trends by day
+        if (votingData.votesByDay && votingData.votesByDay.length > 0) {
+          const trends = votingData.votesByDay.slice(-7).map((day) => ({
+            name: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
+            votes: day.count || 0,
+            revenue: day.amount || 0,
+          }));
+          setVotingTrendsData(trends);
+        } else {
+          setVotingTrendsData([]);
+        }
+
+        // Handle category distribution
+        if (votingData.votesByCategory && votingData.votesByCategory.length > 0) {
+          const categories = votingData.votesByCategory.slice(0, 5).map((cat, index: number) => ({
+            name: cat.category || `Category ${index + 1}`,
+            value: cat.percentage || 0,
+            color: COLORS[index % COLORS.length],
+          }));
+          setCategoryDistribution(categories);
+        } else {
+          setCategoryDistribution([]);
+        }
+      } else {
+        console.error("Failed to fetch voting analytics:", votingRes.status === "rejected" ? votingRes.reason : "No data");
+        setVotingTrendsData([]);
+        setCategoryDistribution([]);
+      }
+
+      // Handle payment analytics for revenue comparison
+      if (paymentRes.status === "fulfilled" && paymentRes.value?.data) {
+        const paymentData = paymentRes.value.data;
+        if (paymentData.revenueByDay && paymentData.revenueByDay.length > 0) {
+          // Group by weeks
+          const weeklyRevenue: { [key: string]: { current: number; count: number } } = {};
+          paymentData.revenueByDay.forEach((day, index) => {
+            const weekNum = Math.floor(index / 7);
+            const weekKey = `Week ${weekNum + 1}`;
+            if (!weeklyRevenue[weekKey]) {
+              weeklyRevenue[weekKey] = { current: 0, count: 0 };
+            }
+            weeklyRevenue[weekKey].current += day.amount || 0;
+            weeklyRevenue[weekKey].count += 1;
+          });
+
+          const revenue = Object.entries(weeklyRevenue).slice(-4).map(([name, data]) => ({
+            name,
+            current: data.current,
+            previous: Math.round(data.current * 0.85), // Estimate previous as 85% (can be improved with actual comparison data)
+          }));
+          setRevenueData(revenue.length > 0 ? revenue : []);
+        } else {
+          setRevenueData([]);
+        }
+      } else {
+        console.error("Failed to fetch payment analytics:", paymentRes.status === "rejected" ? paymentRes.reason : "No data");
+        setRevenueData([]);
       }
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
+      // Set empty states
+      setStats(null);
+      setActivities([]);
+      setVotingTrendsData([]);
+      setCategoryDistribution([]);
+      setRevenueData([]);
     } finally {
       setLoading(false);
     }
   };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchData();
@@ -488,52 +563,60 @@ export default function AdminOverviewTab() {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={votingTrendsData}>
-                    <defs>
-                      <linearGradient id="voteGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey="name"
-                      stroke="#64748B"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#64748B"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => formatNumber(value)}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="votes"
-                      stroke="#3B82F6"
-                      strokeWidth={2}
-                      fill="url(#voteGradient)"
-                      name="Votes"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#10B981"
-                      strokeWidth={2}
-                      fill="url(#revenueGradient)"
-                      name="Revenue (GHS)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {votingTrendsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={votingTrendsData}>
+                      <defs>
+                        <linearGradient id="voteGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#64748B"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#64748B"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatNumber(value)}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="votes"
+                        stroke="#3B82F6"
+                        strokeWidth={2}
+                        fill="url(#voteGradient)"
+                        name="Votes"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                        fill="url(#revenueGradient)"
+                        name="Revenue (GHS)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                    <Vote className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-sm">No voting data available</p>
+                    <p className="text-xs mt-1">Data will appear here as votes are cast</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -547,40 +630,50 @@ export default function AdminOverviewTab() {
               <p className="text-slate-400 text-sm">Votes by category</p>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {categoryDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2 mt-4">
-                {categoryDistribution.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-sm text-slate-300">{item.name}</span>
-                    </div>
-                    <span className="text-sm text-slate-400">{item.value}%</span>
+              {categoryDistribution.length > 0 ? (
+                <>
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={categoryDistribution}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={90}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {categoryDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2 mt-4">
+                    {categoryDistribution.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="text-sm text-slate-300">{item.name}</span>
+                        </div>
+                        <span className="text-sm text-slate-400">{item.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[300px] text-slate-500">
+                  <Vote className="w-12 h-12 mb-3 opacity-50" />
+                  <p className="text-sm">No category data available</p>
+                  <p className="text-xs mt-1">Data will appear here as votes are cast</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -597,38 +690,46 @@ export default function AdminOverviewTab() {
             </CardHeader>
             <CardContent className="pt-4">
               <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData} barGap={8}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey="name"
-                      stroke="#64748B"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#64748B"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(value) => `GHS ${formatNumber(value)}`}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar
-                      dataKey="current"
-                      fill="#3B82F6"
-                      radius={[4, 4, 0, 0]}
-                      name="Current Period"
-                    />
-                    <Bar
-                      dataKey="previous"
-                      fill="#64748B"
-                      radius={[4, 4, 0, 0]}
-                      name="Previous Period"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {revenueData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueData} barGap={8}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#64748B"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#64748B"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `GHS ${formatNumber(value)}`}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar
+                        dataKey="current"
+                        fill="#3B82F6"
+                        radius={[4, 4, 0, 0]}
+                        name="Current Period"
+                      />
+                      <Bar
+                        dataKey="previous"
+                        fill="#64748B"
+                        radius={[4, 4, 0, 0]}
+                        name="Previous Period"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                    <DollarSign className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-sm">No revenue data available</p>
+                    <p className="text-xs mt-1">Data will appear here as payments are made</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -659,9 +760,17 @@ export default function AdminOverviewTab() {
                           </div>
                         </div>
                       ))
-                    : activities.map((activity) => (
+                    : activities.length > 0
+                    ? activities.map((activity) => (
                         <ActivityItem key={activity._id} activity={activity} />
-                      ))}
+                      ))
+                    : (
+                      <div className="flex flex-col items-center justify-center h-[200px] text-slate-500">
+                        <Activity className="w-12 h-12 mb-3 opacity-50" />
+                        <p className="text-sm">No recent activity</p>
+                        <p className="text-xs mt-1">Activity will appear here as it happens</p>
+                      </div>
+                    )}
                 </div>
               </ScrollArea>
             </CardContent>

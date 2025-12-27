@@ -218,7 +218,7 @@ class FileService {
         fileSize: FILE_SIZE_LIMITS.CANDIDATE_PHOTO * 1024 * 1024,
         files: FILE_VALIDATION.MAX_FILES.SINGLE,
       },
-    }).single("photo");
+    }).single("image");
   }
 
   /**
@@ -265,6 +265,21 @@ class FileService {
         files: maxCount,
       },
     }).array("documents", maxCount);
+  }
+
+  /**
+   * Multiple images upload middleware (for gallery uploads)
+   * @returns {multer.Multer}
+   */
+  get uploadMultipleImages() {
+    return multer({
+      storage: this.createLocalStorage(UPLOAD_DIRECTORIES.CANDIDATES),
+      fileFilter: this.imageFilter.bind(this),
+      limits: {
+        fileSize: FILE_SIZE_LIMITS.CANDIDATE_PHOTO * 1024 * 1024,
+        files: FILE_VALIDATION.MAX_FILES.MULTIPLE,
+      },
+    }).array("images", FILE_VALIDATION.MAX_FILES.MULTIPLE);
   }
 
   /**
@@ -898,6 +913,39 @@ class FileService {
       console.error("Failed to get storage stats:", error);
       return null;
     }
+  }
+
+  /**
+   * Convert file path to URL
+   * @param {string} filePath - Local file path (e.g., 'uploads/profiles/image.jpg')
+   * @returns {string} - Full URL to access the file
+   */
+  getFileUrl(filePath) {
+    if (!filePath) return null;
+    
+    // If already a URL, return as is
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    
+    // Remove leading slash if present
+    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    
+    // Get base URL from environment
+    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+    
+    // Return full URL
+    return `${baseUrl}/${cleanPath}`;
+  }
+
+  /**
+   * Convert multiple file paths to URLs
+   * @param {string[]} filePaths - Array of local file paths
+   * @returns {string[]} - Array of full URLs
+   */
+  getFileUrls(filePaths) {
+    if (!filePaths || !Array.isArray(filePaths)) return [];
+    return filePaths.map(path => this.getFileUrl(path)).filter(Boolean);
   }
 
   /**

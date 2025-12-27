@@ -154,6 +154,18 @@ router.post(
 );
 
 /**
+ * @route   POST /api/auth/candidate/change-password
+ * @desc    Change password for authenticated candidate
+ * @access  Private (authenticated candidate)
+ */
+router.post(
+  "/candidate/change-password",
+  authenticateCandidate,
+  (req, res) => AuthController.candidateChangePassword(req, res)
+);
+
+
+/**
  * @route   POST /api/auth/candidate/forgot-password
  * @desc    Request password reset for candidate
  * @access  Public

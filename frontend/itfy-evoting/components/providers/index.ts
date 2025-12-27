@@ -4,6 +4,7 @@
  */
 
 export { AuthProvider, useAuth, useUserAuth, useCandidateAuth } from './AuthProvider';
+export { QueryProvider } from './QueryProvider';
 export {
   UserAuthGuard,
   RoleGuard,

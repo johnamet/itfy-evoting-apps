@@ -9,6 +9,18 @@ const ACTION_TYPE = {
   PASSWORD_RESET: "password_reset",
   PASSWORD_CHANGE: "password_change",
   
+  // User management
+  USER_CREATED: "user_created",
+  USER_UPDATED: "user_updated",
+  USER_DELETED: "user_deleted",
+  USER_ACTIVATED: "user_activated",
+  USER_DEACTIVATED: "user_deactivated",
+  USER_SUSPENDED: "user_suspended",
+  USER_ROLE_UPDATED: "user_role_updated",
+  USER_PERMISSIONS_UPDATED: "user_permissions_updated",
+  USERS_BULK_STATUS_UPDATED: "users_bulk_status_updated",
+  PROFILE_UPDATED: "profile_updated",
+  
   // Event actions
   EVENT_CREATE: "event_create",
   EVENT_UPDATE: "event_update",

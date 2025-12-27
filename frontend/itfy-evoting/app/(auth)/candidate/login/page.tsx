@@ -18,30 +18,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { api } from '@/lib/api/client';
-import { tokenManager } from '@/lib/api/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { eventsApi } from '@/lib/api/events';
+import { useCandidateAuth } from '@/components/providers/AuthProvider';
 import { toast } from 'sonner';
-import type { ApiResponse, Candidate } from '@/types';
-
-interface CandidateLoginResponse {
-  candidate: Candidate;
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: string;
-}
+import type { Event } from '@/types';
 
 const codeLoginSchema = z.object({
   candidateCode: z
     .string()
     .min(1, 'Candidate code is required')
-    .regex(/^CAN-[A-Z0-9]{3}-[A-Z0-9]{4}$/i, 'Invalid format (e.g., CAN-ABC-1234)'),
+    .regex(/^CAN-[A-Z0-9]{4}-[A-Z0-9]{4}$/i, 'Invalid format (e.g., CAN-ABCD-1234)'),
   password: z.string().min(1, 'Password is required'),
 });
 
 const emailLoginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
-  eventId: z.string().min(1, 'Event ID is required'),
+  eventId: z.string().min(1, 'Please select an event'),
 });
 
 type CodeLoginFormData = z.infer<typeof codeLoginSchema>;
@@ -50,9 +44,12 @@ type EmailLoginFormData = z.infer<typeof emailLoginSchema>;
 function CandidateLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login: loginCandidate } = useCandidateAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'code' | 'email'>('code');
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
   const eventIdFromUrl = searchParams.get('eventId');
 
@@ -72,28 +69,55 @@ function CandidateLoginContent() {
     }
   }, [eventIdFromUrl, emailForm]);
 
+  // Fetch active events for the dropdown
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setIsLoadingEvents(true);
+      try {
+        const response = await eventsApi.getPublicEvents({ 
+          status: 'active',
+          page: 1,
+          limit: 100 
+        });
+        
+        if (response.success && response.data) {
+          setEvents(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+        toast.error('Failed to load events', {
+          description: 'Please refresh the page to try again.'
+        });
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const handleLogin = async (identifier: string, password: string, eventId?: string) => {
     setIsLoading(true);
 
     try {
-      const response = await api.post<ApiResponse<CandidateLoginResponse>>(
-        '/auth/candidate/login',
-        { identifier, password, ...(eventId && { eventId }) },
-        { skipAuth: true }
-      );
+      const result = await loginCandidate({ 
+        identifier, 
+        password, 
+        ...(eventId && { eventId }) 
+      });
 
-      if (response.success && response.data) {
-        tokenManager.setCandidateToken(response.data.accessToken);
-
-        const candidateName = response.data.candidate.first_name || 'Candidate';
+      if (result.success) {
         toast.success('Welcome back!', {
-          description: `Hello, ${candidateName}! Redirecting to your portal...`,
+          description: 'Redirecting to your portal...',
           icon: <Sparkles className="h-5 w-5" />,
         });
 
-        router.push('/candidate-portal');
+        // Small delay to ensure auth state is updated
+        setTimeout(() => {
+          router.replace('/candidate-portal');
+        }, 100);
       } else {
-        throw new Error(response.message || 'Login failed');
+        throw new Error(result.error || 'Login failed');
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Login failed. Please try again.';
@@ -258,21 +282,39 @@ function CandidateLoginContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="eventId" className="text-base font-medium">Event ID</Label>
-                  <Input
-                    id="eventId"
-                    type="text"
-                    placeholder="e.g., 2025-awards"
-                    className="h-12 text-base"
-                    disabled={isLoading || !!eventIdFromUrl}
-                    {...emailForm.register('eventId')}
-                  />
+                  <Label htmlFor="eventId" className="text-base font-medium">Select Event</Label>
+                  <Select
+                    value={emailForm.watch('eventId')}
+                    onValueChange={(value) => emailForm.setValue('eventId', value)}
+                    disabled={isLoading || isLoadingEvents || !!eventIdFromUrl}
+                  >
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue placeholder={isLoadingEvents ? "Loading events..." : "Select an event"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {events.length === 0 && !isLoadingEvents && (
+                        <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                          No active events available
+                        </div>
+                      )}
+                      {events.map((event) => (
+                        <SelectItem key={event._id} value={event._id}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{event.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(event.start_date).toLocaleDateString()} - {new Date(event.end_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {emailForm.formState.errors.eventId && (
                     <p className="text-sm text-red-600">{emailForm.formState.errors.eventId.message}</p>
                   )}
                   {eventIdFromUrl && (
                     <p className="text-xs text-emerald-600 font-medium">
-                      ✓ Event ID auto-filled from link
+                      ✓ Event auto-selected from link
                     </p>
                   )}
                 </div>

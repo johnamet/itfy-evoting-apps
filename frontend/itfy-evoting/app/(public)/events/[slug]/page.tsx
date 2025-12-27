@@ -9,19 +9,25 @@ import {
   Tag, Mail, Phone, ExternalLink, AlertCircle, Lock,
   EyeOff, ShieldCheck, Mic, Crown, ImageIcon, X,
   Navigation, Building2, Wifi, Car, Ticket, DollarSign,
-  UserPlus, CalendarClock, AlertTriangle
+  UserPlus, CalendarClock, AlertTriangle, Loader2,
+  Copy, Facebook, Twitter, 
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { RegistrationFormDialog } from '@/components/RegistrationFormDialog';
-import { mockEvents } from '@/lib/mocks/events';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockCandidates } from '@/lib/mocks/candidates';
+import CastVoteModal from '@/components/CastVoteModal';
+import { useEventBySlug, useCategoriesByEvent, useCandidatesByEvent } from '@/hooks/usePublicData';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function EventDetailPage() {
   const params = useParams();
@@ -33,20 +39,50 @@ export default function EventDetailPage() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isHeroHovered, setIsHeroHovered] = useState(false);
   const [isRegistrationDialogOpen, setIsRegistrationDialogOpen] = useState(false);
+  const [isVoteModalOpen, setIsVoteModalOpen] = useState(false);
+  const [shareNotification, setShareNotification] = useState<string | null>(null);
 
-  // Find the event by slug
-  const event = mockEvents.find(e => e.slug === slug);
+  // Fetch event by slug from API
+  const { data: event, isLoading: eventLoading, error: eventError } = useEventBySlug(slug);
 
-  // Get categories for this event
-  const eventCategories = mockCategories.filter(cat => cat.event === event?._id);
+  // Fetch categories for this event (only when event is loaded)
+  const { data: categoriesData } = useCategoriesByEvent(
+    event?._id || '', 
+    { limit: 50 },
+    !!event?._id
+  );
 
-  // Get candidates for this event
-  const eventCandidates = mockCandidates.filter(cand => cand.event === event?._id);
+  // Fetch candidates for this event (only when event is loaded)
+  const { data: candidatesData } = useCandidatesByEvent(
+    event?._id || '',
+    { limit: 100, category: selectedCategory || undefined },
+    !!event?._id
+  );
 
-  // Get candidates for selected category
-  const categoryCandidates = selectedCategory 
-    ? eventCandidates.filter(cand => cand.categories.includes(selectedCategory))
-    : eventCandidates;
+  // Fetch all candidates for the vote modal (without category filter)
+  const { data: allCandidatesData } = useCandidatesByEvent(
+    event?._id || '',
+    { limit: 200 },
+    !!event?._id
+  );
+
+  // Get categories array
+  const eventCategories = useMemo(() => categoriesData?.data || [], [categoriesData]);
+
+  // Get candidates array (filtered by selected category)
+  const eventCandidates = useMemo(() => candidatesData?.data || [], [candidatesData]);
+
+  // Get all candidates for the vote modal
+  const allEventCandidates = useMemo(() => allCandidatesData?.data || [], [allCandidatesData]);
+
+  // Get candidates for selected category (already filtered by API if category selected)
+  const categoryCandidates = eventCandidates;
+
+  // Calculate total votes from categories if event doesn't have it
+  const totalVotes = useMemo(() => {
+    if (event?.total_votes) return event.total_votes;
+    return eventCategories.reduce((sum, cat) => sum + (cat.total_votes || 0), 0);
+  }, [event, eventCategories]);
 
   // Calculate countdown target date and label
   const countdownInfo = useMemo(() => {
@@ -116,7 +152,24 @@ export default function EventDetailPage() {
     return () => clearInterval(interval);
   }, [countdownInfo.targetDate]);
 
-  if (!event) {
+  // Loading state
+  if (eventLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Header />
+        <div className="container mx-auto px-6 py-32 text-center">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
+            <Loader2 className="w-12 h-12 text-[#0152be] animate-spin" />
+          </div>
+          <h1 className="text-2xl font-bold mb-4">Loading Event...</h1>
+          <p className="text-gray-400">Please wait while we fetch the event details.</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!event || eventError) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <Header />
@@ -216,15 +269,67 @@ export default function EventDetailPage() {
     }
   };
 
+  // Share functionality
+  const getShareUrl = () => {
+    if (typeof window !== 'undefined') {
+      return window.location.href;
+    }
+    return '';
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setShareNotification('Link copied to clipboard!');
+      setTimeout(() => setShareNotification(null), 3000);
+    } catch {
+      setShareNotification('Failed to copy link');
+      setTimeout(() => setShareNotification(null), 3000);
+    }
+  };
+
+  const handleShareFacebook = () => {
+    const url = encodeURIComponent(getShareUrl());
+    const text = encodeURIComponent(`Vote for your favorite candidates at ${event.name}!`);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}&quote=${text}`, '_blank', 'width=600,height=400');
+  };
+
+  const handleShareTwitter = () => {
+    const shareUrl = encodeURIComponent(getShareUrl());
+    const text = encodeURIComponent(`Vote for your favorite candidates at ${event.name}! 🗳️`);
+    window.open(`https://twitter.com/intent/tweet?url=${shareUrl}&text=${text}`, '_blank', 'width=600,height=400');
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(`Vote for your favorite candidates at ${event.name}! 🗳️ ${getShareUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: event.name,
+          text: `Vote for your favorite candidates at ${event.name}!`,
+          url: getShareUrl(),
+        });
+      } catch {
+        // User cancelled or share failed
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
   // TODO: Replace with actual auth state
   const isAuthenticated = false;
   const isAdmin = false;
 
   const stats = [
-    { label: 'Total Votes', value: event.total_votes.toLocaleString(), icon: Vote, color: 'from-[#0152be] to-sky-500' },
-    { label: 'Categories', value: eventCategories.length.toString(), icon: Award, color: 'from-purple-500 to-pink-500' },
-    { label: 'Candidates', value: eventCandidates.length.toString(), icon: Users, color: 'from-green-500 to-emerald-500' },
-    { label: 'Attendees', value: event.current_attendees?.toLocaleString() || '0', icon: Users, color: 'from-yellow-500 to-orange-500' },
+    { label: 'Total Votes', value: totalVotes.toLocaleString(), icon: Vote, color: 'from-[#0152be] to-sky-500' },
+    { label: 'Categories', value: (categoriesData?.pagination?.totalItems || eventCategories.length).toString(), icon: Award, color: 'from-purple-500 to-pink-500' },
+    { label: 'Candidates', value: (candidatesData?.pagination?.totalItems || eventCandidates.length).toString(), icon: Users, color: 'from-green-500 to-emerald-500' },
+    { label: 'Attendees', value: event?.current_attendees?.toLocaleString() || '0', icon: Users, color: 'from-yellow-500 to-orange-500' },
   ];
 
   const tabs = [
@@ -450,24 +555,71 @@ export default function EventDetailPage() {
 
       {/* Action Buttons */}
       <section className="container mx-auto px-6 py-8">
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-4 relative">
           {event.status === 'active' && (
             <Button 
               size="lg" 
+              onClick={() => setIsVoteModalOpen(true)}
               className="bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-blue-700 hover:to-sky-600 shadow-lg hover:shadow-[#0152be]/50 transition-all"
             >
               <Vote className="w-5 h-5 mr-2" />
               Vote Now
             </Button>
           )}
-          <Button 
-            size="lg" 
-            variant="outline"
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <Share2 className="w-5 h-5 mr-2" />
-            Share Event
-          </Button>
+          
+          {/* Share Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                size="lg" 
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                <Share2 className="w-5 h-5 mr-2" />
+                Share Event
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-gray-900 border-gray-800 text-white w-48">
+              <DropdownMenuItem 
+                onClick={handleCopyLink}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleShareFacebook}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <Facebook className="w-4 h-4 mr-2" />
+                Share on Facebook
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleShareTwitter}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <Twitter className="w-4 h-4 mr-2" />
+                Share on X
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleShareWhatsApp}
+                className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Share on WhatsApp
+              </DropdownMenuItem>
+              {'share' in navigator && (
+                <DropdownMenuItem 
+                  onClick={handleNativeShare}
+                  className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  More Options
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button 
             size="lg" 
             variant="outline"
@@ -476,6 +628,16 @@ export default function EventDetailPage() {
             <Heart className="w-5 h-5 mr-2" />
             Save
           </Button>
+
+          {/* Share notification toast */}
+          {shareNotification && (
+            <div className="absolute -bottom-12 left-0 bg-green-500/90 text-white px-4 py-2 rounded-lg text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                {shareNotification}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -738,7 +900,10 @@ export default function EventDetailPage() {
                 <p className="text-gray-300 mb-6">
                   Support your favorite nominees by voting. Each vote counts towards determining the winners!
                 </p>
-                <Button className="w-full bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-blue-700 hover:to-sky-600">
+                <Button 
+                  onClick={() => setIsVoteModalOpen(true)}
+                  className="w-full bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-blue-700 hover:to-sky-600"
+                >
                   Start Voting
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
@@ -892,17 +1057,33 @@ export default function EventDetailPage() {
               <GlassCard className="p-6">
                 <h3 className="text-xl font-bold text-white mb-4">Share This Event</h3>
                 <div className="flex gap-3">
-                  <button aria-label="Share on Facebook" className="w-12 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 flex items-center justify-center transition">
+                  <button 
+                    aria-label="Share on Facebook" 
+                    onClick={handleShareFacebook}
+                    className="w-12 h-12 rounded-xl bg-blue-600 hover:bg-blue-700 flex items-center justify-center transition"
+                  >
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   </button>
-                  <button aria-label="Share on Twitter" className="w-12 h-12 rounded-xl bg-sky-500 hover:bg-sky-600 flex items-center justify-center transition">
+                  <button 
+                    aria-label="Share on Twitter" 
+                    onClick={handleShareTwitter}
+                    className="w-12 h-12 rounded-xl bg-sky-500 hover:bg-sky-600 flex items-center justify-center transition"
+                  >
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
                   </button>
-                  <button aria-label="Share on WhatsApp" className="w-12 h-12 rounded-xl bg-green-500 hover:bg-green-600 flex items-center justify-center transition">
+                  <button 
+                    aria-label="Share on WhatsApp" 
+                    onClick={handleShareWhatsApp}
+                    className="w-12 h-12 rounded-xl bg-green-500 hover:bg-green-600 flex items-center justify-center transition"
+                  >
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                   </button>
-                  <button aria-label="Copy link" className="w-12 h-12 rounded-xl bg-gray-600 hover:bg-gray-700 flex items-center justify-center transition">
-                    <Share2 className="w-5 h-5 text-white" />
+                  <button 
+                    aria-label="Copy link" 
+                    onClick={handleCopyLink}
+                    className="w-12 h-12 rounded-xl bg-gray-600 hover:bg-gray-700 flex items-center justify-center transition"
+                  >
+                    <Copy className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </GlassCard>
@@ -1668,6 +1849,15 @@ export default function EventDetailPage() {
         event={event}
         open={isRegistrationDialogOpen}
         onOpenChange={setIsRegistrationDialogOpen}
+      />
+
+      {/* Cast Vote Modal */}
+      <CastVoteModal
+        open={isVoteModalOpen}
+        onOpenChange={setIsVoteModalOpen}
+        event={event}
+        categories={eventCategories}
+        candidates={allEventCandidates}
       />
 
       <Footer />

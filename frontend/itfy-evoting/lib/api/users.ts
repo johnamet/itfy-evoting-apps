@@ -86,6 +86,29 @@ export const usersApi = {
   // ==================== Admin Operations ====================
 
   /**
+   * Get user statistics (admin)
+   */
+  getStats: async (): Promise<ApiResponse<{
+    total: number;
+    byStatus: {
+      active: number;
+      inactive: number;
+      suspended: number;
+    };
+    byRole: Record<string, number>;
+    verification: {
+      verified: number;
+      unverified: number;
+    };
+    activity: {
+      recentRegistrations: number;
+      recentLogins: number;
+    };
+  }>> => {
+    return api.get('/users/stats');
+  },
+
+  /**
    * List all users (admin)
    */
   list: async (filters?: UserFilters): Promise<UsersListResponse> => {
@@ -152,21 +175,21 @@ export const usersApi = {
    * Suspend user (admin)
    */
   suspend: async (userId: string, reason?: string): Promise<ApiResponse<User>> => {
-    return api.post<ApiResponse<User>>(`/users/${userId}/suspend`, { reason });
+    return api.put<ApiResponse<User>>(`/users/${userId}/suspend`, { reason });
   },
 
   /**
    * Reactivate user (admin)
    */
   reactivate: async (userId: string): Promise<ApiResponse<User>> => {
-    return api.post<ApiResponse<User>>(`/users/${userId}/reactivate`);
+    return api.put<ApiResponse<User>>(`/users/${userId}/reactivate`);
   },
 
   /**
    * Force verify user email (admin)
    */
   forceVerifyEmail: async (userId: string): Promise<ApiResponse<User>> => {
-    return api.post<ApiResponse<User>>(`/users/${userId}/verify-email`);
+    return api.put<ApiResponse<User>>(`/users/${userId}/verify-email`);
   },
 
   /**

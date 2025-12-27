@@ -1,49 +1,59 @@
 'use client';
 
 import { format } from 'date-fns';
-import { Calendar, MapPin, Trophy, ArrowRight, Clock, Users, Search, Grid, List } from 'lucide-react';
+import { Calendar, MapPin, Trophy, ArrowRight, Clock, Users, Search, Grid, List, Loader2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AnnouncementBar from '@/components/AnnouncementBar';
 import PromoBanner from '@/components/PromoBanner';
-import { mockEvents } from '@/lib/mocks/events';
+import { usePublicEvents } from '@/hooks/usePublicData';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
+import type { EventStatus } from '@/types';
 
 type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'active' | 'upcoming' | 'archived';
 
 export default function EventsPage() {
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  const filteredEvents = useMemo(() => {
-    return mockEvents
-      .filter(event => event.is_published)
-      .filter(event => {
-        if (statusFilter === 'all') return true;
-        return event.status === statusFilter;
-      })
-      .filter(event => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-          event.name.toLowerCase().includes(query) ||
-          event.description.toLowerCase().includes(query) ||
-          event.location?.city?.toLowerCase().includes(query)
-        );
-      })
-      .sort((a, b) => {
-        // Featured first, then by date
-        if (a.is_featured && !b.is_featured) return -1;
-        if (!a.is_featured && b.is_featured) return 1;
-        return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
-      });
-  }, [searchQuery, statusFilter]);
+  // Debounce search to avoid too many API calls
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setSearchQuery(value);
+  }, 300);
+
+  // Update debounced search when input changes
+  useEffect(() => {
+    debouncedSetSearch(searchInput);
+  }, [searchInput, debouncedSetSearch]);
+
+  // Fetch events from API with filters
+  const { data: eventsData, isLoading, error } = usePublicEvents({
+    limit: 50,
+    search: searchQuery || undefined,
+    status: statusFilter !== 'all' ? statusFilter as EventStatus : undefined,
+  });
+
+  // Get events array from API response
+  const events = useMemo(() => eventsData?.data || [], [eventsData]);
+
+  // Sort events - featured first, then by date
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      // Featured first
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      // Then by start date (newest first)
+      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+    });
+  }, [events]);
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
@@ -116,8 +126,8 @@ export default function EventsPage() {
             <input
               type="text"
               placeholder="Search events..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#0152be] transition"
             />
           </div>
@@ -166,13 +176,38 @@ export default function EventsPage() {
 
         {/* Results count */}
         <div className="mt-6 text-gray-400">
-          Showing <span className="text-white font-semibold">{filteredEvents.length}</span> events
+          {isLoading ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading events...
+            </span>
+          ) : (
+            <>
+              Showing <span className="text-white font-semibold">{sortedEvents.length}</span>
+              {eventsData?.pagination?.totalItems && eventsData.pagination.totalItems > sortedEvents.length && (
+                <> of <span className="text-white font-semibold">{eventsData.pagination.totalItems}</span></>
+              )}
+              {' '}events
+            </>
+          )}
         </div>
       </section>
 
       {/* Events Grid/List */}
       <section className="container mx-auto px-6 py-8">
-        {filteredEvents.length === 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-12 h-12 text-[#0152be] animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-red-500/10 flex items-center justify-center">
+              <Clock className="w-12 h-12 text-red-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Error loading events</h3>
+            <p className="text-gray-400">Please try again later</p>
+          </div>
+        ) : sortedEvents.length === 0 ? (
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/5 flex items-center justify-center">
               <Clock className="w-12 h-12 text-gray-500" />
@@ -182,7 +217,7 @@ export default function EventsPage() {
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredEvents.map((event) => (
+            {sortedEvents.map((event) => (
               <Link href={`/events/${event.slug}`} key={event._id}>
                 <GlassCard className="group h-full flex flex-col hover:shadow-2xl hover:shadow-[#0152be]/20 transition-all duration-500">
                   {/* Event Banner */}
@@ -214,7 +249,7 @@ export default function EventsPage() {
                         <div className="flex items-center gap-2">
                           <Users className="w-5 h-5 text-white" />
                           <div className="text-lg font-bold text-white">
-                            {(event.total_votes / 1000).toFixed(1)}K Votes
+                            {((event.total_votes || 0) / 1000).toFixed(1)}K Votes
                           </div>
                         </div>
                       </div>
@@ -257,7 +292,7 @@ export default function EventsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredEvents.map((event) => (
+            {sortedEvents.map((event) => (
               <Link href={`/events/${event.slug}`} key={event._id}>
                 <GlassCard className="group hover:shadow-xl hover:shadow-[#0152be]/10 transition-all duration-300">
                   <div className="flex flex-col md:flex-row gap-6 p-4">
@@ -306,7 +341,7 @@ export default function EventsPage() {
                         )}
                         <div className="flex items-center gap-2 text-[#0152be] text-sm font-semibold">
                           <Users className="w-4 h-4" />
-                          <span>{event.total_votes.toLocaleString()} votes</span>
+                          <span>{(event.total_votes || 0).toLocaleString()} votes</span>
                         </div>
                       </div>
                     </div>

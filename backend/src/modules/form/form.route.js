@@ -14,6 +14,13 @@ const router = Router();
 // ==================== PUBLIC ROUTES ====================
 
 /**
+ * GET /api/forms/public/nominations
+ * Get all active, published nomination forms (public)
+ * Returns forms grouped by event with their categories
+ */
+router.get("/public/nominations", FormController.getPublicNominationForms.bind(FormController));
+
+/**
  * GET /api/forms/slug/:slug
  * Get form by slug (public for published forms)
  */

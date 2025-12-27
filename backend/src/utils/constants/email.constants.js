@@ -14,6 +14,8 @@ export const EMAIL_TEMPLATES = {
   PASSWORD_RESET: "password-reset",
   PASSWORD_CHANGED: "password-changed",
   ACCOUNT_LOCKED: "account-locked",
+  ACCOUNT_RESTORED: "account-restored",
+  ACCOUNT_DELETED: "account-deleted",
 
   // Vote-related
   VOTE_CONFIRMATION: "vote-confirmation",
@@ -88,6 +90,8 @@ export const EMAIL_SUBJECTS = {
   [EMAIL_TEMPLATES.PASSWORD_RESET]: "Reset Your Password",
   [EMAIL_TEMPLATES.PASSWORD_CHANGED]: "Your Password Has Been Changed",
   [EMAIL_TEMPLATES.ACCOUNT_LOCKED]: "Your Account Has Been Temporarily Locked",
+  [EMAIL_TEMPLATES.ACCOUNT_RESTORED]: "Your Account Has Been Restored! 🎉",
+  [EMAIL_TEMPLATES.ACCOUNT_DELETED]: "Your Account Has Been Deleted",
 
   // Vote-related
   [EMAIL_TEMPLATES.VOTE_CONFIRMATION]: "Vote Confirmed! ✓",

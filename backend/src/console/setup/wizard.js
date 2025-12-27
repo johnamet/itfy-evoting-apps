@@ -1,6 +1,7 @@
 /**
  * First-Time Setup Wizard
  * Guides users through initial configuration and admin account creation
+ * FIXED: Properly handle input to prevent command interpretation
  */
 
 import mongoose from 'mongoose';
@@ -184,6 +185,7 @@ export class SetupWizard {
 
   /**
    * Step 4: JWT configuration
+   * FIXED: Better handling of time format inputs
    */
   async setupJWT() {
     this.ui.header('Step 4: JWT Security Configuration', 'key');
@@ -218,12 +220,32 @@ export class SetupWizard {
       });
     }
 
+    // FIXED: Better prompt for time-based inputs
+    this.ui.newLine();
+    this.ui.info('Token expiration format: Use "m" for minutes, "h" for hours, "d" for days');
+    this.ui.info('Examples: 15m (15 minutes), 1h (1 hour), 7d (7 days)');
+    this.ui.newLine();
+
     this.setupData.JWT_EXPIRATION = await this.ui.question('Access token expiration', {
-      defaultValue: '15m'
+      defaultValue: '15m',
+      validate: (val) => {
+        // Validate time format
+        if (!/^\d+[mhd]$/.test(val)) {
+          return 'Invalid format. Use number followed by m (minutes), h (hours), or d (days). Example: 15m';
+        }
+        return true;
+      }
     });
 
     this.setupData.JWT_REFRESH_EXPIRATION = await this.ui.question('Refresh token expiration', {
-      defaultValue: '7d'
+      defaultValue: '7d',
+      validate: (val) => {
+        // Validate time format
+        if (!/^\d+[mhd]$/.test(val)) {
+          return 'Invalid format. Use number followed by m (minutes), h (hours), or d (days). Example: 7d';
+        }
+        return true;
+      }
     });
 
     this.ui.success('JWT configuration complete!');

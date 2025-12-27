@@ -1,22 +1,69 @@
 'use client';
 
+import { useMemo } from 'react';
 import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
-import { Users, Trophy, ArrowRight, TrendingUp, Vote, Award, Star, Clock, Globe, Lock, ShieldCheck } from 'lucide-react';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockEvents } from '@/lib/mocks/events';
+import { Users, Trophy, ArrowRight, TrendingUp, Vote, Award, Star, Clock, Globe, Lock, ShieldCheck, Loader2 } from 'lucide-react';
+import { useFeaturedCategories } from '@/hooks';
 import Link from 'next/link';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { ResultsVisibility } from '@/types';
 
-export default function CategoriesSection() {
-  const featuredCategories = mockCategories
-    .filter(cat => cat.is_featured && cat.is_voting_open)
-    .sort((a, b) => b.total_votes - a.total_votes)
-    .slice(0, 4);
+// Skeleton loader for category cards
+function CategoryCardSkeleton() {
+  return (
+    <GlassCard className="h-full overflow-hidden">
+      <div className="relative h-48 bg-gray-800 animate-pulse" />
+      <div className="p-6">
+        <div className="h-6 bg-gray-700 rounded animate-pulse mb-2 w-3/4" />
+        <div className="h-4 bg-gray-700 rounded animate-pulse mb-3 w-1/2" />
+        <div className="h-4 bg-gray-700 rounded animate-pulse mb-4 w-full" />
+        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+          <div className="flex items-center gap-4">
+            <div className="h-4 w-12 bg-gray-700 rounded animate-pulse" />
+            <div className="h-4 w-16 bg-gray-700 rounded animate-pulse" />
+          </div>
+          <div className="h-6 w-6 bg-gray-700 rounded-full animate-pulse" />
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
 
-  const getVotingStatus = (category: typeof mockCategories[0]) => {
+export default function CategoriesSection() {
+  const { data: categoriesData, isLoading, error } = useFeaturedCategories({ limit: 4 });
+  
+  // Process categories from API response
+  const featuredCategories = useMemo(() => {
+    if (!categoriesData?.data) return [];
+    return categoriesData.data
+      .filter((cat: { is_voting_open?: boolean }) => cat.is_voting_open)
+      .sort((a: { total_votes?: number }, b: { total_votes?: number }) => 
+        (b.total_votes || 0) - (a.total_votes || 0)
+      )
+      .slice(0, 4);
+  }, [categoriesData]);
+
+  // Define category type for reuse
+  type CategoryType = {
+    _id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    image?: string;
+    is_featured?: boolean;
+    is_voting_open?: boolean;
+    voting_start_date?: string;
+    voting_deadline?: string;
+    total_votes?: number;
+    candidates?: { length: number } | string[];
+    event?: { _id: string; name: string } | string;
+    color_theme?: string;
+    results_visibility?: ResultsVisibility;
+  };
+
+  const getVotingStatus = (category: CategoryType) => {
     const now = new Date();
     const startDate = category.voting_start_date ? new Date(category.voting_start_date) : null;
     const endDate = category.voting_deadline ? new Date(category.voting_deadline) : null;
@@ -33,7 +80,7 @@ export default function CategoriesSection() {
     return { status: 'closed', label: 'Closed', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
   };
 
-  const getVisibilityInfo = (visibility: ResultsVisibility) => {
+  const getVisibilityInfo = (visibility?: ResultsVisibility) => {
     switch (visibility) {
       case 'public':
         return { label: 'Public', color: 'bg-green-500/20 text-green-400', icon: Globe };
@@ -75,11 +122,42 @@ export default function CategoriesSection() {
 
         {/* Categories Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {featuredCategories.map((category) => {
-            const event = mockEvents.find(e => e._id === category.event);
-            const votingStatus = getVotingStatus(category);
-            const visibilityInfo = getVisibilityInfo(category.results_visibility);
-            const VisibilityIcon = visibilityInfo.icon;
+          {isLoading ? (
+            // Loading skeletons
+            Array.from({ length: 4 }).map((_, i) => (
+              <CategoryCardSkeleton key={i} />
+            ))
+          ) : error ? (
+            // Error state
+            <div className="col-span-full text-center py-12">
+              <div className="text-red-400 mb-4">Failed to load categories</div>
+              <Button 
+                variant="outline" 
+                className="border-white/30 text-white hover:bg-white/10"
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : featuredCategories.length === 0 ? (
+            // Empty state
+            <div className="col-span-full text-center py-12">
+              <Trophy className="w-16 h-16 mx-auto mb-4 text-gray-600" />
+              <p className="text-gray-400 text-lg">No featured categories available at the moment</p>
+              <p className="text-gray-500 text-sm mt-2">Check back soon for exciting voting categories!</p>
+            </div>
+          ) : (
+            // Categories list
+            featuredCategories.map((category: CategoryType) => {
+              // Handle event as object or string
+              const event = typeof category.event === 'object' ? category.event : null;
+              const votingStatus = getVotingStatus(category);
+              const visibilityInfo = getVisibilityInfo(category.results_visibility);
+              const VisibilityIcon = visibilityInfo.icon;
+              // Handle candidates as array or object with length
+              const candidatesCount = Array.isArray(category.candidates) 
+                ? category.candidates.length 
+                : (category.candidates?.length || 0);
 
             return (
               <Link key={category._id} href={`/categories/${category.slug}`}>
@@ -144,11 +222,11 @@ export default function CategoriesSection() {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1 text-sm text-gray-400">
                           <Users className="w-4 h-4" />
-                          <span>{category.candidates.length}</span>
+                          <span>{candidatesCount}</span>
                         </div>
                         <div className="flex items-center gap-1 text-sm text-[#0152be]">
                           <Vote className="w-4 h-4" />
-                          <span>{category.total_votes.toLocaleString()}</span>
+                          <span>{(category.total_votes || 0).toLocaleString()}</span>
                         </div>
                       </div>
                       <span className={`${visibilityInfo.color} px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1`}>
@@ -167,7 +245,8 @@ export default function CategoriesSection() {
                 </GlassCard>
               </Link>
             );
-          })}
+          })
+          )}
         </div>
 
         {/* Bottom CTA Section */}

@@ -317,11 +317,11 @@ export default function AdminCategoriesTab() {
         setCategories(response.data);
         setTotalPages(response.pagination?.totalPages || 1);
       } else {
-        setCategories(mockCategories);
+        setCategories([]);
       }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
-      setCategories(mockCategories);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -470,7 +470,14 @@ export default function AdminCategoriesTab() {
               category={category}
               onView={() => {}}
               onEdit={() => handleEdit(category)}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await categoriesApi.delete(category._id);
+                  fetchCategories();
+                } catch (error) {
+                  console.error("Failed to delete category:", error);
+                }
+              }}
             />
           ))}
         </motion.div>

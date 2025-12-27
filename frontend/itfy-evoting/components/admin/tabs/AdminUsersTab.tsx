@@ -1,18 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import {
   Users,
   Search,
-  Filter,
   Plus,
   MoreVertical,
   Edit,
   Trash2,
   Eye,
   UserCheck,
-  UserX,
   Shield,
   Mail,
   Clock,
@@ -22,11 +20,17 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Ban,
+  Calendar,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +45,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -53,7 +56,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -65,7 +67,26 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { usersApi, type UserFilters } from "@/lib/api/users";
-import type { User, UserRole, UserStatus } from "@/types";
+import type { User, UserRole } from "@/types";
+
+// User stats interface (matches backend)
+interface UserStats {
+  total: number;
+  byStatus: {
+    active: number;
+    inactive: number;
+    suspended: number;
+  };
+  byRole: Record<string, number>;
+  verification: {
+    verified: number;
+    unverified: number;
+  };
+  activity: {
+    recentRegistrations: number;
+    recentLogins: number;
+  };
+}
 
 // Role badge colors
 const roleBadgeColors: Record<UserRole, string> = {
@@ -76,81 +97,16 @@ const roleBadgeColors: Record<UserRole, string> = {
 };
 
 // Status badge colors
-const statusBadgeColors: Record<UserStatus, string> = {
+type UserStatusType = 'active' | 'inactive' | 'suspended' | 'deleted';
+const statusBadgeColors: Record<UserStatusType, string> = {
   active: "bg-green-500/20 text-green-400 border-green-500/30",
   inactive: "bg-slate-500/20 text-slate-400 border-slate-500/30",
   suspended: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   deleted: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
-// Mock user data
-const mockUsers: User[] = [
-  {
-    _id: "1",
-    name: "John Mensah",
-    email: "john@itfy.com",
-    role: "super_admin",
-    permissions: ["super"],
-    email_verified: true,
-    status: "active",
-    created_at: "2024-01-15T10:00:00Z",
-    updated_at: "2024-12-01T08:30:00Z",
-    photo_url: null,
-    last_login: "2024-12-15T14:30:00Z",
-  },
-  {
-    _id: "2",
-    name: "Akua Boateng",
-    email: "akua@events.gh",
-    role: "organiser",
-    permissions: ["read", "write", "update"],
-    email_verified: true,
-    status: "active",
-    created_at: "2024-03-20T12:00:00Z",
-    updated_at: "2024-11-28T16:45:00Z",
-    photo_url: null,
-    last_login: "2024-12-14T09:15:00Z",
-  },
-  {
-    _id: "3",
-    name: "Kwame Asante",
-    email: "kwame@admin.gh",
-    role: "admin",
-    permissions: ["read", "write", "update", "delete"],
-    email_verified: true,
-    status: "active",
-    created_at: "2024-02-10T09:00:00Z",
-    updated_at: "2024-12-10T11:20:00Z",
-    photo_url: null,
-    last_login: "2024-12-15T11:00:00Z",
-  },
-  {
-    _id: "4",
-    name: "Ama Serwaa",
-    email: "ama@moderator.gh",
-    role: "moderator",
-    permissions: ["read", "write"],
-    email_verified: false,
-    status: "inactive",
-    created_at: "2024-06-05T14:30:00Z",
-    updated_at: "2024-10-22T10:00:00Z",
-    photo_url: null,
-    last_login: "2024-10-20T15:45:00Z",
-  },
-  {
-    _id: "5",
-    name: "Kofi Owusu",
-    email: "kofi@organiser.gh",
-    role: "organiser",
-    permissions: ["read", "write", "update"],
-    email_verified: true,
-    status: "suspended",
-    created_at: "2024-04-12T08:00:00Z",
-    updated_at: "2024-11-15T09:30:00Z",
-    photo_url: null,
-    last_login: "2024-11-10T12:00:00Z",
-  },
-];
+// Note: This tab now relies on the real `usersApi` for data.
+// Fallback to local mock data was removed so the admin UI uses real integrations.
 
 // User card component for grid view
 function UserCard({
@@ -230,8 +186,10 @@ function UserCard({
             <Badge variant="outline" className={statusBadgeColors[user.status]}>
               {user.status === "active" ? (
                 <UserCheck className="w-3 h-3 mr-1" />
+              ) : user.status === "suspended" ? (
+                <Ban className="w-3 h-3 mr-1" />
               ) : (
-                <UserX className="w-3 h-3 mr-1" />
+                <AlertCircle className="w-3 h-3 mr-1" />
               )}
               {user.status}
             </Badge>
@@ -259,8 +217,11 @@ function UserCard({
 export default function AdminUsersTab() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -268,14 +229,64 @@ export default function AdminUsersTab() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  
+  // Form state for create/edit
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "organiser" as UserRole,
+  });
+  const [formError, setFormError] = useState("");
 
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const itemsPerPage = 12;
 
+  // Debounce search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Fetch stats on mount
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // Fetch users when filters change
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, roleFilter, statusFilter, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, roleFilter, statusFilter, debouncedSearch]);
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await usersApi.getStats();
+      if (response.success && response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -284,7 +295,7 @@ export default function AdminUsersTab() {
       const filters: UserFilters = {
         page: currentPage,
         limit: itemsPerPage,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         role: roleFilter !== "all" ? (roleFilter as UserRole) : undefined,
         status: statusFilter !== "all" ? (statusFilter as 'active' | 'inactive' | 'suspended') : undefined,
       };
@@ -296,16 +307,17 @@ export default function AdminUsersTab() {
         setTotalPages(response.pagination?.totalPages || 1);
         setTotalUsers(response.pagination?.totalItems || response.data.length);
       } else {
-        // Use mock data
-        setUsers(mockUsers);
+        // If API response is not successful, show empty list
+        setUsers([]);
         setTotalPages(1);
-        setTotalUsers(mockUsers.length);
+        setTotalUsers(0);
       }
     } catch (error) {
       console.error("Failed to fetch users:", error);
-      setUsers(mockUsers);
+      // On error, show empty list so UI reflects upstream failure
+      setUsers([]);
       setTotalPages(1);
-      setTotalUsers(mockUsers.length);
+      setTotalUsers(0);
     } finally {
       setLoading(false);
     }
@@ -329,12 +341,30 @@ export default function AdminUsersTab() {
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
-    // Open view modal (to be implemented)
+    setShowViewModal(true);
   };
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
-    // Open edit modal (to be implemented)
+    setFormData({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      role: user.role || "organiser",
+    });
+    setFormError("");
+    setShowEditModal(true);
+  };
+
+  const handleCreateUser = () => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "organiser",
+    });
+    setFormError("");
+    setShowCreateModal(true);
   };
 
   const handleDeleteUser = (user: User) => {
@@ -346,12 +376,106 @@ export default function AdminUsersTab() {
     if (!selectedUser) return;
     
     try {
-      // await usersApi.delete(selectedUser._id);
+      setActionLoading(true);
+      await usersApi.delete(selectedUser._id);
       await fetchUsers();
+      await fetchStats();
       setShowDeleteConfirm(false);
       setSelectedUser(null);
     } catch (error) {
       console.error("Failed to delete user:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCreateSubmit = async () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      setFormError("Name, email and password are required");
+      return;
+    }
+    
+    try {
+      setActionLoading(true);
+      setFormError("");
+      await usersApi.create({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      });
+      setShowCreateModal(false);
+      await fetchUsers();
+      await fetchStats();
+    } catch (error: unknown) {
+      console.error("Failed to create user:", error);
+      setFormError((error as { message?: string })?.message || "Failed to create user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (!selectedUser || !formData.name || !formData.email) {
+      setFormError("Name and email are required");
+      return;
+    }
+    
+    try {
+      setActionLoading(true);
+      setFormError("");
+      await usersApi.update(selectedUser._id, {
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+      });
+      setShowEditModal(false);
+      setSelectedUser(null);
+      await fetchUsers();
+    } catch (error: unknown) {
+      console.error("Failed to update user:", error);
+      setFormError((error as { message?: string })?.message || "Failed to update user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSuspendUser = async (user: User) => {
+    try {
+      setActionLoading(true);
+      await usersApi.suspend(user._id, "Suspended by admin");
+      await fetchUsers();
+      await fetchStats();
+    } catch (error) {
+      console.error("Failed to suspend user:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReactivateUser = async (user: User) => {
+    try {
+      setActionLoading(true);
+      await usersApi.reactivate(user._id);
+      await fetchUsers();
+      await fetchStats();
+    } catch (error) {
+      console.error("Failed to reactivate user:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async (user: User) => {
+    try {
+      setActionLoading(true);
+      await usersApi.forceVerifyEmail(user._id);
+      await fetchUsers();
+      await fetchStats();
+    } catch (error) {
+      console.error("Failed to verify email:", error);
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -374,7 +498,7 @@ export default function AdminUsersTab() {
           </p>
         </div>
         <Button
-          onClick={() => setShowCreateModal(true)}
+          onClick={handleCreateUser}
           className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
         >
           <Plus className="w-4 h-4 mr-2" /> Add User
@@ -384,15 +508,24 @@ export default function AdminUsersTab() {
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total Users", value: totalUsers, color: "blue" },
-          { label: "Active", value: users.filter((u) => u.status === "active").length, color: "green" },
-          { label: "Inactive", value: users.filter((u) => u.status === "inactive").length, color: "slate" },
-          { label: "Suspended", value: users.filter((u) => u.status === "suspended").length, color: "orange" },
+          { label: "Total Users", value: stats?.total ?? totalUsers, color: "blue", icon: Users },
+          { label: "Active", value: stats?.byStatus?.active ?? 0, color: "green", icon: UserCheck },
+          { label: "Suspended", value: stats?.byStatus?.suspended ?? 0, color: "orange", icon: Ban },
+          { label: "Email Verified", value: stats?.verification?.verified ?? 0, color: "purple", icon: Mail },
         ].map((stat, i) => (
           <Card key={i} className="bg-slate-900/50 border-slate-700/50 backdrop-blur-xl">
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-white">{stat.value}</div>
-              <p className="text-slate-400 text-sm">{stat.label}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  {statsLoading ? (
+                    <Skeleton className="w-12 h-7 mb-1" />
+                  ) : (
+                    <div className="text-2xl font-bold text-white">{stat.value}</div>
+                  )}
+                  <p className="text-slate-400 text-sm">{stat.label}</p>
+                </div>
+                <stat.icon className={`w-8 h-8 text-${stat.color}-400 opacity-50`} />
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -620,6 +753,21 @@ export default function AdminUsersTab() {
                           <Edit className="w-4 h-4 mr-2" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-slate-700" />
+                        {user.status === "suspended" ? (
+                          <DropdownMenuItem onClick={() => handleReactivateUser(user)} className="text-green-400 hover:text-green-300 focus:text-green-300 focus:bg-green-500/10">
+                            <CheckCircle className="w-4 h-4 mr-2" /> Reactivate
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => handleSuspendUser(user)} className="text-orange-400 hover:text-orange-300 focus:text-orange-300 focus:bg-orange-500/10">
+                            <Ban className="w-4 h-4 mr-2" /> Suspend
+                          </DropdownMenuItem>
+                        )}
+                        {!user.email_verified && (
+                          <DropdownMenuItem onClick={() => handleVerifyEmail(user)} className="text-blue-400 hover:text-blue-300 focus:text-blue-300 focus:bg-blue-500/10">
+                            <Mail className="w-4 h-4 mr-2" /> Verify Email
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator className="bg-slate-700" />
                         <DropdownMenuItem onClick={() => handleDeleteUser(user)} className="text-red-400 hover:text-red-300 focus:text-red-300 focus:bg-red-500/10">
                           <Trash2 className="w-4 h-4 mr-2" /> Delete
                         </DropdownMenuItem>
@@ -673,15 +821,278 @@ export default function AdminUsersTab() {
             <Button
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
+              disabled={actionLoading}
               className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmDelete}
+              disabled={actionLoading}
               className="bg-red-500 text-white hover:bg-red-600"
             >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Create New User</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Add a new user to the platform.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {formError && (
+              <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4" />
+                {formError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-slate-300">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter name"
+                className="bg-slate-800/50 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-slate-300">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Enter email"
+                className="bg-slate-800/50 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-slate-300">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Enter password"
+                className="bg-slate-800/50 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-slate-300">Role</Label>
+              <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as UserRole })}>
+                <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="organiser">Organiser</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCreateModal(false)}
+              disabled={actionLoading}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateSubmit}
+              disabled={actionLoading}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Create User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit User</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Update user information.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {formError && (
+              <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 p-3 rounded-lg">
+                <AlertCircle className="w-4 h-4" />
+                {formError}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="edit-name" className="text-slate-300">Name</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Enter name"
+                className="bg-slate-800/50 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email" className="text-slate-300">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Enter email"
+                className="bg-slate-800/50 border-slate-700 text-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role" className="text-slate-300">Role</Label>
+              <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v as UserRole })}>
+                <SelectTrigger className="bg-slate-800/50 border-slate-700 text-white">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="organiser">Organiser</SelectItem>
+                  <SelectItem value="moderator">Moderator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditModal(false)}
+              disabled={actionLoading}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleEditSubmit}
+              disabled={actionLoading}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View User Modal */}
+      <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white">User Details</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-6 py-4">
+              {/* User Avatar & Name */}
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={selectedUser.photo_url || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xl">
+                    {selectedUser.name?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">{selectedUser.name}</h3>
+                  <p className="text-slate-400">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              {/* User Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs uppercase">Role</p>
+                  <Badge variant="outline" className={roleBadgeColors[selectedUser.role]}>
+                    {selectedUser.role?.replace("_", " ")}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs uppercase">Status</p>
+                  <Badge variant="outline" className={statusBadgeColors[selectedUser.status]}>
+                    {selectedUser.status}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs uppercase">Email Verified</p>
+                  <Badge
+                    variant="outline"
+                    className={
+                      selectedUser.email_verified
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : "bg-slate-500/20 text-slate-400 border-slate-500/30"
+                    }
+                  >
+                    {selectedUser.email_verified ? "Yes" : "No"}
+                  </Badge>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs uppercase">Last Login</p>
+                  <p className="text-white text-sm">
+                    {selectedUser.last_login
+                      ? new Date(selectedUser.last_login).toLocaleString()
+                      : "Never"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Timestamps */}
+              <div className="border-t border-slate-700 pt-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="w-4 h-4 text-slate-500" />
+                  <span className="text-slate-400">Created:</span>
+                  <span className="text-white">
+                    {selectedUser.created_at
+                      ? new Date(selectedUser.created_at).toLocaleDateString()
+                      : "Unknown"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="w-4 h-4 text-slate-500" />
+                  <span className="text-slate-400">Updated:</span>
+                  <span className="text-white">
+                    {selectedUser.updated_at
+                      ? new Date(selectedUser.updated_at).toLocaleDateString()
+                      : "Unknown"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowViewModal(false)}
+              className="bg-slate-800 border-slate-700 text-white hover:bg-slate-700"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowViewModal(false);
+                if (selectedUser) handleEditUser(selectedUser);
+              }}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+            >
+              <Edit className="w-4 h-4 mr-2" /> Edit User
             </Button>
           </DialogFooter>
         </DialogContent>

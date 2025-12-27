@@ -400,11 +400,11 @@ export default function AdminSlidesTab() {
         setSlides(response.data);
         setTotalPages(response.pagination?.totalPages || 1);
       } else {
-        setSlides(mockSlides);
+        setSlides([]);
       }
     } catch (error) {
       console.error("Failed to fetch slides:", error);
-      setSlides(mockSlides);
+      setSlides([]);
     } finally {
       setLoading(false);
     }
@@ -549,7 +549,14 @@ export default function AdminSlidesTab() {
               slide={slide}
               onView={() => {}}
               onEdit={() => handleEdit(slide)}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await slidesApi.delete(slide._id);
+                  fetchSlides();
+                } catch (error) {
+                  console.error("Failed to delete slide:", error);
+                }
+              }}
               onToggle={() => handleToggle(slide)}
             />
           ))}

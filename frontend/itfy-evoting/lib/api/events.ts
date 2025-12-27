@@ -21,7 +21,15 @@ export interface EventsListResponse {
   pagination: PaginationMeta;
 }
 
-// Event filters
+// Public event filters (for public endpoints)
+export interface PublicEventFilters extends PaginationParams {
+  status?: EventStatus;
+  search?: string;
+  is_featured?: boolean;
+  event_type?: string;
+}
+
+// Event filters (for admin endpoints)
 export interface EventFilters extends PaginationParams {
   status?: EventStatus;
   organiser?: string;
@@ -82,9 +90,15 @@ export const eventsApi = {
   /**
    * Get public/featured events (no auth required)
    */
-  getPublicEvents: async (params?: PaginationParams): Promise<EventsListResponse> => {
+  getPublicEvents: async (filters?: PublicEventFilters): Promise<EventsListResponse> => {
     return api.get<EventsListResponse>('/events/public', {
-      params: buildPaginationParams(params),
+      params: {
+        ...buildPaginationParams(filters),
+        status: filters?.status,
+        search: filters?.search,
+        is_featured: filters?.is_featured,
+        event_type: filters?.event_type,
+      },
       skipAuth: true,
     });
   },
@@ -95,6 +109,25 @@ export const eventsApi = {
   getFeaturedEvents: async (params?: PaginationParams): Promise<EventsListResponse> => {
     return api.get<EventsListResponse>('/events/featured', {
       params: buildPaginationParams(params),
+      skipAuth: true,
+    });
+  },
+
+  /**
+   * Get upcoming events (no auth required)
+   */
+  getUpcomingEvents: async (params?: PaginationParams): Promise<EventsListResponse> => {
+    return api.get<EventsListResponse>('/events/upcoming', {
+      params: buildPaginationParams(params),
+      skipAuth: true,
+    });
+  },
+
+  /**
+   * Get event by slug (public)
+   */
+  getBySlug: async (slug: string): Promise<ApiResponse<Event>> => {
+    return api.get<ApiResponse<Event>>(`/events/slug/${slug}`, {
       skipAuth: true,
     });
   },

@@ -149,6 +149,30 @@ class FormService extends BaseService {
     }
   }
 
+  /**
+   * Get all published, active nomination forms (public)
+   * Returns forms with event and category details
+   * @returns {Promise<Array>} - Public nomination forms
+   */
+  async getPublicNominationForms() {
+    try {
+      const query = {
+        form_type: FORM_TYPE.NOMINATION,
+        is_published: true,
+        status: FORM_STATUS.ACTIVE,
+      };
+
+      const result = await this.repository.findAll(query, 1, 100, {
+        populate: ["event", "categories"],
+        sort: { created_at: -1 },
+      });
+
+      return result.data || [];
+    } catch (error) {
+      throw new Error(`Get public nomination forms failed: ${error.message}`);
+    }
+  }
+
   // ==================== FIELD MAPPING ====================
 
   /**

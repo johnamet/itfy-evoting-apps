@@ -55,47 +55,6 @@ import { analyticsApi } from "@/lib/api/analytics";
 // Colors
 const COLORS = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4"];
 
-// Mock data
-const mockVotingTrends = [
-  { date: "Dec 10", votes: 1234, revenue: 617 },
-  { date: "Dec 11", votes: 1456, revenue: 728 },
-  { date: "Dec 12", votes: 1823, revenue: 912 },
-  { date: "Dec 13", votes: 2145, revenue: 1073 },
-  { date: "Dec 14", votes: 1987, revenue: 994 },
-  { date: "Dec 15", votes: 2456, revenue: 1228 },
-  { date: "Dec 16", votes: 2789, revenue: 1395 },
-];
-
-const mockCategoryData = [
-  { name: "Best Male Artist", votes: 15420, percentage: 28 },
-  { name: "Best Female Artist", votes: 12340, percentage: 22 },
-  { name: "Best Rapper", votes: 10890, percentage: 20 },
-  { name: "Best Dancehall", votes: 8760, percentage: 16 },
-  { name: "Best New Artist", votes: 7890, percentage: 14 },
-];
-
-const mockDeviceData = [
-  { name: "Mobile", value: 65, color: "#3b82f6" },
-  { name: "Desktop", value: 28, color: "#8b5cf6" },
-  { name: "Tablet", value: 7, color: "#10b981" },
-];
-
-const mockRegionData = [
-  { region: "Greater Accra", votes: 25430, percentage: 42 },
-  { region: "Ashanti", votes: 18920, percentage: 31 },
-  { region: "Western", votes: 8540, percentage: 14 },
-  { region: "Central", votes: 4870, percentage: 8 },
-  { region: "Others", votes: 3040, percentage: 5 },
-];
-
-const mockTopCandidates = [
-  { name: "Sarkodie", category: "Best Rapper", votes: 15420, trend: 12.5 },
-  { name: "Shatta Wale", category: "Best Dancehall", votes: 14280, trend: 8.3 },
-  { name: "Stonebwoy", category: "Best Afrobeats", votes: 13560, trend: -2.1 },
-  { name: "King Promise", category: "Best Male Artist", votes: 12890, trend: 15.7 },
-  { name: "Wendy Shay", category: "Best Female Artist", votes: 11450, trend: 5.9 },
-];
-
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -131,11 +90,72 @@ export default function AdminAnalyticsTab() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Analytics data state
+  const [votingAnalytics, setVotingAnalytics] = useState<any>(null);
+  const [paymentAnalytics, setPaymentAnalytics] = useState<any>(null);
+  const [platformDashboard, setPlatformDashboard] = useState<any>(null);
+  const [deviceAnalytics, setDeviceAnalytics] = useState<any>(null);
+  const [regionAnalytics, setRegionAnalytics] = useState<any>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchAnalytics();
+  }, [period]);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      
+      // Calculate date range based on period
+      const endDate = new Date();
+      let startDate = new Date();
+      
+      switch (period) {
+        case "7d":
+          startDate.setDate(endDate.getDate() - 7);
+          break;
+        case "30d":
+          startDate.setDate(endDate.getDate() - 30);
+          break;
+        case "90d":
+          startDate.setDate(endDate.getDate() - 90);
+          break;
+        case "1y":
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+      }
+
+      const [votingResponse, paymentResponse, platformResponse, deviceResponse, regionResponse] = await Promise.all([
+        analyticsApi.getVotingAnalytics({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }),
+        analyticsApi.getPaymentAnalytics({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }),
+        analyticsApi.getDashboardOverview(),
+        analyticsApi.getDeviceAnalytics({
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+        }),
+        analyticsApi.getRegionAnalytics({
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+        }),
+      ]);
+
+      setVotingAnalytics(votingResponse.data);
+      setPaymentAnalytics(paymentResponse.data);
+      setPlatformDashboard(platformResponse.data);
+      setDeviceAnalytics(deviceResponse.data);
+      setRegionAnalytics(regionResponse.data);
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -145,11 +165,51 @@ export default function AdminAnalyticsTab() {
     }
   };
 
+  // Format voting trends for charts
+  const votingTrends = votingAnalytics?.votesByDay?.map((item: any) => ({
+    date: new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    votes: item.count || 0,
+    revenue: item.amount || 0,
+  })) || [];
+
+  // Format category data for pie chart
+  const categoryData = votingAnalytics?.votesByCategory?.map((item: any) => ({
+    name: item.category,
+    votes: item.count,
+    percentage: item.percentage,
+  })) || [];
+
+  // Top candidates with real trends from API
+  const topCandidates = votingAnalytics?.topCandidates?.slice(0, 5).map((c: any, idx: number) => ({
+    ...c,
+    trend: c.trend || 0, // Real trend calculation from backend
+    category: c.event || "Unknown",
+  })) || [];
+
+  // Format device data from API
+  const deviceData = deviceAnalytics?.deviceTypes?.map((item: any) => ({
+    name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
+    value: parseFloat(item.percentage),
+    color: item.type === "mobile" ? "#3b82f6" : item.type === "desktop" ? "#8b5cf6" : "#10b981",
+  })) || [];
+
+  // Format region data from API (top 5 countries)
+  const regionData = regionAnalytics?.countries?.slice(0, 5).map((item: any) => ({
+    name: item.country,
+    percentage: parseFloat(item.percentage),
+  })) || [];
+
+  // Calculate stats for cards
+  const totalVotes = votingAnalytics?.totalVotes || 0;
+  const totalRevenue = paymentAnalytics?.totalRevenue || 0;
+  const totalTransactions = paymentAnalytics?.totalTransactions || 0;
+  const avgTransactionValue = paymentAnalytics?.averageTransactionValue || 0;
+
   // Stats cards data
   const statsCards = [
     {
       title: "Total Votes",
-      value: "55,300",
+      value: totalVotes.toLocaleString(),
       change: "+12.5%",
       trend: "up",
       icon: Vote,
@@ -157,23 +217,23 @@ export default function AdminAnalyticsTab() {
     },
     {
       title: "Revenue",
-      value: "GHS 27,650",
+      value: `GHS ${totalRevenue.toLocaleString()}`,
       change: "+8.3%",
       trend: "up",
       icon: DollarSign,
       color: "green",
     },
     {
-      title: "Active Users",
-      value: "12,450",
+      title: "Transactions",
+      value: totalTransactions.toLocaleString(),
       change: "+15.2%",
       trend: "up",
       icon: Users,
       color: "purple",
     },
     {
-      title: "Conversion Rate",
-      value: "24.8%",
+      title: "Avg Transaction",
+      value: `GHS ${avgTransactionValue.toFixed(2)}`,
       change: "-2.1%",
       trend: "down",
       icon: Target,
@@ -277,7 +337,7 @@ export default function AdminAnalyticsTab() {
                   <Skeleton className="w-full h-[300px]" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={mockVotingTrends}>
+                    <AreaChart data={votingTrends}>
                       <defs>
                         <linearGradient id="voteGradient" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -315,7 +375,7 @@ export default function AdminAnalyticsTab() {
                   <Skeleton className="w-full h-[300px]" />
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={mockVotingTrends}>
+                    <BarChart data={votingTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                       <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
                       <YAxis stroke="#64748b" fontSize={12} />
@@ -346,7 +406,7 @@ export default function AdminAnalyticsTab() {
                     <ResponsiveContainer width="50%" height={200}>
                       <RePieChart>
                         <Pie
-                          data={mockCategoryData}
+                          data={categoryData}
                           cx="50%"
                           cy="50%"
                           innerRadius={50}
@@ -354,7 +414,7 @@ export default function AdminAnalyticsTab() {
                           paddingAngle={2}
                           dataKey="percentage"
                         >
-                          {mockCategoryData.map((_, index) => (
+                          {categoryData.map((_, index) => (
                             <Cell key={index} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -362,7 +422,7 @@ export default function AdminAnalyticsTab() {
                       </RePieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-2">
-                      {mockCategoryData.map((cat, index) => (
+                      {categoryData.map((cat, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div
@@ -390,7 +450,7 @@ export default function AdminAnalyticsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockTopCandidates.map((candidate, index) => (
+                  {topCandidates.map((candidate, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
@@ -473,7 +533,7 @@ export default function AdminAnalyticsTab() {
                   <ResponsiveContainer width="50%" height={200}>
                     <RePieChart>
                       <Pie
-                        data={mockDeviceData}
+                        data={deviceData}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -481,14 +541,14 @@ export default function AdminAnalyticsTab() {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {mockDeviceData.map((entry, index) => (
+                        {deviceData.map((entry, index) => (
                           <Cell key={index} fill={entry.color} />
                         ))}
                       </Pie>
                     </RePieChart>
                   </ResponsiveContainer>
                   <div className="flex-1 space-y-3">
-                    {mockDeviceData.map((device, index) => (
+                    {deviceData.map((device, index) => (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: device.color }} />
@@ -512,7 +572,7 @@ export default function AdminAnalyticsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockRegionData.map((region, index) => (
+                  {regionData.map((region, index) => (
                     <div key={index}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-slate-300 text-sm">{region.region}</span>

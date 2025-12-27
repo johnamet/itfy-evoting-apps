@@ -254,12 +254,12 @@ export default function AdminEventsTab() {
         setEvents(response.data);
         setTotalPages(response.pagination?.totalPages || 1);
       } else {
-        setEvents(mockEvents);
+        setEvents([]);
         setTotalPages(1);
       }
     } catch (error) {
       console.error("Failed to fetch events:", error);
-      setEvents(mockEvents);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -387,7 +387,14 @@ export default function AdminEventsTab() {
               event={event}
               onView={() => {}}
               onEdit={() => {}}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await eventsApi.delete(event._id);
+                  fetchEvents();
+                } catch (error) {
+                  console.error("Failed to delete event:", error);
+                }
+              }}
             />
           ))}
         </motion.div>

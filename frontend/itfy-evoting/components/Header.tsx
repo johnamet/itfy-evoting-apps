@@ -32,6 +32,7 @@ export default function Header() {
     { href: '/events', label: 'Events' },
     { href: '/categories', label: 'Categories' },
     { href: '/nominees', label: 'Nominees' },
+    { href: '/vote', label: 'Vote' },
     { href: '/contact', label: 'Contact' },
   ];
 

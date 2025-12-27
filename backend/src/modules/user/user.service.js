@@ -13,6 +13,7 @@ import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
 import { ROLES, PERMISSIONS, STATUS } from "../../utils/constants/user.constants.js";
 import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
 import { NOTIFICATION_TYPE } from "../../utils/constants/notification.constants.js";
+import agendaManager from "../../services/agenda.service.js";
 
 // Register validation class with BaseService
 BaseService.setValidation(UserValidation);
@@ -78,6 +79,37 @@ class UserService extends BaseService {
       return user;
     } catch (error) {
       throw new Error(`Create user failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find all users with filters and options
+   * @param {Object} filters - Query filters
+   * @param {Object} options - Query options (skip, limit, sort, etc.)
+   * @returns {Promise<Array>} - List of users
+   */
+  async findAll(filters = {}, options = {}) {
+    try {
+      const { skip = 0, limit = 10, sort = '-created_at', ...queryOptions } = options;
+      const page = Math.floor(skip / limit) + 1;
+      
+      const result = await this.repository.findAll(filters, page, limit, { sort, ...queryOptions });
+      return result.data;
+    } catch (error) {
+      throw new Error(`Find all users failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count users matching filters
+   * @param {Object} filters - Query filters
+   * @returns {Promise<number>} - Count of users
+   */
+  async count(filters = {}) {
+    try {
+      return await this.repository.count(filters);
+    } catch (error) {
+      throw new Error(`Count users failed: ${error.message}`);
     }
   }
 
@@ -151,7 +183,7 @@ class UserService extends BaseService {
       });
 
       // Notify user of role change
-      await NotificationService.sendNotification({
+      await NotificationService.create({
         userId: userId,
         type: NOTIFICATION_TYPE.USER_ROLE_UPDATED,
         title: "Your Role Has Been Updated",
@@ -318,7 +350,7 @@ class UserService extends BaseService {
       });
 
       // Notify user
-      await NotificationService.sendNotification({
+      await NotificationService.create({
         userId: userId,
         type: NOTIFICATION_TYPE.USER_DEACTIVATED,
         title: "Account Deactivated",
@@ -364,7 +396,7 @@ class UserService extends BaseService {
       });
 
       // Notify user
-      await NotificationService.sendNotification({
+      await NotificationService.create({
         userId: userId,
         type: NOTIFICATION_TYPE.USER_ACTIVATED,
         title: "Account Activated",
@@ -384,6 +416,146 @@ class UserService extends BaseService {
       return updated;
     } catch (error) {
       throw new Error(`Activate user failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Suspend user account
+   * @param {string|mongoose.Types.ObjectId} userId - User ID
+   * @param {string} reason - Suspension reason
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Updated user
+   */
+  async suspendUser(userId, reason, adminId) {
+    try {
+      const user = await this.repository.findById(userId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.status === STATUS.SUSPENDED) {
+        throw new Error("User is already suspended");
+      }
+
+      const updated = await this.repository.updateById(userId, {
+        status: STATUS.SUSPENDED,
+      });
+
+      // Notify user
+      await NotificationService.create({
+        userId: userId,
+        type: NOTIFICATION_TYPE.USER_SUSPENDED,
+        title: "Account Suspended",
+        message: reason || "Your account has been suspended. Contact support for more information.",
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.USER_SUSPENDED,
+        entityType: ENTITY_TYPE.USER,
+        entityId: userId,
+        description: `Suspended user: ${user.email}`,
+        metadata: { reason, userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return updated;
+    } catch (error) {
+      throw new Error(`Suspend user failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Reactivate suspended user account
+   * @param {string|mongoose.Types.ObjectId} userId - User ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Updated user
+   */
+  async reactivateUser(userId, adminId) {
+    try {
+      const user = await this.repository.findById(userId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.status === STATUS.ACTIVE) {
+        throw new Error("User is already active");
+      }
+
+      const updated = await this.repository.updateById(userId, {
+        status: STATUS.ACTIVE,
+      });
+
+      // Notify user
+      await NotificationService.create({
+        userId: userId,
+        type: NOTIFICATION_TYPE.USER_ACTIVATED,
+        title: "Account Reactivated",
+        message: "Your account has been reactivated. You can now access the platform.",
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.USER_ACTIVATED,
+        entityType: ENTITY_TYPE.USER,
+        entityId: userId,
+        description: `Reactivated user: ${user.email}`,
+        metadata: { userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return updated;
+    } catch (error) {
+      throw new Error(`Reactivate user failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Force verify user email (admin action)
+   * @param {string|mongoose.Types.ObjectId} userId - User ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Updated user
+   */
+  async forceVerifyEmail(userId, adminId) {
+    try {
+      const user = await this.repository.findById(userId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.email_verified) {
+        throw new Error("User email is already verified");
+      }
+
+      const updated = await this.repository.updateById(userId, {
+        email_verified: true,
+        email_verified_at: new Date(),
+      });
+
+      // Notify user
+      await NotificationService.create({
+        userId: userId,
+        type: NOTIFICATION_TYPE.SYSTEM,
+        title: "Email Verified",
+        message: "Your email has been verified by an administrator.",
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.USER_UPDATED,
+        entityType: ENTITY_TYPE.USER,
+        entityId: userId,
+        description: `Force verified email for user: ${user.email}`,
+        metadata: { userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return updated;
+    } catch (error) {
+      throw new Error(`Force verify email failed: ${error.message}`);
     }
   }
 
@@ -466,6 +638,69 @@ class UserService extends BaseService {
   }
 
   /**
+   * Get overall user statistics (admin dashboard)
+   * @returns {Promise<Object>} - Aggregate user statistics
+   */
+  async getUserStats() {
+    try {
+      // Get total counts by status
+      const totalUsers = await this.repository.count({});
+      const activeUsers = await this.repository.count({ status: STATUS.ACTIVE });
+      const inactiveUsers = await this.repository.count({ status: STATUS.INACTIVE });
+      const suspendedUsers = await this.repository.count({ status: STATUS.SUSPENDED });
+
+      // Get counts by role
+      const superAdmins = await this.repository.count({ role: ROLES.SUPER_ADMIN });
+      const admins = await this.repository.count({ role: ROLES.ADMIN });
+      const moderators = await this.repository.count({ role: ROLES.MODERATOR });
+      const voters = await this.repository.count({ role: ROLES.VOTER || ROLES.USER });
+
+      // Get verified vs unverified
+      const verifiedUsers = await this.repository.count({ email_verified: true });
+      const unverifiedUsers = await this.repository.count({ email_verified: false });
+
+      // Get recent registrations (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentRegistrations = await this.repository.count({
+        created_at: { $gte: sevenDaysAgo }
+      });
+
+      // Get recent logins (last 24 hours)
+      const oneDayAgo = new Date();
+      oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+      const recentLogins = await this.repository.count({
+        last_login: { $gte: oneDayAgo }
+      });
+
+      return {
+        total: totalUsers,
+        byStatus: {
+          active: activeUsers,
+          inactive: inactiveUsers,
+          suspended: suspendedUsers,
+        },
+        byRole: {
+          superAdmin: superAdmins,
+          admin: admins,
+          moderator: moderators,
+          voter: voters,
+        },
+        verification: {
+          verified: verifiedUsers,
+          unverified: unverifiedUsers,
+        },
+        activity: {
+          recentRegistrations,
+          recentLogins,
+        },
+      };
+    } catch (error) {
+      throw new Error(`Get user stats failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Get user statistics
    * @param {string|mongoose.Types.ObjectId} userId - User ID
    * @returns {Promise<Object>} - User statistics
@@ -498,6 +733,93 @@ class UserService extends BaseService {
       throw new Error(`Get user statistics failed: ${error.message}`);
     }
   }
+
+  /**
+   * Delete user by ID (soft delete)
+   * @param {string|mongoose.Types.ObjectId} userId - User ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Deleted user
+   */
+  async deleteUser(userId, adminId) {
+    try {
+      const user = await this.repository.findById(userId);
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const deleted = await this.repository.deleteUser(userId);
+
+      // Notify user of deletion
+      await agendaManager.now('send email', {
+        to: user.email,
+        subject: "Account Deleted",
+        template: "account-deleted",
+        context: {
+          name: user.name,
+          email: user.email,
+        },
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.USER_DELETED,
+        entityType: ENTITY_TYPE.USER,
+        entityId: userId,
+        description: `Deleted user: ${user.email}`,
+        metadata: { userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return deleted;
+    } catch (error) {
+      throw new Error(`Delete user failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Restore soft-deleted user
+   * @param {string|mongoose.Types.ObjectId} userId - User ID
+   * @param {string|mongoose.Types.ObjectId} adminId - Admin ID
+   * @returns {Promise<Object>} - Restored user
+   */
+  async restoreUser(userId, adminId) {
+    try {
+      const user = await this.repository.findById(userId, { includeDeleted: true });
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const restored = await this.repository.restoreUser(userId);
+
+      //Email user of restoration
+      await agendaManager.now('send email', {
+        to: user.email,
+        subject: "Account Restored",
+        template: "account-restored",
+        context: {
+          name: user.name,
+          email: user.email,
+        },
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        userId: adminId,
+        action: ACTION_TYPE.USER_RESTORED,
+        entityType: ENTITY_TYPE.USER,
+        entityId: userId,
+        description: `Restored user: ${user.email}`,
+        metadata: { userEmail: user.email },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return restored;
+    } catch (error) {
+      throw new Error(`Restore user failed: ${error.message}`);
+    } 
+  }
+   
 
   // ==================== HELPER METHODS ====================
 

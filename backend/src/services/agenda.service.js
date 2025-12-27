@@ -297,6 +297,34 @@ class AgendaManager {
     );
 
     /**
+     * Generic send email job
+     * Handles any email with template and context
+     */
+    this.agenda.define(
+      "send email",
+      { priority: "normal", concurrency: 20 },
+      async (job) => {
+        const { to, subject, template, context } = job.attrs.data;
+
+        try {
+          console.log(`📧 Sending ${template} email to:`, to);
+
+          await EmailService.sendTemplateEmail({
+            to,
+            subject,
+            template,
+            context,
+          });
+
+          console.log(`✅ ${template} email sent to ${to}`);
+        } catch (error) {
+          console.error(`❌ Failed to send ${template} email:`, error);
+          throw error;
+        }
+      }
+    );
+
+    /**
      * Send candidate welcome email
      */
     this.agenda.define(

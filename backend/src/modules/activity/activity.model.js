@@ -61,6 +61,32 @@ class Activity extends BaseModel {
         type: String,
         required: false,
       },
+      device: {
+        type: {
+          device_type: {
+            type: String, // 'mobile', 'tablet', 'desktop'
+            enum: ["mobile", "tablet", "desktop", "unknown"],
+          },
+          browser: {
+            name: String,
+            version: String,
+          },
+          os: {
+            name: String,
+            version: String,
+          },
+        },
+        required: false,
+      },
+      location: {
+        type: {
+          country: String,
+          region: String,
+          city: String,
+          timezone: String,
+        },
+        required: false,
+      },
       metadata: {
         type: Map,
         of: mongoose.Schema.Types.Mixed,

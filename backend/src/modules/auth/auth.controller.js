@@ -27,9 +27,9 @@ class AuthController extends BaseController {
     return this.created(res, {
       data: {
         user: result.user,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn,
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+        expires_in: result.expiresIn,
       },
       message: result.message,
     });
@@ -49,9 +49,9 @@ class AuthController extends BaseController {
     return this.success(res, {
       data: {
         user: result.user,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn,
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+        expires_in: result.expiresIn,
       },
       message: "Login successful",
     });
@@ -63,7 +63,7 @@ class AuthController extends BaseController {
    */
   async logout(req, res) {
     const userId = this.getUserId(req);
-    const refreshToken = req.body.refreshToken;
+    const refreshToken = req.body.refresh_token;
 
     await this.service("authService").logoutUser(userId, refreshToken);
 
@@ -78,13 +78,13 @@ class AuthController extends BaseController {
    */
   async refreshToken(req, res) {
     const validated = this.validate(req.body, AuthValidation.refreshTokenSchema);
-    const result = await this.service("authService").refreshAccessToken(validated.refreshToken);
+    const result = await this.service("authService").refreshAccessToken(validated.refresh_token);
 
     return this.success(res, {
       data: {
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn,
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+        expires_in: result.expiresIn,
       },
       message: "Token refreshed successfully",
     });
@@ -96,7 +96,7 @@ class AuthController extends BaseController {
    */
   async verifyEmail(req, res) {
     const validated = this.validate(req.body, AuthValidation.verifyEmailSchema);
-    await this.service("authService").verifyEmail(validated.token);
+    await this.service("authService").verifyEmail(validated, "user");
 
     return this.success(res, {
       message: "Email verified successfully",
@@ -147,13 +147,36 @@ class AuthController extends BaseController {
    * POST /api/auth/change-password
    */
   async changePassword(req, res) {
+    console.log("Change password request received");
     const userId = this.getUserId(req);
-    const validated = this.validate(req.body, AuthValidation.changePasswordSchema);
-    await this.service("authService").changePassword(userId, validated, "user");
+    try{
+      console.log("Request body:", req.body);
+          const validated = this.validate(req.body, AuthValidation.changePasswordSchema);
+        await this.service("authService").changePassword(userId, validated, "user");
+    }catch(error){
+        return this.error(res, {
+            message: error,
+            status_code: error.status_code || 400,
+        });
+    }
 
     return this.success(res, {
       message: "Password changed successfully",
     });
+  }
+
+  /**
+   * Change candidate password (authenticated)
+   * POST /api/auth/candidate/change-password
+   */
+  async candidateChangePassword(req, res) {
+    const candidateId = this.getUserId(req);
+    const validated = this.validate(req.body, AuthValidation.changePasswordSchema);
+    await this.service("authService").changePassword(candidateId, validated, "candidate");
+
+    return this.success(res, {
+      message: "Password changed successfully",
+    }); 
   }
 
   /**
@@ -185,9 +208,9 @@ class AuthController extends BaseController {
     return this.success(res, {
       data: {
         candidate: result.candidate,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        expiresIn: result.expiresIn,
+        access_token: result.accessToken,
+        refresh_token: result.refreshToken,
+        expires_in: result.expiresIn,
       },
       message: "Login successful",
     });
@@ -199,7 +222,7 @@ class AuthController extends BaseController {
    */
   async candidateLogout(req, res) {
     const candidateId = this.getUserId(req);
-    const refreshToken = req.body.refreshToken;
+    const refreshToken = req.body.refresh_token;
 
     await this.service("authService").logoutCandidate(candidateId, refreshToken);
 

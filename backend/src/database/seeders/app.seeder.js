@@ -408,7 +408,6 @@ class DatabaseSeeder {
           last_name: lastName,
           email: email,
           password_hash: "Password123!",
-          candidate_code: generateCandidateCode(candidateIndex),
           phone_number: `+233${getRandomInt(20, 59)}${getRandomInt(1000000, 9999999)}`,
           slug: generateSlug(`${fullName}-${candidateIndex}`),
           bio: bioTemplates[categoryType](fullName),

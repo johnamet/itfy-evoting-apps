@@ -17,6 +17,12 @@ class Event extends BaseModel {
         required: true,
         trim: true,
       },
+      slug: {
+        type: String,
+        unique: true,
+        lowercase: true,
+        trim: true,
+      },
       description: {
         type: String,
         required: true,
@@ -307,6 +313,7 @@ class Event extends BaseModel {
 
     // Create index for unique event names
     this.schema.index({ name: 1 }, { unique: true });
+    this.schema.index({ slug: 1 }, { unique: true, sparse: true });
 
     // Create compound indexes for common queries
     this.schema.index({ status: 1, start_date: 1 });
@@ -317,6 +324,16 @@ class Event extends BaseModel {
     this.schema.pre("save", async function (next) {
       try {
         const now = new Date();
+
+        // Generate slug from name if not provided
+        if (!this.slug && this.name) {
+          this.slug = this.name
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .trim();
+        }
         
         // Validate that end_date is after start_date
         if (this.end_date <= this.start_date) {

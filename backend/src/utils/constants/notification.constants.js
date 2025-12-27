@@ -55,6 +55,11 @@ export const NOTIFICATION_TYPE = {
   PASSWORD_CHANGED: "password_changed",
   EMAIL_VERIFIED: "email_verified",
 
+  // User status
+  USER_ACTIVATED: "user_activated",
+  USER_DEACTIVATED: "user_deactivated",
+  USER_SUSPENDED: "user_suspended",
+
   // System
   SYSTEM_ANNOUNCEMENT: "system_announcement",
   SYSTEM_MAINTENANCE: "system_maintenance",

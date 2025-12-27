@@ -58,69 +58,6 @@ const activityConfig: Record<string, { icon: React.ElementType; color: string; b
 };
 
 // Mock activities
-const mockActivities: ActivityType[] = [
-  {
-    _id: "1",
-    user: { _id: "u1", name: "Kwame Asante", email: "kwame@example.com", avatar: null },
-    action: "vote",
-    description: "Voted for Sarkodie in Best Rapper category",
-    entity_type: "vote",
-    entity_id: "v123",
-    metadata: { candidate: "Sarkodie", category: "Best Rapper", votes: 5 },
-    ip_address: "102.176.94.52",
-    user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
-    created_at: "2024-12-15T14:32:00Z",
-  },
-  {
-    _id: "2",
-    user: { _id: "u2", name: "Akosua Mensah", email: "akosua@example.com", avatar: null },
-    action: "payment",
-    description: "Purchased 50 vote bundle for GHS 25.00",
-    entity_type: "payment",
-    entity_id: "p456",
-    metadata: { amount: 25, currency: "GHS", votes: 50, method: "Mobile Money" },
-    ip_address: "41.215.172.89",
-    user_agent: "Mozilla/5.0 (Android 14; SM-S918B)",
-    created_at: "2024-12-15T14:28:00Z",
-  },
-  {
-    _id: "3",
-    user: { _id: "u3", name: "Admin User", email: "admin@itfy.com", avatar: null },
-    action: "create",
-    description: "Created new category: Best Gospel Artist",
-    entity_type: "category",
-    entity_id: "c789",
-    metadata: { category_name: "Best Gospel Artist" },
-    ip_address: "197.210.53.4",
-    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    created_at: "2024-12-15T13:45:00Z",
-  },
-  {
-    _id: "4",
-    user: { _id: "u1", name: "Kwame Asante", email: "kwame@example.com", avatar: null },
-    action: "login",
-    description: "Logged in successfully",
-    entity_type: "auth",
-    entity_id: "auth123",
-    metadata: { method: "email" },
-    ip_address: "102.176.94.52",
-    user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
-    created_at: "2024-12-15T13:30:00Z",
-  },
-  {
-    _id: "5",
-    user: { _id: "u4", name: "Yaw Boateng", email: "yaw@example.com", avatar: null },
-    action: "update",
-    description: "Updated profile information",
-    entity_type: "user",
-    entity_id: "u4",
-    metadata: { fields: ["phone", "address"] },
-    ip_address: "154.160.17.22",
-    user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-    created_at: "2024-12-15T12:15:00Z",
-  },
-];
-
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -243,11 +180,11 @@ export default function AdminActivitiesTab() {
         setActivities(response.data);
         setTotalPages(response.pagination?.totalPages || 1);
       } else {
-        setActivities(mockActivities);
+        setActivities([]);
       }
     } catch (error) {
       console.error("Failed to fetch activities:", error);
-      setActivities(mockActivities);
+      setActivities([]);
     } finally {
       setLoading(false);
     }

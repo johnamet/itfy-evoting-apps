@@ -139,6 +139,7 @@ class AuthValidation {
         "any.only": "Passwords do not match",
         "string.empty": "Confirm password is required",
       }),
+
   });
 
   /**
@@ -181,7 +182,7 @@ class AuthValidation {
    * Refresh token schema
    */
   static refreshTokenSchema = Joi.object({
-    refreshToken: Joi.string().required()
+    refresh_token: Joi.string().required()
       .messages({
         "string.empty": "Refresh token is required",
       }),
@@ -214,8 +215,8 @@ class AuthValidation {
    * Logout schema
    */
   static logoutSchema = Joi.object({
-    refreshToken: Joi.string().optional(),
-    accessToken: Joi.string().optional(),
+    refresh_token: Joi.string().optional(),
+    access_token: Joi.string().optional(),
   });
 
   // ==================== VALIDATION HELPERS ====================

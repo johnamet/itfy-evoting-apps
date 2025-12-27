@@ -1,9 +1,9 @@
 /* eslint-disable no-undef */
- 
 
 /**
  * Main Console Application
  * Orchestrates the CLI interface, authentication, and command routing
+ * FIXED: Proper readline handling to prevent double input display
  */
 
 import readline from 'readline';
@@ -119,29 +119,54 @@ export class ConsoleApp extends EventEmitter {
 
   /**
    * Run the main interactive session
+   * FIXED: Proper readline configuration to prevent double input display
    */
   async runInteractiveSession() {
     this.isRunning = true;
     
-    // Create readline interface
+    // Clear any lingering input from setup wizard
+    process.stdin.pause();
+    process.stdin.setRawMode && process.stdin.setRawMode(false);
+    
+    // Small delay to ensure stdin is clean
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Create readline interface with proper configuration
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       prompt: this.ui.getPrompt(),
-      historySize: 100
+      terminal: true,
+      historySize: 100,
+      removeHistoryDuplicates: true,
+      // Prevent double echo
+      completer: undefined
     });
+
+    // Pass readline reference to UI for proper handling
+    this.ui.setReadlineInterface(this.rl);
 
     // Handle line input
     this.rl.on('line', async (line) => {
       const input = line.trim();
       
       if (input) {
+        // Pause readline while processing to prevent interference
+        this.rl.pause();
+        
         await this.handleInput(input);
-      }
-      
-      if (this.isRunning) {
-        this.rl.setPrompt(this.ui.getPrompt(this.currentUser));
-        this.rl.prompt();
+        
+        // Resume and show prompt
+        if (this.isRunning) {
+          this.rl.resume();
+          this.rl.setPrompt(this.ui.getPrompt(this.currentUser));
+          this.rl.prompt();
+        }
+      } else {
+        // Empty input, just show prompt again
+        if (this.isRunning) {
+          this.rl.prompt();
+        }
       }
     });
 
@@ -150,9 +175,15 @@ export class ConsoleApp extends EventEmitter {
       this.shutdown();
     });
 
-    // Handle SIGINT
-    process.on('SIGINT', () => {
+    // Handle SIGINT (Ctrl+C)
+    this.rl.on('SIGINT', () => {
       this.ui.newLine();
+      this.ui.warning('Press Ctrl+C again to exit, or type "exit" to quit gracefully');
+      this.rl.prompt();
+    });
+
+    // Handle SIGTERM
+    process.on('SIGTERM', () => {
       this.shutdown();
     });
 
@@ -192,17 +223,33 @@ export class ConsoleApp extends EventEmitter {
    * Shutdown the console
    */
   shutdown() {
+    if (!this.isRunning) return;
+    
     this.isRunning = false;
+    
+    // Close readline interface
+    if (this.rl) {
+      this.rl.close();
+    }
+    
     this.ui.newLine();
     this.ui.info('Shutting down console...');
     
     // Stop server if running
     if (this.serverManager?.isServerRunning()) {
       this.ui.info('Stopping backend server...');
-      this.serverManager.stopServer();
+      try {
+        this.serverManager.stopServer();
+      } catch (error) {
+        // Ignore errors during shutdown
+      }
     }
     
     this.ui.success('Goodbye!');
-    process.exit(0);
+    
+    // Force exit after a short delay
+    setTimeout(() => {
+      process.exit(0);
+    }, 100);
   }
 }

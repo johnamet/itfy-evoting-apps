@@ -32,10 +32,13 @@ export interface RefreshTokenResponse {
   refresh_token?: string;
 }
 
-export interface CandidateAuthResponse {
-  token: string;
+interface CandidateLoginResponse {
   candidate: Candidate;
+  access_token: string;
+  refresh_token: string;
+  expires_in: string;
 }
+
 
 /**
  * User Authentication
@@ -78,7 +81,12 @@ export const authApi = {
    */
   logout: async (): Promise<ApiResponse<{ message: string }>> => {
     try {
-      const response = await api.post<ApiResponse<{ message: string }>>('/auth/logout');
+      const refreshToken = tokenManager.getRefreshToken();
+      const response = await api.post<ApiResponse<{ message: string }>>(
+        '/auth/logout',
+        { refresh_token: refreshToken },
+        { skipAuth: false }
+      );
       return response;
     } finally {
       // Always clear tokens, even if request fails
@@ -163,6 +171,7 @@ export const authApi = {
   changePassword: async (data: {
     current_password: string;
     new_password: string;
+    userType: 'user' | 'candidate';
   }): Promise<ApiResponse<{ message: string }>> => {
     return api.post<ApiResponse<{ message: string }>>('/auth/change-password', data);
   },
@@ -182,16 +191,19 @@ export const candidateAuthApi = {
   /**
    * Login candidate with identifier (code or email) and password
    */
-  login: async (data: CandidateLoginRequest): Promise<ApiResponse<CandidateAuthResponse>> => {
-    const response = await api.post<ApiResponse<CandidateAuthResponse>>(
+  login: async (data: CandidateLoginRequest): Promise<ApiResponse<CandidateLoginResponse>> => {
+    const response = await api.post<ApiResponse<CandidateLoginResponse>>(
       '/auth/candidate/login',
       data,
       { skipAuth: true }
     );
 
-    // Store candidate token on successful login
-    if (response.data?.token) {
-      tokenManager.setCandidateToken(response.data.token);
+    // Store candidate tokens on successful login
+    if (response.data?.access_token) {
+      tokenManager.setCandidateToken(response.data.access_token);
+    }
+    if (response.data?.refresh_token) {
+      tokenManager.setCandidateRefreshToken(response.data.refresh_token);
     }
 
     return response;
@@ -234,9 +246,10 @@ export const candidateAuthApi = {
    */
   logout: async (): Promise<void> => {
     try {
+      const refreshToken = tokenManager.getCandidateRefreshToken();
       await api.post<ApiResponse<{ message: string }>>(
         '/auth/candidate/logout',
-        {},
+        { refresh_token: refreshToken },
         { authType: 'candidate' }
       );
     } finally {

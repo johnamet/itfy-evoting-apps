@@ -46,6 +46,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { couponsApi } from "@/lib/api/coupons";
 
 // Coupon type
 interface Coupon {
@@ -461,11 +462,14 @@ export default function AdminCouponsTab() {
   const fetchCoupons = async () => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setCoupons(mockCoupons);
+      const response = await couponsApi.list({
+        search: searchQuery,
+        status: statusFilter === "all" ? undefined : statusFilter as any,
+      });
+      setCoupons(response.data || []);
     } catch (error) {
       console.error("Failed to fetch coupons:", error);
-      setCoupons(mockCoupons);
+      setCoupons([]);
     } finally {
       setLoading(false);
     }
@@ -482,9 +486,17 @@ export default function AdminCouponsTab() {
   };
 
   const handleSave = async (data: Partial<Coupon>) => {
-    console.log("Saving coupon:", data);
-    setModalOpen(false);
-    fetchCoupons();
+    try {
+      if (selectedCoupon) {
+        await couponsApi.update(selectedCoupon._id, data as any);
+      } else {
+        await couponsApi.create(data as any);
+      }
+      setModalOpen(false);
+      fetchCoupons();
+    } catch (error) {
+      console.error("Failed to save coupon:", error);
+    }
   };
 
   const handleCopy = (code: string) => {
@@ -492,8 +504,12 @@ export default function AdminCouponsTab() {
   };
 
   const handleToggle = async (coupon: Coupon) => {
-    console.log("Toggling coupon:", coupon._id);
-    fetchCoupons();
+    try {
+      await couponsApi.update(coupon._id, { is_active: !coupon.is_active });
+      fetchCoupons();
+    } catch (error) {
+      console.error("Failed to toggle coupon:", error);
+    }
   };
 
   // Filter coupons
@@ -612,7 +628,14 @@ export default function AdminCouponsTab() {
               key={coupon._id}
               coupon={coupon}
               onEdit={() => handleEdit(coupon)}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await couponsApi.delete(coupon._id);
+                  fetchCoupons();
+                } catch (error) {
+                  console.error("Failed to delete coupon:", error);
+                }
+              }}
               onCopy={() => handleCopy(coupon.code)}
               onToggle={() => handleToggle(coupon)}
             />

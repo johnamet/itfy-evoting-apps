@@ -244,11 +244,11 @@ export default function AdminCandidatesTab() {
         setCandidates(response.data);
         setTotalPages(response.pagination?.totalPages || 1);
       } else {
-        setCandidates(mockCandidates);
+        setCandidates([]);
       }
     } catch (error) {
       console.error("Failed to fetch candidates:", error);
-      setCandidates(mockCandidates);
+      setCandidates([]);
     } finally {
       setLoading(false);
     }
@@ -364,7 +364,14 @@ export default function AdminCandidatesTab() {
               rank={index + 1}
               onView={() => {}}
               onEdit={() => {}}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await candidatesApi.delete(candidate._id);
+                  fetchCandidates();
+                } catch (error) {
+                  console.error("Failed to delete candidate:", error);
+                }
+              }}
             />
           ))}
         </motion.div>

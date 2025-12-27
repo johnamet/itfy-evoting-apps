@@ -106,7 +106,7 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    if (!user.is_active) {
+    if (user.status === "inactive") {
       return ResponseHelper.error(res, {
         message: "Your account has been deactivated. Contact support.",
         status_code: HTTP_STATUS.FORBIDDEN,
@@ -264,8 +264,9 @@ export const authorize = (...allowedRoles) => {
       });
     }
 
+
     // Check if user's role is in allowed roles
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role) && req.user.role !== "super" && req.user.role !== "super_admin") {
       return ResponseHelper.error(res, {
         message: `Access restricted to: ${allowedRoles.join(", ")}`,
         status_code: HTTP_STATUS.FORBIDDEN,

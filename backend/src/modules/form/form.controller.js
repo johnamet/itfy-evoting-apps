@@ -128,6 +128,20 @@ class FormController extends BaseController {
     });
   }
 
+  // ==================== PUBLIC QUERIES ====================
+
+  /**
+   * Get all published, active nomination forms (public)
+   * GET /api/forms/public/nominations
+   */
+  async getPublicNominationForms(req, res) {
+    const forms = await this.service("formService").getPublicNominationForms();
+
+    return this.success(res, {
+      data: forms,
+    });
+  }
+
   // ==================== EVENT-BASED QUERIES ====================
 
   /**

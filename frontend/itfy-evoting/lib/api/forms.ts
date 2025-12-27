@@ -89,6 +89,16 @@ export const formsApi = {
     });
   },
 
+  /**
+   * Get all public nomination forms (active and published)
+   * Returns forms with event and category details
+   */
+  getPublicNominationForms: async (): Promise<ApiResponse<Form[]>> => {
+    return api.get<ApiResponse<Form[]>>('/forms/public/nominations', {
+      skipAuth: true,
+    });
+  },
+
   // ==================== Admin/Organiser Endpoints ====================
 
   /**

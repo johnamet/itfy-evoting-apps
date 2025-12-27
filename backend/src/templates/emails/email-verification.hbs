@@ -5,49 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Verification</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 20px 60px rgba(139, 92, 246, 0.2);">
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, {{primaryColor}} 0%, #7C3AED 100%); padding: 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 10px;">📧</div>
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Verify Your Email</h1>
+            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); padding: 50px 40px; text-align: center;">
+              <div style="width: 90px; height: 90px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; backdrop-filter: blur(10px); border: 3px solid rgba(255,255,255,0.4); line-height: 90px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <span style="font-size: 45px;">🔐</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;">Verify Your Email</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 15px; font-weight: 500;">Secure your account in seconds</p>
             </td>
           </tr>
 
           <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Hi <strong>{{name}}</strong>,
+            <td style="padding: 50px 40px;">
+              <p style="color: #F1F5F9; font-size: 18px; line-height: 1.6; margin: 0 0 10px; font-weight: 600;">
+                Hi <span style="background: linear-gradient(90deg, #8B5CF6, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{name}}</span>,
               </p>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                Thank you for signing up! To complete your registration and start voting, please verify your email address.
+              <p style="color: #CBD5E1; font-size: 16px; line-height: 1.8; margin: 0 0 35px;">
+                Thanks for signing up! To complete your registration and unlock full access to voting features, please verify your email address.
               </p>
 
-              <!-- Verification Code -->
               {{#if verificationCode}}
-              <div style="background-color: #F3F4F6; border: 2px dashed #D1D5DB; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center;">
-                <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">Your verification code:</p>
-                <p style="color: {{primaryColor}}; font-size: 32px; font-weight: 700; letter-spacing: 8px; margin: 0; font-family: monospace;">{{verificationCode}}</p>
+              <!-- Verification Code -->
+              <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%); border: 2px dashed rgba(139, 92, 246, 0.4); border-radius: 16px; padding: 35px; margin-bottom: 30px; text-align: center; position: relative;">
+                <div style="position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: #1E293B; padding: 0 15px;">
+                  <span style="color: #8B5CF6; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Your Verification Code</span>
+                </div>
+                <p style="color: #F1F5F9; font-size: 48px; font-weight: 800; letter-spacing: 12px; margin: 20px 0; font-family: 'Courier New', monospace; text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);">{{verificationCode}}</p>
+                <p style="color: #94A3B8; font-size: 13px; margin: 0;">Enter this code on the verification page</p>
               </div>
-              <p style="color: #6B7280; font-size: 14px; text-align: center; margin: 0 0 30px;">
-                Enter this code on the verification page to confirm your email address.
-              </p>
               {{/if}}
 
-              <!-- Verification Button -->
               {{#if verificationUrl}}
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+              <!-- Verification Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
                 <tr>
                   <td align="center">
-                    <a href="{{verificationUrl}}" style="display: inline-block; background-color: {{primaryColor}}; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Verify Email Address
+                    <a href="{{verificationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); color: #ffffff; text-decoration: none; padding: 20px 60px; border-radius: 50px; font-weight: 700; font-size: 17px; box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 1px; transition: transform 0.3s;">
+                      Verify Email Address →
                     </a>
                   </td>
                 </tr>
@@ -55,26 +58,29 @@
               {{/if}}
 
               <!-- Security Note -->
-              <div style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; padding: 16px; margin-top: 30px; border-radius: 4px;">
-                <p style="color: #92400E; font-size: 14px; margin: 0; line-height: 1.6;">
-                  <strong>⚠️ Security Note:</strong> This verification link will expire in <strong>24 hours</strong>. If you didn't create an account, please ignore this email.
+              <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border-left: 4px solid #F59E0B; padding: 25px; margin-top: 35px; border-radius: 12px;">
+                <p style="color: #FCD34D; font-size: 14px; margin: 0 0 10px; font-weight: 700;">
+                  ⚠️ Security Notice
+                </p>
+                <p style="color: #FDE68A; font-size: 14px; margin: 0; line-height: 1.7;">
+                  This verification link expires in <strong style="color: #FBBF24;">24 hours</strong>. If you didn't create an account, please ignore this email or contact our support team immediately.
                 </p>
               </div>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
-                Best regards,<br>
-                <strong>The {{appName}} Team</strong>
+              <p style="color: #CBD5E1; font-size: 16px; line-height: 1.7; margin: 40px 0 0;">
+                Stay secure,<br>
+                <strong style="background: linear-gradient(90deg, #8B5CF6, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 18px;">The {{appName}} Team</strong>
               </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
-              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
-                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: {{primaryColor}}; text-decoration: none;">{{supportEmail}}</a>
+            <td style="background: rgba(0,0,0,0.3); padding: 30px 40px; text-align: center; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+              <p style="color: #94A3B8; font-size: 14px; margin: 0 0 10px;">
+                Need help? <a href="mailto:{{supportEmail}}" style="color: #8B5CF6; text-decoration: none; font-weight: 600;">{{supportEmail}}</a>
               </p>
-              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
+              <p style="color: #64748B; font-size: 12px; margin: 10px 0 0;">
                 © {{currentYear}} {{appName}}. All rights reserved.
               </p>
             </td>

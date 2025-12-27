@@ -4,18 +4,19 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { 
   Award, Search, Grid, List, Clock, Users, Vote, 
   ChevronRight, Star, Trophy, Globe, Lock,
-  ArrowRight, ShieldCheck
+  ArrowRight, ShieldCheck, Loader2
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AnnouncementBar from '@/components/AnnouncementBar';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockEvents } from '@/lib/mocks/events';
+import { useCategories } from '@/hooks/useCategories';
+import { usePublicEvents } from '@/hooks/usePublicData';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useMemo } from 'react';
+import type { Category, Event } from '@/types';
 
 type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'voting' | 'upcoming' | 'closed';
@@ -28,16 +29,43 @@ export default function CategoriesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortOption>('popular');
 
+  // Fetch categories from API
+  const { 
+    data: categoriesResponse, 
+    isLoading: categoriesLoading, 
+    error: categoriesError 
+  } = useCategories({
+    event: eventFilter !== 'all' ? eventFilter : undefined,
+    search: searchQuery || undefined,
+    limit: 100,
+  });
+
+  // Fetch events for filter dropdown
+  const { 
+    data: eventsResponse, 
+    isLoading: eventsLoading 
+  } = usePublicEvents({ limit: 50 });
+
+  const categories = useMemo(() => categoriesResponse?.data || [], [categoriesResponse?.data]);
+  const events = useMemo(() => eventsResponse?.data || [], [eventsResponse?.data]);
+
   // Get unique events that have categories
   const eventsWithCategories = useMemo(() => {
-    const eventIds = [...new Set(mockCategories.map(cat => cat.event))];
-    return mockEvents.filter(e => eventIds.includes(e._id));
-  }, []);
+    const eventIds = [...new Set(categories.map(cat => cat.event))];
+    return events.filter(e => eventIds.includes(e._id));
+  }, [categories, events]);
+
+  // Create a map for quick event lookup
+  const eventsMap = useMemo(() => {
+    const map: Record<string, Event> = {};
+    events.forEach(e => { map[e._id] = e; });
+    return map;
+  }, [events]);
 
   const filteredCategories = useMemo(() => {
-    return mockCategories
+    return categories
       .filter(category => {
-        // Status filter
+        // Status filter (client-side since API may not support all status filters)
         if (statusFilter !== 'all') {
           const now = new Date();
           const votingStart = category.voting_start_date ? new Date(category.voting_start_date) : null;
@@ -59,24 +87,6 @@ export default function CategoriesPage() {
         }
         return true;
       })
-      .filter(category => {
-        // Event filter
-        if (eventFilter !== 'all') {
-          return category.event === eventFilter;
-        }
-        return true;
-      })
-      .filter(category => {
-        // Search filter
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        const event = mockEvents.find(e => e._id === category.event);
-        return (
-          category.name.toLowerCase().includes(query) ||
-          category.description?.toLowerCase().includes(query) ||
-          event?.name.toLowerCase().includes(query)
-        );
-      })
       .sort((a, b) => {
         switch (sortBy) {
           case 'popular':
@@ -93,9 +103,9 @@ export default function CategoriesPage() {
             return 0;
         }
       });
-  }, [searchQuery, statusFilter, eventFilter, sortBy]);
+  }, [categories, statusFilter, sortBy]);
 
-  const getVotingStatus = (category: typeof mockCategories[0]) => {
+  const getVotingStatus = (category: Category) => {
     const now = new Date();
     const votingStart = category.voting_start_date ? new Date(category.voting_start_date) : null;
     const votingEnd = category.voting_deadline ? new Date(category.voting_deadline) : null;
@@ -140,11 +150,13 @@ export default function CategoriesPage() {
   ];
 
   // Statistics
-  const stats = {
-    total: mockCategories.length,
-    voting: mockCategories.filter(c => c.is_voting_open).length,
-    totalVotes: mockCategories.reduce((sum, c) => sum + c.total_votes, 0),
-  };
+  const stats = useMemo(() => ({
+    total: categories.length,
+    voting: categories.filter(c => c.is_voting_open).length,
+    totalVotes: categories.reduce((sum, c) => sum + c.total_votes, 0),
+  }), [categories]);
+
+  const isLoading = categoriesLoading || eventsLoading;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -179,15 +191,21 @@ export default function CategoriesPage() {
             {/* Stats */}
             <div className="flex flex-wrap justify-center gap-8 mt-12">
               <div className="text-center">
-                <div className="text-4xl font-bold text-white">{stats.total}</div>
+                <div className="text-4xl font-bold text-white">
+                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin mx-auto" /> : stats.total}
+                </div>
                 <div className="text-gray-400 text-sm">Categories</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-green-400">{stats.voting}</div>
+                <div className="text-4xl font-bold text-green-400">
+                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin mx-auto" /> : stats.voting}
+                </div>
                 <div className="text-gray-400 text-sm">Active Voting</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-[#0152be]">{stats.totalVotes.toLocaleString()}</div>
+                <div className="text-4xl font-bold text-[#0152be]">
+                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin mx-auto" /> : stats.totalVotes.toLocaleString()}
+                </div>
                 <div className="text-gray-400 text-sm">Total Votes</div>
               </div>
             </div>
@@ -290,7 +308,19 @@ export default function CategoriesPage() {
       {/* Categories Grid/List */}
       <section className="py-16">
         <div className="container mx-auto px-6">
-          {filteredCategories.length === 0 ? (
+          {/* Loading State */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-12 h-12 text-[#0152be] animate-spin mb-4" />
+              <p className="text-gray-400">Loading categories...</p>
+            </div>
+          ) : categoriesError ? (
+            <div className="text-center py-16">
+              <Award className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-400">Failed to load categories</h3>
+              <p className="text-gray-500 mt-2">Please try again later</p>
+            </div>
+          ) : filteredCategories.length === 0 ? (
             <div className="text-center py-16">
               <Award className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-400">No categories found</h3>
@@ -299,7 +329,7 @@ export default function CategoriesPage() {
           ) : viewMode === 'grid' ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCategories.map((category) => {
-                const event = mockEvents.find(e => e._id === category.event);
+                const event = eventsMap[category.event];
                 const votingStatus = getVotingStatus(category);
                 const visibilityInfo = getVisibilityInfo(category.results_visibility);
                 const VisibilityIcon = visibilityInfo.icon;
@@ -367,7 +397,7 @@ export default function CategoriesPage() {
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1 text-sm text-gray-400">
                               <Users className="w-4 h-4" />
-                              <span>{category.candidates.length}</span>
+                              <span>{category.candidates?.length || 0}</span>
                             </div>
                             <div className="flex items-center gap-1 text-sm text-[#0152be]">
                               <Vote className="w-4 h-4" />
@@ -396,7 +426,7 @@ export default function CategoriesPage() {
             /* List View */
             <div className="space-y-4">
               {filteredCategories.map((category) => {
-                const event = mockEvents.find(e => e._id === category.event);
+                const event = eventsMap[category.event];
                 const votingStatus = getVotingStatus(category);
                 const visibilityInfo = getVisibilityInfo(category.results_visibility);
                 const VisibilityIcon = visibilityInfo.icon;
@@ -462,7 +492,7 @@ export default function CategoriesPage() {
                           <div className="flex flex-wrap items-center gap-6 text-sm">
                             <div className="flex items-center gap-2 text-gray-400">
                               <Users className="w-4 h-4" />
-                              <span>{category.candidates.length} Candidates</span>
+                              <span>{category.candidates?.length || 0} Candidates</span>
                             </div>
                             <div className="flex items-center gap-2 text-[#0152be]">
                               <Vote className="w-4 h-4" />

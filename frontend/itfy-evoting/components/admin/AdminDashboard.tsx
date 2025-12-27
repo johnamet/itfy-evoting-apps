@@ -24,7 +24,16 @@ import {
   X,
   Command,
   Plus,
+  Loader2,
+  CheckCheck,
+  FileText,
+  Hash,
 } from "lucide-react";
+import { notificationsApi } from "@/lib/api/notifications";
+import { eventsApi } from "@/lib/api/events";
+import { candidatesApi } from "@/lib/api/candidates";
+import { usersApi } from "@/lib/api/users";
+import type { Notification, Event, Candidate, User as UserType } from "@/types";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -86,19 +95,145 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [notifications] = useState<Array<{
-    id: string;
-    title: string;
-    message: string;
-    time: string;
-    read: boolean;
-  }>>([
-    { id: "1", title: "New Event Created", message: "Ghana Music Awards 2025 has been created", time: "5m ago", read: false },
-    { id: "2", title: "Payment Received", message: "GHS 500.00 payment processed", time: "15m ago", read: false },
-    { id: "3", title: "New Candidate", message: "John Doe registered for GMAs", time: "1h ago", read: true },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+  
+  // Search state
+  const [searchResults, setSearchResults] = useState<{
+    events: Event[];
+    candidates: Candidate[];
+    users: UserType[];
+  }>({ events: [], candidates: [], users: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const mainContentRef = useRef<HTMLDivElement>(null);
+
+  // Search functionality with debounce
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults({ events: [], candidates: [], users: [] });
+      setSearchLoading(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const [eventsRes, candidatesRes, usersRes] = await Promise.allSettled([
+        eventsApi.list({ search: query, limit: 5 }),
+        candidatesApi.list({ search: query, limit: 5 }),
+        usersApi.list({ search: query, limit: 5 }),
+      ]);
+
+      setSearchResults({
+        events: eventsRes.status === "fulfilled" && eventsRes.value.success ? eventsRes.value.data : [],
+        candidates: candidatesRes.status === "fulfilled" && candidatesRes.value.success ? candidatesRes.value.data : [],
+        users: usersRes.status === "fulfilled" && usersRes.value.success ? usersRes.value.data : [],
+      });
+    } catch (error) {
+      console.error("Search failed:", error);
+      setSearchResults({ events: [], candidates: [], users: [] });
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Debounced search effect
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.trim().length >= 2) {
+      setSearchLoading(true);
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearch(searchQuery);
+      }, 300);
+    } else {
+      setSearchResults({ events: [], candidates: [], users: [] });
+      setSearchLoading(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, performSearch]);
+
+  // Handle search result click
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSearchResultClick = (type: string, _id: string) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    
+    // Navigate to the appropriate tab
+    // TODO: Could also store the ID to highlight/scroll to the item
+    switch (type) {
+      case "event":
+        setActiveTab("events");
+        break;
+      case "candidate":
+        setActiveTab("candidates");
+        break;
+      case "user":
+        setActiveTab("users");
+        break;
+    }
+  };
+
+  // Get total search results count
+  const totalSearchResults = searchResults.events.length + searchResults.candidates.length + searchResults.users.length;
+
+  // Fetch notifications from backend
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setNotificationsLoading(true);
+        const response = await notificationsApi.getMyNotifications({ limit: 10 });
+        if (response.success && response.data) {
+          setNotifications(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      } finally {
+        setNotificationsLoading(false);
+      }
+    };
+
+    fetchNotifications();
+    // Refetch every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mark all notifications as read
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, status: "read" as const, read_at: new Date().toISOString() }))
+      );
+    } catch (error) {
+      console.error("Failed to mark notifications as read:", error);
+    }
+  };
+
+  // Format notification time
+  const formatNotificationTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -153,7 +288,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     window.location.href = "/login";
   };
 
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const unreadNotifications = notifications.filter((n) => !n.read_at && n.status !== "read").length;
 
   return (
     <TooltipProvider>
@@ -172,8 +307,11 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[20vh]"
-              onClick={() => setSearchOpen(false)}
+              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-[15vh]"
+              onClick={() => {
+                setSearchOpen(false);
+                setSearchQuery("");
+              }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -184,8 +322,13 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden">
+                  {/* Search Input */}
                   <div className="flex items-center px-4 border-b border-slate-700/50">
-                    <Search className="w-5 h-5 text-slate-400" />
+                    {searchLoading ? (
+                      <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                    ) : (
+                      <Search className="w-5 h-5 text-slate-400" />
+                    )}
                     <input
                       type="text"
                       placeholder="Search events, candidates, users..."
@@ -194,15 +337,197 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                       className="flex-1 px-4 py-4 bg-transparent text-white placeholder:text-slate-500 focus:outline-none"
                       autoFocus
                     />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white mr-2"
+                        aria-label="Clear search"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                     <kbd className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-slate-800 text-xs text-slate-400">
                       ESC
                     </kbd>
                   </div>
-                  <div className="p-4">
-                    <p className="text-sm text-slate-500">
-                      Start typing to search across all modules...
-                    </p>
-                  </div>
+
+                  {/* Search Results */}
+                  <ScrollArea className="max-h-[60vh]">
+                    {searchQuery.length < 2 ? (
+                      <div className="p-6 text-center">
+                        <Search className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+                        <p className="text-sm text-slate-500">
+                          Type at least 2 characters to search across events, candidates, and users
+                        </p>
+                        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-slate-600">
+                          <span className="flex items-center gap-1">
+                            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">↑</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">↓</kbd>
+                            to navigate
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Enter</kbd>
+                            to select
+                          </span>
+                        </div>
+                      </div>
+                    ) : searchLoading ? (
+                      <div className="p-8 text-center">
+                        <Loader2 className="w-8 h-8 mx-auto mb-3 text-blue-400 animate-spin" />
+                        <p className="text-sm text-slate-400">Searching...</p>
+                      </div>
+                    ) : totalSearchResults === 0 ? (
+                      <div className="p-8 text-center">
+                        <FileText className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+                        <p className="text-sm text-slate-400">No results found for &quot;{searchQuery}&quot;</p>
+                        <p className="text-xs text-slate-500 mt-1">Try different keywords or check spelling</p>
+                      </div>
+                    ) : (
+                      <div className="p-2">
+                        {/* Events Results */}
+                        {searchResults.events.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                              <Calendar className="w-3.5 h-3.5" />
+                              Events ({searchResults.events.length})
+                            </div>
+                            {searchResults.events.map((event) => (
+                              <button
+                                key={event._id}
+                                onClick={() => handleSearchResultClick("event", event._id)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-colors text-left group"
+                              >
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0">
+                                  <Calendar className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">
+                                    {event.name}
+                                  </p>
+                                  <p className="text-xs text-slate-500 truncate">
+                                    {event.status} • {event.event_type || "Event"}
+                                  </p>
+                                </div>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-xs ${
+                                    event.status === "active" 
+                                      ? "bg-green-500/20 text-green-400" 
+                                      : event.status === "upcoming"
+                                      ? "bg-blue-500/20 text-blue-400"
+                                      : "bg-slate-500/20 text-slate-400"
+                                  }`}
+                                >
+                                  {event.status}
+                                </Badge>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Candidates Results */}
+                        {searchResults.candidates.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                              <UserCheck className="w-3.5 h-3.5" />
+                              Candidates ({searchResults.candidates.length})
+                            </div>
+                            {searchResults.candidates.map((candidate) => {
+                              const candidateName = `${candidate.first_name} ${candidate.last_name}`;
+                              return (
+                                <button
+                                  key={candidate._id}
+                                  onClick={() => handleSearchResultClick("candidate", candidate._id)}
+                                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-colors text-left group"
+                                >
+                                  <Avatar className="w-10 h-10 border border-slate-700">
+                                    <AvatarImage src={candidate.profile_image || undefined} />
+                                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm">
+                                      {candidate.first_name?.charAt(0).toUpperCase() || "C"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-white truncate group-hover:text-purple-400 transition-colors">
+                                      {candidateName}
+                                    </p>
+                                    <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                                      <Hash className="w-3 h-3" />
+                                      {candidate.candidate_code}
+                                    </p>
+                                  </div>
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`text-xs ${
+                                      candidate.status === "approved" 
+                                        ? "bg-green-500/20 text-green-400" 
+                                        : candidate.status === "pending"
+                                        ? "bg-yellow-500/20 text-yellow-400"
+                                        : "bg-slate-500/20 text-slate-400"
+                                    }`}
+                                  >
+                                    {candidate.status}
+                                  </Badge>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Users Results */}
+                        {searchResults.users.length > 0 && (
+                          <div className="mb-2">
+                            <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                              <Users className="w-3.5 h-3.5" />
+                              Users ({searchResults.users.length})
+                            </div>
+                            {searchResults.users.map((userItem) => (
+                              <button
+                                key={userItem._id}
+                                onClick={() => handleSearchResultClick("user", userItem._id)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800/70 transition-colors text-left group"
+                              >
+                                <Avatar className="w-10 h-10 border border-slate-700">
+                                  <AvatarImage src={userItem.photo_url || undefined} />
+                                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-teal-500 text-white text-sm">
+                                    {userItem.name?.charAt(0).toUpperCase() || "U"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white truncate group-hover:text-green-400 transition-colors">
+                                    {userItem.name}
+                                  </p>
+                                  <p className="text-xs text-slate-500 truncate">
+                                    {userItem.email}
+                                  </p>
+                                </div>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={`text-xs ${
+                                    userItem.role === "admin" || userItem.role === "super_admin"
+                                      ? "bg-red-500/20 text-red-400" 
+                                      : userItem.role === "organiser"
+                                      ? "bg-purple-500/20 text-purple-400"
+                                      : "bg-slate-500/20 text-slate-400"
+                                  }`}
+                                >
+                                  {userItem.role}
+                                </Badge>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {/* Footer with result count */}
+                  {searchQuery.length >= 2 && totalSearchResults > 0 && (
+                    <div className="px-4 py-3 border-t border-slate-700/50 bg-slate-800/30">
+                      <p className="text-xs text-slate-500 text-center">
+                        Found {totalSearchResults} result{totalSearchResults !== 1 ? "s" : ""} • Click to navigate
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -444,7 +769,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                       <Bell className="w-5 h-5" />
                       {unreadNotifications > 0 && (
                         <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium">
-                          {unreadNotifications}
+                          {unreadNotifications > 9 ? "9+" : unreadNotifications}
                         </span>
                       )}
                     </motion.button>
@@ -455,35 +780,63 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   >
                     <DropdownMenuLabel className="flex items-center justify-between">
                       <span className="text-slate-400">Notifications</span>
-                      <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
-                        {unreadNotifications} new
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {unreadNotifications > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleMarkAllAsRead();
+                            }}
+                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                          >
+                            <CheckCheck className="w-3 h-3" />
+                            Mark all read
+                          </button>
+                        )}
+                        <Badge variant="secondary" className="bg-blue-500/20 text-blue-400">
+                          {unreadNotifications} new
+                        </Badge>
+                      </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-slate-700" />
                     <ScrollArea className="h-64">
-                      {notifications.map((notification) => (
-                        <DropdownMenuItem
-                          key={notification.id}
-                          className={`flex flex-col items-start gap-1 p-3 ${
-                            !notification.read ? "bg-slate-800/50" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="font-medium text-white text-sm">
-                              {notification.title}
-                            </span>
-                            {!notification.read && (
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                            )}
-                          </div>
-                          <span className="text-slate-400 text-xs">
-                            {notification.message}
-                          </span>
-                          <span className="text-slate-500 text-xs">
-                            {notification.time}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
+                      {notificationsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                        </div>
+                      ) : notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+                          <Bell className="w-8 h-8 mb-2 opacity-50" />
+                          <span className="text-sm">No notifications</span>
+                        </div>
+                      ) : (
+                        notifications.map((notification) => {
+                          const isUnread = !notification.read_at && notification.status !== "read";
+                          return (
+                            <DropdownMenuItem
+                              key={notification._id}
+                              className={`flex flex-col items-start gap-1 p-3 cursor-pointer ${
+                                isUnread ? "bg-slate-800/50" : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <span className="font-medium text-white text-sm flex-1 truncate">
+                                  {notification.title}
+                                </span>
+                                {isUnread && (
+                                  <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                                )}
+                              </div>
+                              <span className="text-slate-400 text-xs line-clamp-2">
+                                {notification.message}
+                              </span>
+                              <span className="text-slate-500 text-xs">
+                                {formatNotificationTime(notification.created_at)}
+                              </span>
+                            </DropdownMenuItem>
+                          );
+                        })
+                      )}
                     </ScrollArea>
                     <DropdownMenuSeparator className="bg-slate-700" />
                     <DropdownMenuItem className="justify-center text-blue-400 hover:text-blue-300 focus:text-blue-300">
@@ -501,14 +854,14 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                       className="flex items-center gap-3 p-1.5 pr-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors"
                     >
                       <Avatar className="w-8 h-8 border-2 border-slate-700">
-                        <AvatarImage src={user.photo_url || undefined} />
+                        <AvatarImage src={user?.photo_url || undefined} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm">
-                          {user.name?.charAt(0).toUpperCase() || "A"}
+                          {user?.name?.charAt(0).toUpperCase() || "A"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="hidden sm:block text-left">
-                        <p className="text-sm font-medium text-white">{user.name}</p>
-                        <p className="text-xs text-slate-400 capitalize">{user.role?.replace('_', ' ')}</p>
+                        <p className="text-sm font-medium text-white">{user?.name || "Admin"}</p>
+                        <p className="text-xs text-slate-400 capitalize">{user?.role?.replace('_', ' ') || "User"}</p>
                       </div>
                       <ChevronDown className="w-4 h-4 text-slate-400" />
                     </motion.button>
@@ -519,9 +872,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   >
                     <DropdownMenuLabel>
                       <div className="flex flex-col">
-                        <span className="text-white">{user.name}</span>
+                        <span className="text-white">{user?.name || "Admin"}</span>
                         <span className="text-slate-400 text-xs font-normal">
-                          {user.email}
+                          {user?.email || ""}
                         </span>
                       </div>
                     </DropdownMenuLabel>

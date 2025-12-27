@@ -5,6 +5,7 @@
 import mongoose from "mongoose";
 import { BaseModel } from "../shared/base.model.js";
 import { STATUS } from "../../utils/constants/candidate.constants.js";
+import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
 
 class Candidate extends BaseModel {
   constructor() {
@@ -460,6 +461,12 @@ class Candidate extends BaseModel {
           }
         }
 
+        // Hash password if modified or new
+        if (this.isModified("password_hash")) {
+         
+          this.password_hash = await AuthHelpers.hashPassword(this.password_hash);
+        }
+
         next();
       } catch (error) {
         next(error);
@@ -558,7 +565,7 @@ class Candidate extends BaseModel {
     // Virtual: Has social links
     this.schema.virtual("hasSocialLinks").get(function () {
       if (!this.social_links) return false;
-      return Object.values(this.social_links).some((link) => link && link.trim() !== "");
+      return Object.values(this.social_links).some((link) => link && typeof link === "string" && link.trim() !== "");
     });
 
     // Virtual: Project count

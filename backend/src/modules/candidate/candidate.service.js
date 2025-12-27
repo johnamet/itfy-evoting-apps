@@ -8,6 +8,7 @@ import NotificationService from "../../services/notification.service.js";
 import agendaManager from "../../services/agenda.service.js";
 import EmailService from "../../services/email.service.js";
 import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
+import FileService from "../../services/file.service.js";
 import crypto from "crypto";
 
 BaseService.setValidation(CandidateValidation);
@@ -29,6 +30,35 @@ class CandidateService extends BaseService {
   }
 
   /**
+   * Convert candidate image paths to URLs
+   * @param {Object} candidate - Candidate object
+   * @returns {Object} - Candidate with URLs instead of paths
+   * @private
+   */
+  _convertImagesToUrls(candidate) {
+    if (!candidate) return candidate;
+
+    const candidateData = candidate.toObject ? candidate.toObject() : { ...candidate };
+
+    // Convert profile image
+    if (candidateData.profile_image) {
+      candidateData.profile_image = FileService.getFileUrl(candidateData.profile_image);
+    }
+
+    // Convert cover image
+    if (candidateData.cover_image) {
+      candidateData.cover_image = FileService.getFileUrl(candidateData.cover_image);
+    }
+
+    // Convert gallery images
+    if (candidateData.gallery && Array.isArray(candidateData.gallery)) {
+      candidateData.gallery = FileService.getFileUrls(candidateData.gallery);
+    }
+
+    return candidateData;
+  }
+
+  /**
    * AUTHENTICATION METHODS MOVED TO AuthService
    * 
    * For authentication operations, use:
@@ -38,6 +68,55 @@ class CandidateService extends BaseService {
    * - AuthService.requestPasswordReset(data, 'candidate') - Request password reset
    * - AuthService.resetPassword(data, 'candidate') - Reset password with token
    */
+
+  // ==================== LISTING & COUNTING ====================
+
+  /**
+   * Find all candidates with filters and pagination
+   * @param {Object} filters - Query filters
+   * @param {Object} options - Query options (skip, limit, sort, populate)
+   * @returns {Promise<Array>} - Array of candidates
+   */
+  async findAll(filters = {}, options = {}) {
+    try {
+      const { skip = 0, limit = 20, sort = { created_at: -1 }, populate = [] } = options;
+
+      const query = this.repository.model
+        .find(filters)
+        .skip(skip)
+        .limit(limit)
+        .sort(sort);
+
+      // Apply populate if specified
+      if (populate.length > 0) {
+        populate.forEach(p => query.populate(p));
+      } else {
+        // Default population
+        query.populate("event", "name slug")
+             .populate("categories", "name slug");
+      }
+
+      const candidates = await query.lean().exec();
+      
+      // Convert image paths to URLs
+      return candidates.map(candidate => this._convertImagesToUrls(candidate));
+    } catch (error) {
+      throw new Error(`Find all candidates failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count candidates matching filters
+   * @param {Object} filters - Query filters
+   * @returns {Promise<number>} - Count of matching candidates
+   */
+  async count(filters = {}) {
+    try {
+      return await this.repository.model.countDocuments(filters).exec();
+    } catch (error) {
+      throw new Error(`Count candidates failed: ${error.message}`);
+    }
+  }
 
   // ==================== PROFILE MANAGEMENT ====================
 
@@ -49,12 +128,54 @@ class CandidateService extends BaseService {
    */
   async getProfile(candidateId, options = {}) {
     try {
-      return await this.repository.findById(candidateId, {
+      const candidate = await this.repository.findById(candidateId, {
         ...options,
         populate: ["event", "categories", "created_by"],
       });
+      
+      return this._convertImagesToUrls(candidate);
     } catch (error) {
       throw new Error(`Get profile failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get candidate by slug (public)
+   * @param {string} slug - Candidate slug
+   * @returns {Promise<Object>} - Candidate profile
+   */
+  async getCandidateBySlug(slug) {
+    try {
+      const candidate = await this.repository.model
+        .findOne({ slug })
+        .populate("event", "name slug")
+        .populate("categories", "name slug")
+        .lean()
+        .exec();
+
+      return this._convertImagesToUrls(candidate);
+    } catch (error) {
+      throw new Error(`Get candidate by slug failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get candidate by code (public)
+   * @param {string} code - Candidate code
+   * @returns {Promise<Object>} - Candidate profile
+   */
+  async getCandidateByCode(code) {
+    try {
+      const candidate = await this.repository.model
+        .findOne({ candidate_code: code })
+        .populate("event", "name slug")
+        .populate("categories", "name slug")
+        .lean()
+        .exec();
+
+      return this._convertImagesToUrls(candidate);
+    } catch (error) {
+      throw new Error(`Get candidate by code failed: ${error.message}`);
     }
   }
 
@@ -816,6 +937,307 @@ class CandidateService extends BaseService {
     }
 
     return slug;
+  }
+
+  // ==================== STATISTICS ====================
+
+  /**
+   * Get candidate statistics
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @returns {Promise<Object>} - Candidate statistics
+   */
+  async getCandidateStats(candidateId) {
+    try {
+      const candidate = await this.repository.findById(candidateId, {
+        populate: ["event", "categories"],
+      });
+
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      // Import VoteRepository
+      const VoteRepository = (await import("../vote/vote/vote.repository.js")).default;
+
+      // Get total votes for this candidate
+      const totalVotes = await VoteRepository.countForCandidate(candidateId);
+
+      // Get all candidates in the same categories to calculate rank
+      const categoryIds = candidate.categories.map(cat => cat._id || cat);
+      
+      // Get votes for all candidates in the same categories
+      const candidatesInCategories = await this.repository.model
+        .find({
+          categories: { $in: categoryIds },
+          status: STATUS.APPROVED,
+          is_published: true,
+          event: candidate.event._id || candidate.event,
+        })
+        .select("_id vote_count")
+        .lean()
+        .exec();
+
+      // Calculate rank (how many candidates have more votes)
+      const rank = candidatesInCategories.filter(c => c.vote_count > totalVotes).length + 1;
+
+      // Calculate percentage of total votes in categories
+      const totalCategoryVotes = candidatesInCategories.reduce((sum, c) => sum + (c.vote_count || 0), 0);
+      const percentage = totalCategoryVotes > 0 ? (totalVotes / totalCategoryVotes) * 100 : 0;
+
+      // Get votes over time (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const votesOverTime = await VoteRepository.model.aggregate([
+        {
+          $match: {
+            candidate: candidate._id,
+            cast_at: { $gte: thirtyDaysAgo },
+            status: "active",
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: "%Y-%m-%d", date: "$cast_at" },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+        {
+          $project: {
+            _id: 0,
+            date: "$_id",
+            count: 1,
+          },
+        },
+      ]);
+
+      return {
+        total_votes: totalVotes,
+        rank,
+        percentage: Math.round(percentage * 100) / 100,
+        votes_over_time: votesOverTime,
+        view_count: candidate.view_count || 0,
+        profile_completeness: candidate.profileCompleteness || 0,
+      };
+    } catch (error) {
+      throw new Error(`Get candidate stats failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get candidate vote details
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @returns {Promise<Object>} - Vote details
+   */
+  async getCandidateVotes(candidateId) {
+    try {
+      const VoteRepository = (await import("../vote/vote/vote.repository.js")).default;
+      
+      const [totalVotes, recentVotes] = await Promise.all([
+        VoteRepository.countForCandidate(candidateId),
+        VoteRepository.findByCandidate(candidateId, {
+          limit: 10,
+          sort: { cast_at: -1 },
+          lean: true,
+        }),
+      ]);
+
+      return {
+        total_votes: totalVotes,
+        recent_votes: recentVotes,
+      };
+    } catch (error) {
+      throw new Error(`Get candidate votes failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Increment candidate view count
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @returns {Promise<void>}
+   */
+  async incrementViewCount(candidateId) {
+    try {
+      await this.repository.model.findByIdAndUpdate(
+        candidateId,
+        { $inc: { view_count: 1 } },
+        { new: false }
+      ).exec();
+    } catch (error) {
+      // Log error but don't fail the operation
+      console.error(`Failed to increment view count: ${error.message}`);
+    }
+  }
+
+  // ==================== IMAGE MANAGEMENT ====================
+
+  /**
+   * Update candidate profile image
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @param {string} imageUrl - Image URL
+   * @returns {Promise<Object>} - Updated candidate
+   */
+  async updateProfileImage(candidateId, imageUrl) {
+    try {
+      const FileService = (await import("../../services/file.service.js")).default;
+      
+      // Get current candidate to delete old image
+      const candidate = await this.repository.findById(candidateId);
+      
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      // Delete old image if exists
+      if (candidate.profile_image) {
+        try {
+          await FileService.deleteFile(candidate.profile_image);
+        } catch (error) {
+          console.error("Failed to delete old profile image:", error.message);
+        }
+      }
+
+      // Update candidate with new image
+      return await this.repository.updateById(candidateId, {
+        profile_image: imageUrl,
+      });
+    } catch (error) {
+      throw new Error(`Update profile image failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete candidate profile image
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @returns {Promise<Object>} - Updated candidate
+   */
+  async deleteProfileImage(candidateId) {
+    try {
+      const FileService = (await import("../../services/file.service.js")).default;
+      
+      const candidate = await this.repository.findById(candidateId);
+      
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      // Delete image file if exists
+      if (candidate.profile_image) {
+        try {
+          await FileService.deleteFile(candidate.profile_image);
+        } catch (error) {
+          console.error("Failed to delete profile image file:", error.message);
+        }
+      }
+
+      // Remove image from candidate
+      return await this.repository.updateById(candidateId, {
+        profile_image: null,
+      });
+    } catch (error) {
+      throw new Error(`Delete profile image failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update candidate cover image
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @param {string} imageUrl - Image URL
+   * @returns {Promise<Object>} - Updated candidate
+   */
+  async updateCoverImage(candidateId, imageUrl) {
+    try {
+      const FileService = (await import("../../services/file.service.js")).default;
+      
+      // Get current candidate to delete old image
+      const candidate = await this.repository.findById(candidateId);
+      
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      // Delete old image if exists
+      if (candidate.cover_image) {
+        try {
+          await FileService.deleteFile(candidate.cover_image);
+        } catch (error) {
+          console.error("Failed to delete old cover image:", error.message);
+        }
+      }
+
+      // Update candidate with new image
+      return await this.repository.updateById(candidateId, {
+        cover_image: imageUrl,
+      });
+    } catch (error) {
+      throw new Error(`Update cover image failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Add images to candidate gallery
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @param {Array<string>} imageUrls - Array of image URLs
+   * @returns {Promise<Object>} - Updated candidate
+   */
+  async addGalleryImages(candidateId, imageUrls) {
+    try {
+      const candidate = await this.repository.findById(candidateId);
+      
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      const currentGallery = candidate.gallery || [];
+      const updatedGallery = [...currentGallery, ...imageUrls];
+
+      return await this.repository.updateById(candidateId, {
+        gallery: updatedGallery,
+      });
+    } catch (error) {
+      throw new Error(`Add gallery images failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Remove image from candidate gallery
+   * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
+   * @param {string} imageUrl - Image URL to remove
+   * @returns {Promise<Object>} - Updated candidate
+   */
+  async removeGalleryImage(candidateId, imageUrl) {
+    try {
+      const FileService = (await import("../../services/file.service.js")).default;
+      
+      const candidate = await this.repository.findById(candidateId);
+      
+      if (!candidate) {
+        throw new Error("Candidate not found");
+      }
+
+      // Remove image from gallery array
+      const updatedGallery = (candidate.gallery || []).filter(
+        (img) => img !== imageUrl
+      );
+
+      // Delete the image file
+      try {
+        await FileService.deleteFile(imageUrl);
+      } catch (error) {
+        console.error("Failed to delete gallery image file:", error.message);
+      }
+
+      return await this.repository.updateById(candidateId, {
+        gallery: updatedGallery,
+      });
+    } catch (error) {
+      throw new Error(`Remove gallery image failed: ${error.message}`);
+    }
   }
 }
 

@@ -6,6 +6,63 @@
 
 import agendaManager from "../services/agenda.service.js";
 import { ACTION_TYPE, ENTITY_TYPE } from "../utils/constants/activity.constants.js";
+import UAParser from "ua-parser-js";
+import geoip from "geoip-lite";
+
+/**
+ * Parse user agent string to extract device, browser, and OS info
+ * @param {string} userAgent - User agent string from request headers
+ * @returns {Object} Parsed device information
+ */
+const parseUserAgent = (userAgent) => {
+  if (!userAgent) return null;
+  
+  const parser = new UAParser(userAgent);
+  const result = parser.getResult();
+  
+  // Determine device type
+  let deviceType = "desktop";
+  if (result.device.type === "mobile") deviceType = "mobile";
+  else if (result.device.type === "tablet") deviceType = "tablet";
+  else if (result.device.type) deviceType = result.device.type;
+  
+  return {
+    device_type: deviceType,
+    browser: {
+      name: result.browser.name || "unknown",
+      version: result.browser.version || "unknown",
+    },
+    os: {
+      name: result.os.name || "unknown",
+      version: result.os.version || "unknown",
+    },
+  };
+};
+
+/**
+ * Get location information from IP address
+ * @param {string} ip - IP address
+ * @returns {Object} Location information
+ */
+const getLocationFromIP = (ip) => {
+  if (!ip || ip === "::1" || ip === "127.0.0.1" || ip === "localhost") {
+    return null;
+  }
+  
+  // Extract IPv4 from IPv6 format (::ffff:192.168.1.1)
+  const ipv4Match = ip.match(/::ffff:(\d+\.\d+\.\d+\.\d+)/);
+  const cleanIp = ipv4Match ? ipv4Match[1] : ip;
+  
+  const geo = geoip.lookup(cleanIp);
+  if (!geo) return null;
+  
+  return {
+    country: geo.country || "unknown",
+    region: geo.region || "unknown",
+    city: geo.city || "unknown",
+    timezone: geo.timezone || "unknown",
+  };
+};
 
 /**
  * Log activity after successful response
@@ -54,6 +111,12 @@ export const logActivity = (action, entityType, options = {}) => {
         const eventId =
           req.params.eventId || req.body.event_id || res.locals.eventId || null;
 
+        // Parse user agent and IP location
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers["user-agent"];
+        const device = parseUserAgent(userAgent);
+        const location = getLocationFromIP(ipAddress);
+
         // Queue activity log (async, non-blocking)
         agendaManager
           .now("log-activity", {
@@ -64,8 +127,10 @@ export const logActivity = (action, entityType, options = {}) => {
             eventId,
             description,
             severity: options.severity || "info",
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.headers["user-agent"],
+            ipAddress,
+            userAgent,
+            device,
+            location,
             sessionId: req.sessionID || req.session?.id || null,
             metadata,
           })
@@ -96,6 +161,10 @@ export const logAuth = (action, success = true) => {
     res.send = function (data) {
       if (success && res.statusCode >= 200 && res.statusCode < 300) {
         const userId = req.user?._id || res.locals.userId;
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers["user-agent"];
+        const device = parseUserAgent(userAgent);
+        const location = getLocationFromIP(ipAddress);
 
         agendaManager
           .now("log-activity", {
@@ -105,8 +174,10 @@ export const logAuth = (action, success = true) => {
             entityId: userId,
             description: `User ${action.toLowerCase()} ${success ? "successful" : "failed"}`,
             severity: success ? "info" : "warning",
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.headers["user-agent"],
+            ipAddress,
+            userAgent,
+            device,
+            location,
             sessionId: req.sessionID || req.session?.id || null,
             metadata: {
               success,
@@ -118,6 +189,11 @@ export const logAuth = (action, success = true) => {
           });
       } else if (!success) {
         // Log failed auth immediately, even on error response
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.headers["user-agent"];
+        const device = parseUserAgent(userAgent);
+        const location = getLocationFromIP(ipAddress);
+        
         agendaManager
           .now("log-activity", {
             userId: null,
@@ -125,8 +201,10 @@ export const logAuth = (action, success = true) => {
             entityType: ENTITY_TYPE.USER,
             description: "Failed login attempt",
             severity: "warning",
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.headers["user-agent"],
+            ipAddress,
+            userAgent,
+            device,
+            location,
             metadata: {
               email: req.body?.email,
               reason: res.locals.failureReason || "invalid_credentials",
@@ -165,6 +243,10 @@ export const logDataChange = (action, entityType, getChanges) => {
         Promise.resolve(getChanges(req, "after", res))
           .then((afterData) => {
             const entityId = req.params.id || res.locals.entityId;
+            const ipAddress = req.ip || req.connection.remoteAddress;
+            const userAgent = req.headers["user-agent"];
+            const device = parseUserAgent(userAgent);
+            const location = getLocationFromIP(ipAddress);
 
             agendaManager
               .now("log-activity", {
@@ -174,8 +256,10 @@ export const logDataChange = (action, entityType, getChanges) => {
                 entityId,
                 description: `${entityType} ${action.toLowerCase()}`,
                 severity: "info",
-                ipAddress: req.ip,
-                userAgent: req.headers["user-agent"],
+                ipAddress,
+                userAgent,
+                device,
+                location,
                 changes: {
                   before: beforeData,
                   after: afterData,

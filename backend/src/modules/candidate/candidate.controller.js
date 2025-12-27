@@ -14,6 +14,88 @@ class CandidateController extends BaseController {
     });
   }
 
+  // ==================== CANDIDATE SELF-SERVICE ====================
+
+  /**
+   * Request to be added to additional category (candidate self-service)
+   * POST /api/candidates/profile/categories
+   */
+  async requestCategoryAddition(req, res) {
+    const candidateId = req.candidate._id;
+    const { categoryId } = req.body;
+
+    if (!categoryId) {
+      return this.badRequest(res, "Category ID is required");
+    }
+
+    const candidate = await this.service("candidateService").addCategory(candidateId, categoryId);
+
+    return this.success(res, {
+      data: candidate,
+      message: "Category addition request submitted successfully. Awaiting admin approval.",
+    });
+  }
+
+  // ==================== PUBLIC ROUTES ====================
+
+  /**
+   * Get all published and approved candidates (public)
+   * GET /api/candidates/public
+   */
+  async listPublic(req, res) {
+    const { page, limit, skip } = this.getPagination(req);
+    const filters = {
+      is_published: true,
+      status: "approved",
+      ...this.getFilters(req, ["event", "categories"]),
+    };
+    const sort = this.getSort(req, "-vote_count");
+    const search = this.getSearch(req);
+
+    if (search) {
+      filters.$or = [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { bio: { $regex: search, $options: "i" } },
+        { candidate_code: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const [candidates, total] = await Promise.all([
+      this.service("candidateService").findAll(filters, { skip, limit, sort }),
+      this.service("candidateService").count(filters),
+    ]);
+
+    return this.paginated(res, {
+      data: candidates,
+      page,
+      limit,
+      total_items: total,
+    });
+  }
+
+  /**
+   * Get candidate by slug (public)
+   * GET /api/candidates/slug/:slug
+   */
+  async getBySlug(req, res) {
+    const { slug } = req.params;
+    const candidate = await this.service("candidateService").getCandidateBySlug(slug);
+
+    if (!candidate) {
+      return this.notFound(res, { resource: "Candidate" });
+    }
+
+    // Only return if published and approved
+    if (!candidate.is_published || candidate.status !== "approved") {
+      return this.notFound(res, { resource: "Candidate" });
+    }
+
+    return this.success(res, {
+      data: candidate,
+    });
+  }
+
   // ==================== CANDIDATE CRUD (ADMIN) ====================
 
   /**
@@ -167,6 +249,123 @@ class CandidateController extends BaseController {
 
     return this.success(res, {
       data: history,
+    });
+  }
+
+  /**
+   * Get own statistics (candidate authenticated)
+   * GET /api/candidates/profile/stats
+   */
+  async getMyStats(req, res) {
+    const candidateId = this.getUserId(req);
+    const stats = await this.service("candidateService").getCandidateStats(candidateId);
+
+    return this.success(res, {
+      data: stats,
+    });
+  }
+
+  /**
+   * Upload profile image (candidate authenticated)
+   * POST /api/candidates/profile/image
+   */
+  async uploadProfileImage(req, res) {
+    const candidateId = this.getUserId(req);
+    
+    if (!req.file) {
+      return this.badRequest(res, { message: "No image file provided" });
+    }
+
+    const imagePath = req.file.path || `uploads/${req.file.filename}`;
+    const candidate = await this.service("candidateService").updateProfileImage(candidateId, imagePath);
+
+    // Convert path to URL before sending response
+    const FileService = (await import("../../services/file.service.js")).default;
+    const imageUrl = FileService.getFileUrl(candidate.profile_image);
+
+    return this.success(res, {
+      data: { image_url: imageUrl },
+      message: "Profile image uploaded successfully",
+    });
+  }
+
+  /**
+   * Delete profile image (candidate authenticated)
+   * DELETE /api/candidates/profile/image
+   */
+  async deleteProfileImage(req, res) {
+    const candidateId = this.getUserId(req);
+    await this.service("candidateService").deleteProfileImage(candidateId);
+
+    return this.success(res, {
+      message: "Profile image deleted successfully",
+    });
+  }
+
+  /**
+   * Upload cover image (candidate authenticated)
+   * POST /api/candidates/profile/cover
+   */
+  async uploadCoverImage(req, res) {
+    const candidateId = this.getUserId(req);
+    
+    if (!req.file) {
+      return this.badRequest(res, { message: "No image file provided" });
+    }
+
+    const imagePath = req.file.path || `uploads/${req.file.filename}`;
+    const candidate = await this.service("candidateService").updateCoverImage(candidateId, imagePath);
+
+    // Convert path to URL before sending response
+    const FileService = (await import("../../services/file.service.js")).default;
+    const imageUrl = FileService.getFileUrl(candidate.cover_image);
+
+    return this.success(res, {
+      data: { image_url: imageUrl },
+      message: "Cover image uploaded successfully",
+    });
+  }
+
+  /**
+   * Upload gallery images (candidate authenticated)
+   * POST /api/candidates/profile/gallery
+   */
+  async uploadGalleryImages(req, res) {
+    const candidateId = this.getUserId(req);
+    
+    if (!req.files || req.files.length === 0) {
+      return this.badRequest(res, { message: "No image files provided" });
+    }
+
+    const imagePaths = req.files.map(file => file.path || `uploads/${file.filename}`);
+    const candidate = await this.service("candidateService").addGalleryImages(candidateId, imagePaths);
+
+    // Convert paths to URLs before sending response
+    const FileService = (await import("../../services/file.service.js")).default;
+    const galleryUrls = FileService.getFileUrls(candidate.gallery);
+
+    return this.success(res, {
+      data: { gallery: galleryUrls },
+      message: "Gallery images uploaded successfully",
+    });
+  }
+
+  /**
+   * Delete gallery image (candidate authenticated)
+   * DELETE /api/candidates/profile/gallery
+   */
+  async deleteGalleryImage(req, res) {
+    const candidateId = this.getUserId(req);
+    const { image_url } = req.query;
+
+    if (!image_url) {
+      return this.badRequest(res, { message: "Image URL is required" });
+    }
+
+    await this.service("candidateService").removeGalleryImage(candidateId, image_url);
+
+    return this.success(res, {
+      message: "Gallery image deleted successfully",
     });
   }
 

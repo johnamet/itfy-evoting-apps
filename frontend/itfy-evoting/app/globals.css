@@ -156,3 +156,15 @@
 .progress-bar {
   width: var(--progress, 0%);
 }
+
+@layer utilities {
+  .before\:mask-image-radial-gradient::before {
+    content: '';
+    mask: radial-gradient(circle at center, transparent 0%, black 70%);
+    -webkit-mask: radial-gradient(circle at center, transparent 0%, black 70%);
+  }
+  .before\:mask-composite-exclude::before {
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+  }
+}

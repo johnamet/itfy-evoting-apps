@@ -1,206 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile Update Required</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f7fa;
-      margin: 0;
-      padding: 0;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 30px auto;
-      background-color: #ffffff;
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    .header {
-      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-      padding: 40px 30px;
-      text-align: center;
-      color: #ffffff;
-    }
-
-    .header .icon {
-      font-size: 64px;
-      margin-bottom: 10px;
-    }
-
-    .header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-    }
-
-    .content {
-      padding: 40px 30px;
-      color: #333333;
-      line-height: 1.8;
-    }
-
-    .alert-box {
-      background-color: #fff3e0;
-      border-left: 4px solid #ff9800;
-      padding: 20px;
-      margin: 25px 0;
-      border-radius: 5px;
-    }
-
-    .reason-box {
-      background-color: #ffebee;
-      border: 2px solid #ef5350;
-      padding: 20px;
-      margin: 25px 0;
-      border-radius: 8px;
-    }
-
-    .reason-box h3 {
-      margin-top: 0;
-      color: #c62828;
-      font-size: 16px;
-    }
-
-    .button {
-      display: inline-block;
-      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-      color: #ffffff;
-      text-decoration: none;
-      padding: 15px 40px;
-      border-radius: 50px;
-      font-weight: 600;
-      margin: 25px 0;
-      font-size: 16px;
-      transition: transform 0.2s;
-    }
-
-    .button:hover {
-      transform: translateY(-2px);
-    }
-
-    .action-steps {
-      background-color: #f0f7ff;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 25px 0;
-    }
-
-    .action-steps h3 {
-      margin-top: 0;
-      color: #1976d2;
-      font-size: 18px;
-    }
-
-    .action-steps ol {
-      margin: 15px 0;
-      padding-left: 20px;
-    }
-
-    .action-steps li {
-      margin: 10px 0;
-      color: #555;
-    }
-
-    .footer {
-      background-color: #f8f9fa;
-      padding: 30px;
-      text-align: center;
-      color: #666666;
-      font-size: 13px;
-      border-top: 1px solid #e0e0e0;
-    }
-
-    .footer a {
-      color: #ff9800;
-      text-decoration: none;
-    }
-
-    .highlight {
-      color: #ff9800;
-      font-weight: 600;
-    }
-  </style>
 </head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 20px 60px rgba(245, 158, 11, 0.2);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #EF4444 50%, #8B5CF6 100%); padding: 50px 40px; text-align: center;">
+              <div style="width: 90px; height: 90px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; backdrop-filter: blur(10px); border: 3px solid rgba(255,255,255,0.4); line-height: 90px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <span style="font-size: 45px;">📝</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3); letter-spacing: -0.5px;">Profile Update Required</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0; font-size: 15px; font-weight: 500;">Action needed to publish your profile</p>
+            </td>
+          </tr>
 
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="icon">⚠️</div>
-      <h1>Profile Update Required</h1>
-    </div>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 50px 40px;">
+              <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(239, 68, 68, 0.15) 100%); border-left: 4px solid #F59E0B; padding: 25px; margin: 0 0 35px; border-radius: 12px;">
+                <p style="color: #F1F5F9; font-size: 18px; margin: 0 0 10px; font-weight: 700;">
+                  Hi <span style="background: linear-gradient(90deg, #F59E0B, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{name}}</span>,
+                </p>
+                <p style="color: #CBD5E1; font-size: 15px; margin: 0; line-height: 1.7;">
+                  Your candidate profile has been reviewed. A few updates are needed before we can publish it. Don't worry - we'll guide you through the changes!
+                </p>
+              </div>
 
-    <div class="content">
-      <div class="alert-box">
-        <p style="margin:0; font-size: 16px;">
-          <strong>Hi {{name}},</strong>
-        </p>
-        <p style="margin: 10px 0 0 0;">
-          Your candidate profile requires some updates before it can be approved.
-        </p>
-      </div>
+              <p style="color: #94A3B8; font-size: 15px; margin: 0 0 35px;">
+                Our review team has provided specific feedback to help you improve your profile. Please review the details below and make the necessary updates.
+              </p>
 
-      <p>
-        Our review team has identified some issues that need to be addressed. Please review the feedback below and
-        update your profile accordingly.
-      </p>
+              {{#if reason}}
+              <!-- Feedback Box -->
+              <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 2px solid #EF4444; border-radius: 16px; padding: 30px; margin-bottom: 35px; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);">
+                <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                  <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #EF4444, #F59E0B); border-radius: 50%; text-align: center; line-height: 40px; font-size: 20px; margin-right: 15px;">💬</div>
+                  <h3 style="color: #FCA5A5; font-size: 16px; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Feedback from Review Team</h3>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid #EF4444; padding: 20px; border-radius: 8px;">
+                  <p style="color: #FED7D7; font-size: 15px; margin: 0; line-height: 1.7;">{{reason}}</p>
+                </div>
+              </div>
+              {{/if}}
 
-      {{#if reason}}
-      <div class="reason-box">
-        <h3>📝 Feedback from Review Team:</h3>
-        <p style="margin: 10px 0 0 0; line-height: 1.6;">{{reason}}</p>
-      </div>
-      {{/if}}
+              <!-- Action Steps -->
+              <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border-radius: 16px; padding: 35px 30px; margin-bottom: 35px;">
+                <h3 style="color: #F1F5F9; font-size: 20px; margin: 0 0 25px; font-weight: 700; text-align: center;">✅ How to Fix This</h3>
+                
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 18px 0;">
+                      <div style="display: flex; align-items: start;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #8B5CF6, #06B6D4); border-radius: 50%; text-align: center; line-height: 35px; font-weight: 800; color: white; font-size: 16px; flex-shrink: 0; margin-right: 15px;">1</div>
+                        <div>
+                          <p style="color: #F1F5F9; font-size: 15px; margin: 0 0 5px; font-weight: 700;">Log In to Your Portal</p>
+                          <p style="color: #94A3B8; font-size: 14px; margin: 0; line-height: 1.6;">Access your candidate dashboard</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 18px 0; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                      <div style="display: flex; align-items: start;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #06B6D4, #10B981); border-radius: 50%; text-align: center; line-height: 35px; font-weight: 800; color: white; font-size: 16px; flex-shrink: 0; margin-right: 15px;">2</div>
+                        <div>
+                          <p style="color: #F1F5F9; font-size: 15px; margin: 0 0 5px; font-weight: 700;">Review the Feedback</p>
+                          <p style="color: #94A3B8; font-size: 14px; margin: 0; line-height: 1.6;">Carefully read the review team's comments</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 18px 0; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                      <div style="display: flex; align-items: start;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #10B981, #F59E0B); border-radius: 50%; text-align: center; line-height: 35px; font-weight: 800; color: white; font-size: 16px; flex-shrink: 0; margin-right: 15px;">3</div>
+                        <div>
+                          <p style="color: #F1F5F9; font-size: 15px; margin: 0 0 5px; font-weight: 700;">Make the Updates</p>
+                          <p style="color: #94A3B8; font-size: 14px; margin: 0; line-height: 1.6;">Apply the necessary corrections to your profile</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 18px 0; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+                      <div style="display: flex; align-items: start;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #F59E0B, #8B5CF6); border-radius: 50%; text-align: center; line-height: 35px; font-weight: 800; color: white; font-size: 16px; flex-shrink: 0; margin-right: 15px;">4</div>
+                        <div>
+                          <p style="color: #F1F5F9; font-size: 15px; margin: 0 0 5px; font-weight: 700;">Submit for Re-Review</p>
+                          <p style="color: #94A3B8; font-size: 14px; margin: 0; line-height: 1.6;">We'll review it promptly and get you published</p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
 
-      <div class="action-steps">
-        <h3>✅ What You Need to Do:</h3>
-        <ol>
-          <li><strong>Log in</strong> to your candidate portal</li>
-          <li><strong>Review the feedback</strong> provided above carefully</li>
-          <li><strong>Update your profile</strong> with the necessary corrections</li>
-          <li><strong>Submit for re-review</strong> - our team will review it promptly</li>
-        </ol>
-      </div>
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{profileUrl}}" style="display: inline-block; background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%); color: #ffffff; text-decoration: none; padding: 20px 60px; border-radius: 50px; font-weight: 700; font-size: 17px; box-shadow: 0 15px 40px rgba(245, 158, 11, 0.4); text-transform: uppercase; letter-spacing: 1px;">
+                      Update Your Profile →
+                    </a>
+                  </td>
+                </tr>
+              </table>
 
-      <div style="text-align: center;">
-        <a href="{{profileUrl}}" class="button">Update Your Profile</a>
-      </div>
+              <!-- Pro Tip -->
+              <div style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%); border-left: 4px solid #06B6D4; padding: 25px; margin-top: 35px; border-radius: 12px;">
+                <p style="color: #67E8F9; font-size: 14px; margin: 0 0 10px; font-weight: 700;">
+                  💡 Pro Tip
+                </p>
+                <p style="color: #A5F3FC; font-size: 14px; margin: 0; line-height: 1.7;">
+                  Ensure all required fields are complete and accurate. High-quality photos and detailed descriptions significantly improve your approval chances!
+                </p>
+              </div>
 
-      <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 25px 0; border-radius: 5px;">
-        <p style="margin: 0; font-size: 14px;">
-          <strong>💡 Tip:</strong> Make sure all required fields are filled out completely and accurately. High-quality
-          photos and detailed descriptions increase your chances of approval.
-        </p>
-      </div>
+              <p style="color: #94A3B8; font-size: 15px; line-height: 1.7; margin: 35px 0 0;">
+                Need assistance? Our support team is here to help!<br>
+                Email: <a href="mailto:{{supportEmail}}" style="color: #F59E0B; text-decoration: none; font-weight: 600;">{{supportEmail}}</a>
+              </p>
 
-      <p style="margin-top: 30px;">
-        If you have any questions about the feedback or need assistance with your profile, please don't hesitate to
-        contact our support team at <a href="mailto:{{supportEmail}}" style="color: #ff9800;">{{supportEmail}}</a>.
-      </p>
+              <p style="color: #CBD5E1; font-size: 16px; line-height: 1.7; margin: 30px 0 0;">
+                We're rooting for you!<br>
+                <strong style="background: linear-gradient(90deg, #F59E0B, #EF4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 18px;">The ITFY E-Voting Team</strong>
+              </p>
+            </td>
+          </tr>
 
-      <p style="margin-top: 30px; color: #999; font-size: 13px;">
-        Best regards,<br>
-        <strong>The ITFY E-Voting Team</strong>
-      </p>
-    </div>
+          <!-- Footer -->
+          <tr>
+            <td style="background: rgba(0,0,0,0.3); padding: 30px 40px; text-align: center; border-top: 1px solid rgba(245, 158, 11, 0.2);">
+              <p style="color: #94A3B8; font-size: 14px; margin: 0 0 10px;">
+                <a href="{{profileUrl}}" style="color: #F59E0B; text-decoration: none; font-weight: 600;">Candidate Portal</a> | 
+                <a href="mailto:{{supportEmail}}" style="color: #06B6D4; text-decoration: none; font-weight: 600;">Contact Support</a>
+              </p>
+              <p style="color: #64748B; font-size: 12px; margin: 10px 0 0;">
+                © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
+              </p>
+            </td>
+          </tr>
 
-    <div class="footer">
-      <p>This is an automated email from <strong>ITFY E-Voting Platform</strong></p>
-      <p>
-        <a href="{{profileUrl}}">Candidate Portal</a> |
-        <a href="mailto:{{supportEmail}}">Contact Support</a>
-      </p>
-      <p style="margin-top: 15px; color: #999;">
-        © {{formatDate currentYear}} ITFY E-Voting. All rights reserved.
-      </p>
-    </div>
-  </div>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
-
 </html>

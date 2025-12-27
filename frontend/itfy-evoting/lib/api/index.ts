@@ -41,6 +41,7 @@ export {
   eventsApi,
   type EventsListResponse,
   type EventFilters,
+  type PublicEventFilters,
   type EventStatsResponse,
   type EventResultsResponse,
 } from './events';

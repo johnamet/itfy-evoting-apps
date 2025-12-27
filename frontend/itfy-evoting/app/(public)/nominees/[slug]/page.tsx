@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, use, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -32,12 +32,12 @@ import {
   Globe,
   Youtube,
   X,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
-import { mockCandidates } from '@/lib/mocks/candidates';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockEvents } from '@/lib/mocks/events';
+import { candidatesApi } from '@/lib/api/candidates';
+import { Candidate, Event, Category } from '@/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import VoteDialog from '@/components/VoteDialog';
@@ -67,22 +67,84 @@ export default function NomineeDetailPage({ params }: { params: Promise<{ slug: 
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
   const [isVoteDialogOpen, setIsVoteDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [nominee, setNominee] = useState<Candidate | null>(null);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rank, setRank] = useState<number>(0);
+  const [relatedNominees, setRelatedNominees] = useState<Candidate[]>([]);
   
-  // Find the nominee
-  const nominee = mockCandidates.find(c => c.slug === resolvedParams.slug);
+  // Fetch nominee data
+  useEffect(() => {
+    const fetchNomineeData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch the nominee by slug
+        const response = await candidatesApi.getBySlug(resolvedParams.slug);
+        const nomineeData = response.data;
+        
+        if (!nomineeData) {
+          notFound();
+        }
+        
+        setNominee(nomineeData);
+        
+        // Extract event and categories from populated data
+        if (nomineeData.event && typeof nomineeData.event === 'object') {
+          setEvent(nomineeData.event as unknown as Event);
+        }
+        
+        if (nomineeData.categories && Array.isArray(nomineeData.categories)) {
+          setCategories(nomineeData.categories as unknown as Category[]);
+        }
+        
+        // Fetch candidates from same event to calculate rank
+        if (nomineeData.event) {
+          const eventId = typeof nomineeData.event === 'object' ? (nomineeData.event as any)._id : nomineeData.event;
+          const eventCandidatesResponse = await candidatesApi.getByEvent(eventId, { page: 1, limit: 1000 });
+          const eventCandidates = (eventCandidatesResponse.data || [])
+            .sort((a, b) => b.vote_count - a.vote_count);
+          const calculatedRank = eventCandidates.findIndex(c => c._id === nomineeData._id) + 1;
+          setRank(calculatedRank);
+          
+          // Set related nominees (same event, excluding current nominee)
+          const related = eventCandidates
+            .filter(c => c._id !== nomineeData._id)
+            .slice(0, 3);
+          setRelatedNominees(related);
+        }
+      } catch (error) {
+        console.error('Failed to fetch nominee data:', error);
+        notFound();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchNomineeData();
+  }, [resolvedParams.slug]);
   
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Header />
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-[#0152be] animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Loading nominee...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+  
+  // Nominee not found
   if (!nominee) {
     notFound();
   }
-  
-  const event = mockEvents.find(e => e._id === nominee.event);
-  const categories = mockCategories.filter(c => nominee.categories.includes(c._id));
-  
-  // Calculate rank among all candidates in same event
-  const eventCandidates = mockCandidates
-    .filter(c => c.event === nominee.event && c.is_published && c.status === 'approved')
-    .sort((a, b) => b.vote_count - a.vote_count);
-  const rank = eventCandidates.findIndex(c => c._id === nominee._id) + 1;
   
   // Handle share
   const handleShare = async () => {
@@ -701,43 +763,35 @@ export default function NomineeDetailPage({ params }: { params: Promise<{ slug: 
               <GlassCard className="p-6">
                 <h3 className="text-lg font-bold text-white mb-4">Related Nominees</h3>
                 <div className="space-y-3">
-                  {mockCandidates
-                    .filter(c => 
-                      c._id !== nominee._id && 
-                      c.event === nominee.event && 
-                      c.is_published && 
-                      c.status === 'approved'
-                    )
-                    .slice(0, 3)
-                    .map(related => (
-                      <Link
-                        key={related._id}
-                        href={`/nominees/${related.slug}`}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors"
-                      >
-                        <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
-                          {related.profile_image ? (
-                            <Image
-                              src={related.profile_image}
-                              alt={`${related.first_name} ${related.last_name}`}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="flex items-center justify-center h-full bg-[#0152be]/20 text-[#0152be] text-sm font-bold">
-                              {related.first_name[0]}{related.last_name[0]}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">
-                            {related.first_name} {related.last_name}
-                          </p>
-                          <p className="text-sm text-gray-400">{related.vote_count.toLocaleString()} votes</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-600" />
-                      </Link>
-                    ))}
+                  {relatedNominees.map(related => (
+                    <Link
+                      key={related._id}
+                      href={`/nominees/${related.slug}`}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
+                        {related.profile_image ? (
+                          <Image
+                            src={related.profile_image}
+                            alt={`${related.first_name} ${related.last_name}`}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full bg-[#0152be]/20 text-[#0152be] text-sm font-bold">
+                            {related.first_name[0]}{related.last_name[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {related.first_name} {related.last_name}
+                        </p>
+                        <p className="text-sm text-gray-400">{related.vote_count.toLocaleString()} votes</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-600" />
+                    </Link>
+                  ))}
                 </div>
               </GlassCard>
             </div>

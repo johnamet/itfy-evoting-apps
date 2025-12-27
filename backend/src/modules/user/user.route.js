@@ -216,4 +216,35 @@ router.put(
   UserController.suspend.bind(UserController)
 );
 
+/**
+ * PUT /api/users/:id/reactivate
+ * Reactivate user (unsuspend)
+ * Requires: Admin
+ */
+router.put(
+  "/:id/reactivate",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.USER_ACTIVATED, ENTITY_TYPE.USER, {
+    getEntityId: (req) => req.params.id,
+  }),
+  UserController.reactivate.bind(UserController)
+);
+
+/**
+ * PUT /api/users/:id/verify-email
+ * Force verify user email
+ * Requires: Admin
+ */
+router.put(
+  "/:id/verify-email",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.USER_UPDATED, ENTITY_TYPE.USER, {
+    getEntityId: (req) => req.params.id,
+    getDescription: (req) => `Admin force verified email for user ${req.params.id}`,
+  }),
+  UserController.forceVerifyEmail.bind(UserController)
+);
+
 export default router;

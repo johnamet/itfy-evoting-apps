@@ -5,40 +5,81 @@ import { format, differenceInSeconds, differenceInDays, differenceInHours, diffe
 import { 
   Award, ArrowRight, Users, Vote, Star, Trophy,
   Globe, Lock, Calendar, Info, Timer,
-  ChevronRight, Share2, Heart, ArrowLeft, EyeOff, ShieldCheck
+  ChevronRight, Share2, Heart, ArrowLeft, EyeOff, ShieldCheck, Loader2
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockEvents } from '@/lib/mocks/events';
-import { mockCandidates } from '@/lib/mocks/candidates';
+import { useCategoryBySlug, useCategoriesByEvent } from '@/hooks/useCategories';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import type { Category, Candidate, Event } from '@/types';
 
 export default function CategoryDetailPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
-  // Find the category by slug
-  const category = mockCategories.find(c => c.slug === slug);
+  // Fetch the category by slug (includes embedded candidates and event)
+  const { data: category, isLoading: categoryLoading, error: categoryError } = useCategoryBySlug(slug);
   
-  // Find the event this category belongs to
-  const event = category ? mockEvents.find(e => e._id === category.event) : null;
+  // Extract event from category (already populated)
+  const event = useMemo(() => {
+    if (!category) return null;
+    // event could be ObjectId string or populated Event object
+    return typeof category.event === 'object' ? category.event as Event : null;
+  }, [category]);
   
-  // Get candidates for this category
-  const categoryCandidates = category 
-    ? mockCandidates.filter(c => c.categories.includes(category._id) && c.status === 'approved' && c.is_published)
-        .sort((a, b) => b.vote_count - a.vote_count)
-    : [];
+  // Extract and filter candidates from category (already embedded)
+  const categoryCandidates = useMemo(() => {
+    if (!category) return [];
+    // candidates could be ObjectId[] or Candidate[]
+    const candidates = category.candidates as Candidate[];
+    if (!candidates || candidates.length === 0) return [];
+    // Check if first item is an object (populated) or string (ObjectId)
+    if (typeof candidates[0] === 'string') return [];
+    return candidates
+      .filter(c => c.status === 'approved' && c.is_published)
+      .sort((a, b) => b.vote_count - a.vote_count);
+  }, [category]);
 
-  // Calculate voting status
+  // Fetch other categories in the same event
+  const eventId = event?._id;
+  const categoryId = (category as Category | undefined)?._id;
+  const { data: otherCategoriesResponse } = useCategoriesByEvent(eventId ?? '', undefined, !!eventId);
+  const otherCategories = useMemo(() => {
+    const cats = (otherCategoriesResponse?.data ?? []) as Category[];
+    return cats.filter(c => c._id !== categoryId).slice(0, 4);
+  }, [otherCategoriesResponse?.data, categoryId]);
+
+  // Use computed virtuals from backend for voting status
   const getVotingInfo = () => {
     if (!category) return { status: 'inactive', targetDate: null, label: '', isEnded: true };
     
+    // Use backend computed virtuals when available
+    if (category.hasVotingEnded) {
+      return { status: 'ended', targetDate: null, label: 'Voting Ended', isEnded: true };
+    }
+    if (category.isVotingUpcoming && category.voting_start_date) {
+      return { 
+        status: 'upcoming', 
+        targetDate: new Date(category.voting_start_date), 
+        label: 'Voting Opens In', 
+        isEnded: false 
+      };
+    }
+    if (category.isVotingActive && category.voting_deadline) {
+      return { 
+        status: 'active', 
+        targetDate: new Date(category.voting_deadline), 
+        label: 'Voting Ends In', 
+        isEnded: false 
+      };
+    }
+    
+    // Fallback to manual calculation if virtuals not available
     const now = new Date();
     const startDate = category.voting_start_date ? new Date(category.voting_start_date) : null;
     const endDate = category.voting_deadline ? new Date(category.voting_deadline) : null;
@@ -54,15 +95,31 @@ export default function CategoryDetailPage() {
     }
     return { status: 'inactive', targetDate: null, label: 'Voting Inactive', isEnded: true };
   };
-  const votingInfo = getVotingInfo();
+  const votingInfo = useMemo(() => {
+    return category ? getVotingInfo() : { status: 'inactive', targetDate: null, label: '', isEnded: true };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    category?._id,
+    category?.hasVotingEnded,
+    category?.isVotingUpcoming,
+    category?.isVotingActive,
+    category?.voting_start_date,
+    category?.voting_deadline,
+    category?.is_voting_open
+  ]);
+
+  // Memoize target date timestamp for useEffect dependency
+  const targetDateTimestamp = useMemo(() => {
+    return votingInfo.targetDate?.getTime() ?? null;
+  }, [votingInfo.targetDate]);
 
   // Countdown timer effect
   useEffect(() => {
-    if (!votingInfo.targetDate) return;
+    if (!targetDateTimestamp) return;
 
     const updateCountdown = () => {
       const now = new Date();
-      const target = votingInfo.targetDate!;
+      const target = new Date(targetDateTimestamp);
       const totalSeconds = differenceInSeconds(target, now);
       
       if (totalSeconds <= 0) {
@@ -81,12 +138,36 @@ export default function CategoryDetailPage() {
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [votingInfo.targetDate]);
+  }, [targetDateTimestamp]);
 
-  // Check if results should be visible
+  // Check if results should be visible (use backend computed virtual when available)
   const getCanShowResults = () => {
     if (!category) return { canShow: false, reason: 'Category not found' };
     
+    // Use backend computed virtual when available
+    if (category.canViewResults !== undefined) {
+      if (category.canViewResults) {
+        return { canShow: true, reason: null };
+      }
+      // Determine reason based on settings
+      const votingEnded = category.hasVotingEnded ?? 
+        (category.voting_deadline ? new Date(category.voting_deadline) <= new Date() : false);
+      
+      if (!votingEnded && !category.show_results_before_deadline) {
+        return { canShow: false, reason: 'Results will be available after voting ends' };
+      }
+      
+      switch (category.results_visibility) {
+        case 'authenticated':
+          return { canShow: false, reason: 'Sign in to view results' };
+        case 'admin_only':
+          return { canShow: false, reason: 'Results are restricted to administrators' };
+        default:
+          return { canShow: false, reason: 'Results are not available' };
+      }
+    }
+    
+    // Fallback to manual calculation
     const votingEnded = category.voting_deadline ? new Date(category.voting_deadline) <= new Date() : false;
     
     // If voting hasn't ended yet, check show_results_before_deadline
@@ -130,6 +211,43 @@ export default function CategoryDetailPage() {
     }
   };
 
+  // Loading state
+  if (categoryLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Header />
+        <div className="container mx-auto px-6 py-32 text-center">
+          <Loader2 className="w-12 h-12 mx-auto mb-6 animate-spin text-[#0152be]" />
+          <p className="text-gray-400">Loading category...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (categoryError) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <Header />
+        <div className="container mx-auto px-6 py-32 text-center">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-red-500/10 flex items-center justify-center">
+            <Info className="w-12 h-12 text-red-400" />
+          </div>
+          <h1 className="text-4xl font-bold mb-4">Error Loading Category</h1>
+          <p className="text-gray-400 mb-8">There was a problem loading this category. Please try again later.</p>
+          <Link href="/categories">
+            <Button className="bg-gradient-to-r from-[#0152be] to-sky-500">
+              Browse Categories
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!category) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
@@ -155,6 +273,7 @@ export default function CategoryDetailPage() {
   const visibilityInfo = getVisibilityInfo(category.results_visibility);
   const VisibilityIcon = visibilityInfo.icon;
   const totalVotes = categoryCandidates.reduce((sum, c) => sum + c.vote_count, 0);
+  const candidateCount = category.candidateCount ?? categoryCandidates.length;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -236,7 +355,7 @@ export default function CategoryDetailPage() {
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
             <div className="text-center">
-              <div className="text-3xl font-bold text-white">{categoryCandidates.length}</div>
+              <div className="text-3xl font-bold text-white">{candidateCount}</div>
               <div className="text-gray-400 text-sm">Candidates</div>
             </div>
             <div className="text-center">
@@ -311,7 +430,7 @@ export default function CategoryDetailPage() {
             <div className="lg:col-span-2 space-y-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Candidates</h2>
-                <span className="text-gray-400">{categoryCandidates.length} nominees</span>
+                <span className="text-gray-400">{candidateCount} nominees</span>
               </div>
 
               {categoryCandidates.length === 0 ? (
@@ -550,7 +669,7 @@ export default function CategoryDetailPage() {
       </section>
 
       {/* Other Categories */}
-      {event && (
+      {event && otherCategories.length > 0 && (
         <section className="py-16 bg-white/5">
           <div className="container mx-auto px-6">
             <div className="flex items-center justify-between mb-8">
@@ -562,8 +681,7 @@ export default function CategoryDetailPage() {
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockCategories
-                .filter(c => c.event === event._id && c._id !== category._id)
+              {otherCategories
                 .slice(0, 3)
                 .map((cat) => {
                   const catVotingStatus = cat.is_voting_open ? 'Voting Open' : 'Closed';

@@ -3,103 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voting Started</title>
+  <title>Voting Has Started</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 20px 0;">
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <table width="600" cellpadding="0" cellspacing="0" style="background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 20px 60px rgba(139, 92, 246, 0.2);">
           
-          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); padding: 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 10px;">🗳️</div>
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">Voting Has Started!</h1>
+            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 50%, #F59E0B 100%); padding: 50px 40px; text-align: center;">
+              <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; margin: 0 auto 20px; backdrop-filter: blur(10px); border: 4px solid rgba(255,255,255,0.4); line-height: 100px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                <span style="font-size: 50px;">🗳️</span>
+              </div>
+              <h1 style="color: #ffffff; margin: 0 0 10px; font-size: 36px; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Voting Has Started!</h1>
+              <p style="color: rgba(255,255,255,0.95); margin: 0; font-size: 16px; font-weight: 600;">Cast your vote now</p>
             </td>
           </tr>
 
-          <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Hi <strong>{{name}}</strong>,
+            <td style="padding: 50px 40px;">
+              <p style="color: #F1F5F9; font-size: 18px; font-weight: 600;">Hi <span style="background: linear-gradient(90deg, #8B5CF6, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{name}}</span>,</p>
+
+              <p style="color: #CBD5E1; font-size: 16px; line-height: 1.8; margin: 0 0 35px;">
+                Great news! Voting is now open for <strong style="color: #8B5CF6;">{{eventName}}</strong>. Don't miss your chance to make your voice heard!
               </p>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                Great news! Voting is now open for <strong>{{eventName}}</strong>. Cast your vote now and make your voice heard!
-              </p>
+              <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 2px solid #8B5CF6; border-radius: 16px; padding: 30px; margin-bottom: 35px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 15px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                      <span style="color: #94A3B8; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Event</span>
+                      <span style="color: #F1F5F9; font-size: 20px; font-weight: 800; display: block;">{{eventName}}</span>
+                    </td>
+                  </tr>
+                  {{#if eventDescription}}
+                  <tr>
+                    <td style="padding: 15px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                      <span style="color: #94A3B8; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Description</span>
+                      <span style="color: #CBD5E1; font-size: 15px; display: block; line-height: 1.6;">{{eventDescription}}</span>
+                    </td>
+                  </tr>
+                  {{/if}}
+                  <tr>
+                    <td style="padding: 15px 0; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+                      <span style="color: #94A3B8; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Voting Started</span>
+                      <span style="color: #10B981; font-size: 16px; font-weight: 700; display: block;">{{formatDateTime startDate}}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 15px 0;">
+                      <span style="color: #94A3B8; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Voting Ends</span>
+                      <span style="color: #EF4444; font-size: 16px; font-weight: 700; display: block;">{{formatDateTime endDate}}</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
 
-              <!-- Event Details -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB; margin-bottom: 30px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
-                          <span style="color: #6B7280; font-size: 14px; display: block;">Event</span>
-                          <span style="color: #111827; font-size: 18px; font-weight: 700; display: block; margin-top: 4px;">{{eventName}}</span>
-                        </td>
-                      </tr>
-                      {{#if eventDescription}}
-                      <tr>
-                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
-                          <span style="color: #6B7280; font-size: 14px; display: block;">Description</span>
-                          <span style="color: #111827; font-size: 15px; display: block; margin-top: 4px; line-height: 1.5;">{{eventDescription}}</span>
-                        </td>
-                      </tr>
-                      {{/if}}
-                      <tr>
-                        <td style="padding: 10px 0; border-bottom: 1px solid #E5E7EB;">
-                          <span style="color: #6B7280; font-size: 14px; display: block;">Voting Started</span>
-                          <span style="color: #111827; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime startDate}}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 10px 0;">
-                          <span style="color: #6B7280; font-size: 14px; display: block;">Voting Ends</span>
-                          <span style="color: #EF4444; font-size: 16px; font-weight: 600; display: block; margin-top: 4px;">{{formatDateTime endDate}}</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Info Box -->
-              <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 16px; margin-bottom: 30px; border-radius: 4px;">
-                <p style="color: #1E40AF; font-size: 14px; margin: 0; line-height: 1.6;">
-                  <strong>ℹ️ Note:</strong> {{#if categoriesCount}}Browse through <strong>{{categoriesCount}} categories</strong> and{{else}}Browse through available categories and{{/if}} vote for your favorite candidates. Don't miss this opportunity!
+              <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%); border-left: 4px solid #3B82F6; padding: 25px; margin-bottom: 35px; border-radius: 12px;">
+                <p style="color: #93C5FD; font-size: 14px; margin: 0; line-height: 1.7;">
+                  <strong>ℹ️ Note:</strong> {{#if categoriesCount}}Browse through <strong>{{categoriesCount}} categories</strong> and{{else}}Browse available categories and{{/if}} vote for your favorite candidates. Every vote counts!
                 </p>
               </div>
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 35px 0;">
                 <tr>
                   <td align="center">
-                    <a href="{{eventUrl}}" style="display: inline-block; background-color: #8B5CF6; color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 6px; font-weight: 600; font-size: 16px;">
-                      Vote Now
+                    <a href="{{eventUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); color: #ffffff; text-decoration: none; padding: 20px 60px; border-radius: 50px; font-weight: 700; font-size: 17px; box-shadow: 0 15px 40px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 1px;">
+                      Vote Now →
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 30px 0 0;">
-                Good luck to all candidates!<br>
-                <strong>The {{appName}} Team</strong>
+              <p style="color: #CBD5E1; font-size: 16px; margin: 40px 0 0;">
+                Best of luck to all candidates!<br>
+                <strong style="background: linear-gradient(90deg, #8B5CF6, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">The {{appName}} Team</strong>
               </p>
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
-            <td style="background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB;">
-              <p style="color: #6B7280; font-size: 14px; margin: 0 0 10px;">
-                Need help? Contact us at <a href="mailto:{{supportEmail}}" style="color: #8B5CF6; text-decoration: none;">{{supportEmail}}</a>
+            <td style="background: rgba(0,0,0,0.3); padding: 30px 40px; text-align: center; border-top: 1px solid rgba(139, 92, 246, 0.2);">
+              <p style="color: #94A3B8; font-size: 14px; margin: 0 0 10px;">
+                Need help? <a href="mailto:{{supportEmail}}" style="color: #8B5CF6; text-decoration: none; font-weight: 600;">{{supportEmail}}</a>
               </p>
-              <p style="color: #9CA3AF; font-size: 12px; margin: 10px 0 0;">
-                © {{currentYear}} {{appName}}. All rights reserved.
-              </p>
+              <p style="color: #64748B; font-size: 12px; margin: 10px 0 0;">© {{currentYear}} {{appName}}. All rights reserved.</p>
             </td>
           </tr>
 

@@ -120,6 +120,25 @@ class UserValidation {
     }),
   });
 
+  // Suspend user validation
+  static suspendUserSchema = Joi.object({
+    reason: Joi.string().trim().max(500).allow("", null).messages({
+      "string.max": "Reason cannot exceed 500 characters",
+    }),
+  });
+
+  // Bulk status update validation
+  static bulkStatusUpdateSchema = Joi.object({
+    userIds: Joi.array().items(ObjectId()).min(1).required().messages({
+      "array.min": "At least one user ID is required",
+      "any.required": "User IDs are required",
+    }),
+    status: this.fields.status.required().messages({
+      "any.only": "Invalid status specified",
+      "any.required": "Status is required",
+    }),
+  });
+
   // User ID parameter validation
   static userIdSchema = Joi.object({
     id: ObjectId().required().messages({

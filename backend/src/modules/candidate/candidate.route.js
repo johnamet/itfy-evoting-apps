@@ -5,6 +5,7 @@
 
 import { Router } from "express";
 import CandidateController from "./candidate.controller.js";
+import FileService from "../../services/file.service.js";
 import {
   authenticate,
   authenticateCandidate,
@@ -18,6 +19,26 @@ import { ROLES } from "../../utils/constants/user.constants.js";
 const router = Router();
 
 // ==================== PUBLIC ROUTES ====================
+
+/**
+ * @route   GET /api/candidates/public
+ * @desc    Get all published and approved candidates (public)
+ * @access  Public
+ */
+router.get(
+  "/public",
+  (req, res) => CandidateController.listPublic(req, res)
+);
+
+/**
+ * @route   GET /api/candidates/slug/:slug
+ * @desc    Get candidate by slug (public)
+ * @access  Public
+ */
+router.get(
+  "/slug/:slug",
+  (req, res) => CandidateController.getBySlug(req, res)
+);
 
 /**
  * @route   GET /api/candidates/code/:code
@@ -63,6 +84,104 @@ router.get(
   "/profile/history",
   authenticateCandidate,
   (req, res) => CandidateController.getProfileHistory(req, res)
+);
+
+/**
+ * @route   GET /api/candidates/profile/stats
+ * @desc    Get own statistics (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.get(
+  "/profile/stats",
+  authenticateCandidate,
+  (req, res) => CandidateController.getMyStats(req, res)
+);
+
+/**
+ * @route   POST /api/candidates/profile/image
+ * @desc    Upload profile image (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.post(
+  "/profile/image",
+  authenticateCandidate,
+  FileService.uploadCandidatePhoto,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: () => "Uploaded profile image",
+  }),
+  (req, res) => CandidateController.uploadProfileImage(req, res)
+);
+
+/**
+ * @route   DELETE /api/candidates/profile/image
+ * @desc    Delete profile image (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.delete(
+  "/profile/image",
+  authenticateCandidate,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: () => "Deleted profile image",
+  }),
+  (req, res) => CandidateController.deleteProfileImage(req, res)
+);
+
+/**
+ * @route   POST /api/candidates/profile/cover
+ * @desc    Upload cover image (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.post(
+  "/profile/cover",
+  authenticateCandidate,
+  FileService.uploadCandidatePhoto,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: () => "Uploaded cover image",
+  }),
+  (req, res) => CandidateController.uploadCoverImage(req, res)
+);
+
+/**
+ * @route   POST /api/candidates/profile/gallery
+ * @desc    Upload gallery images (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.post(
+  "/profile/gallery",
+  authenticateCandidate,
+  FileService.uploadMultipleImages,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: (req) => `Uploaded ${req.files?.length || 0} gallery images`,
+  }),
+  (req, res) => CandidateController.uploadGalleryImages(req, res)
+);
+
+/**
+ * @route   DELETE /api/candidates/profile/gallery
+ * @desc    Delete gallery image (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.delete(
+  "/profile/gallery",
+  authenticateCandidate,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: () => "Deleted gallery image",
+  }),
+  (req, res) => CandidateController.deleteGalleryImage(req, res)
+);
+
+/**
+ * @route   POST /api/candidates/profile/categories
+ * @desc    Request to be added to additional category (authenticated candidate)
+ * @access  Private (candidate)
+ */
+router.post(
+  "/profile/categories",
+  authenticateCandidate,
+  logActivity(ACTION_TYPE.CANDIDATE_UPDATE, ENTITY_TYPE.CANDIDATE, {
+    getDescription: (req) => `Requested addition to category ${req.body.categoryId}`,
+  }),
+  (req, res) => CandidateController.requestCategoryAddition(req, res)
 );
 
 // ==================== BULK OPERATIONS (ADMIN) ====================

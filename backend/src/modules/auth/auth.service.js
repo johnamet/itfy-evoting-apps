@@ -12,6 +12,7 @@ import AuthValidation from "./auth.validation.js";
 import { AuthHelpers } from "../../utils/helpers/auth.helper.js";
 import { cache } from "../../utils/cache/cache.utils.js";
 import agendaManager from "../../services/agenda.service.js";
+import FileService from "../../services/file.service.js";
 import { STATUS } from "../../utils/constants/candidate.constants.js";
 import { ROLES } from "../../utils/constants/user.constants.js";
 import {
@@ -323,12 +324,16 @@ class AuthService extends BaseService {
           .select("+password_hash +login_attempts +locked_until");
       }
 
+      console.log("Candidate found:", candidate);
+
       // Use dummy hash if candidate doesn't exist (prevent timing attacks)
       const passwordHash =
         candidate?.password_hash ||
         "$2b$10$X/invalid/hash/that/will/never/match/anythingXXXXXXXXXXXXXXXXX";
 
-      const isValid = await bcrypt.compare(validated.password, passwordHash);
+      console.log("Using password hash:", validated.password, passwordHash);
+      const isValid = await AuthHelpers.comparePassword(validated.password, passwordHash);
+      console.log("Password valid:", isValid);
 
       // Check if candidate exists AFTER password comparison (constant time)
       if (!candidate) {
@@ -412,6 +417,9 @@ class AuthService extends BaseService {
           status: candidate.status,
           event: candidate.event,
           is_published: candidate.is_published,
+          profile_image: FileService.getFileUrl(candidate.profile_image),
+          cover_image: FileService.getFileUrl(candidate.cover_image),
+          gallery: FileService.getFileUrls(candidate.gallery),
         },
         accessToken,
         refreshToken,
@@ -446,17 +454,17 @@ class AuthService extends BaseService {
       }
 
       // Verify current password
-      const isValidPassword = await bcrypt.compare(
+      const isValidPassword = await AuthHelpers.comparePassword(
         validated.currentPassword,
         account.password_hash
-      );
+      )
 
       if (!isValidPassword) {
         throw new Error("Current password is incorrect");
       }
 
       // Check if new password is same as current
-      const isSamePassword = await bcrypt.compare(validated.newPassword, account.password_hash);
+      const isSamePassword = await AuthHelpers.comparePassword(validated.newPassword, account.password_hash);
 
       if (isSamePassword) {
         throw new Error("New password must be different from current password");
@@ -597,6 +605,62 @@ class AuthService extends BaseService {
     }
   }
 
+  // ==================== CURRENT USER ====================
+
+  /**
+   * Get current user or candidate profile
+   * @param {string} userId - User or candidate ID
+   * @param {string} userType - 'user' or 'candidate'
+   * @returns {Promise<Object>}
+   */
+  async getCurrentUser(userId, userType = "user") {
+    try {
+      const repository = userType === "candidate" ? this.candidateRepository : this.userRepository;
+
+      const account = await repository.findById(userId);
+
+      if (!account) {
+        throw new Error(ERROR_MESSAGES.ACCOUNT_NOT_FOUND);
+      }
+
+      // Return sanitized user data
+      if (userType === "candidate") {
+        return {
+          _id: account._id,
+          name: account.name,
+          email: account.email,
+          candidate_code: account.candidate_code,
+          status: account.status,
+          event: account.event,
+          categories: account.categories,
+          bio: account.bio,
+          phone: account.phone,
+          social_media: account.social_media,
+          profile_image: FileService.getFileUrl(account.profile_image),
+          cover_image: FileService.getFileUrl(account.cover_image),
+          gallery: FileService.getFileUrls(account.gallery),
+          is_published: account.is_published,
+          total_votes: account.total_votes,
+          created_at: account.created_at,
+          updated_at: account.updated_at,
+        };
+      }
+
+      return {
+        _id: account._id,
+        name: account.name,
+        email: account.email,
+        role: account.role,
+        email_verified: account.email_verified,
+        profile_image: FileService.getFileUrl(account.profile_image),
+        created_at: account.created_at,
+        updated_at: account.updated_at,
+      };
+    } catch (error) {
+      throw new Error(`Get current user failed: ${error.message}`);
+    }
+  }
+
   // ==================== TOKEN MANAGEMENT ====================
 
   /**
@@ -657,9 +721,18 @@ class AuthService extends BaseService {
   }
 
   /**
+   * Refresh access token using refresh token (alias for controller compatibility)
+   * @param {string} refreshToken - The refresh token
+   * @returns {Promise<Object>} - { accessToken, refreshToken }
+   */
+  async refreshAccessToken(refreshToken) {
+    return this.refreshToken({ refreshToken });
+  }
+
+  /**
    * Logout user or candidate
    * @param {string} userId - User or candidate ID
-   * @param {Object} data - { refreshToken, accessToken }
+   * @param {Object} data - { refresh_token, access_token }
    * @returns {Promise<Object>}
    */
   async logout(userId, data = {}) {
@@ -667,14 +740,14 @@ class AuthService extends BaseService {
       const validated = this.validate(data, AuthValidation.logoutSchema);
 
       // Delete refresh token
-      if (validated.refreshToken) {
+      if (validated.refresh_token) {
         await AuthHelpers.deleteRefreshToken(userId);
       }
 
       // Blacklist access token
-      if (validated.accessToken) {
+      if (validated.access_token) {
         try {
-          const payload = AuthHelpers.verifyToken(validated.accessToken);
+          const payload = AuthHelpers.verifyToken(validated.access_token);
           const ttl = payload.exp - Math.floor(Date.now() / 1000);
 
           if (ttl > 0) {
@@ -692,6 +765,26 @@ class AuthService extends BaseService {
     } catch (error) {
       throw new Error(`Logout failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Logout user (alias for controller compatibility)
+   * @param {string} userId - User ID
+   * @param {string} refreshToken - Refresh token to invalidate
+   * @returns {Promise<Object>}
+   */
+  async logoutUser(userId, refreshToken) {
+    return this.logout(userId, { refresh_token: refreshToken });
+  }
+
+  /**
+   * Logout candidate (alias for controller compatibility)
+   * @param {string} candidateId - Candidate ID
+   * @param {string} refreshToken - Refresh token to invalidate
+   * @returns {Promise<Object>}
+   */
+  async logoutCandidate(candidateId, refreshToken) {
+    return this.logout(candidateId, { refresh_token: refreshToken });
   }
 
   // ==================== EMAIL VERIFICATION ====================
@@ -803,6 +896,16 @@ class AuthService extends BaseService {
     } catch (error) {
       throw new Error(`Resend verification failed: ${error.message}`);
     }
+  }
+
+  /**
+   * Resend verification email (alias for controller compatibility)
+   * @param {string} email - User email
+   * @param {string} userType - 'user' or 'candidate'
+   * @returns {Promise<Object>}
+   */
+  async resendVerificationEmail(email, userType = "user") {
+    return this.resendVerification({ email }, userType);
   }
 
   // ==================== PRIVATE HELPERS ====================

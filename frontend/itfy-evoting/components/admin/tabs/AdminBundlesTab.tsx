@@ -50,6 +50,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { bundlesApi } from "@/lib/api/bundles";
+
 // Bundle type
 interface Bundle {
   _id: string;
@@ -425,12 +427,19 @@ export default function AdminBundlesTab() {
   const fetchBundles = async () => {
     try {
       setLoading(true);
-      // API call would go here
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setBundles(mockBundles);
+      const response = await bundlesApi.list({
+        page: 1,
+        limit: 50,
+        search: searchQuery || undefined,
+      });
+      if (response.success && response.data) {
+        setBundles(response.data);
+      } else {
+        setBundles([]);
+      }
     } catch (error) {
       console.error("Failed to fetch bundles:", error);
-      setBundles(mockBundles);
+      setBundles([]);
     } finally {
       setLoading(false);
     }
@@ -447,16 +456,26 @@ export default function AdminBundlesTab() {
   };
 
   const handleSave = async (data: Partial<Bundle>) => {
-    // Save logic here
-    console.log("Saving bundle:", data);
-    setModalOpen(false);
-    fetchBundles();
+    try {
+      if (selectedBundle) {
+        await bundlesApi.update(selectedBundle._id, data as any);
+      } else {
+        await bundlesApi.create(data as any);
+      }
+      setModalOpen(false);
+      fetchBundles();
+    } catch (error) {
+      console.error("Failed to save bundle:", error);
+    }
   };
 
   const handleToggle = async (bundle: Bundle) => {
-    // Toggle logic here
-    console.log("Toggling bundle:", bundle._id);
-    fetchBundles();
+    try {
+      await bundlesApi.update(bundle._id, { is_active: !bundle.is_active } as any);
+      fetchBundles();
+    } catch (error) {
+      console.error("Failed to toggle bundle:", error);
+    }
   };
 
   // Filter bundles
@@ -569,7 +588,14 @@ export default function AdminBundlesTab() {
               key={bundle._id}
               bundle={bundle}
               onEdit={() => handleEdit(bundle)}
-              onDelete={() => {}}
+              onDelete={async () => {
+                try {
+                  await bundlesApi.delete(bundle._id);
+                  fetchBundles();
+                } catch (error) {
+                  console.error("Failed to delete bundle:", error);
+                }
+              }}
               onToggle={() => handleToggle(bundle)}
             />
           ))}

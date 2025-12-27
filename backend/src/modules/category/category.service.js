@@ -153,6 +153,41 @@ class CategoryService extends BaseService {
   }
 
   /**
+   * Find all categories with filters and options
+   * @param {Object} filters - Query filters
+   * @param {Object} options - Query options (skip, limit, sort, etc.)
+   * @returns {Promise<Array>} - List of categories
+   */
+  async findAll(filters = {}, options = {}) {
+    try {
+      const { skip = 0, limit = 10, sort = { display_order: 1 }, ...queryOptions } = options;
+      const page = Math.floor(skip / limit) + 1;
+      
+      const result = await this.repository.findAll(filters, page, limit, { 
+        sort, 
+        populate: ["event", "candidates"],
+        ...queryOptions 
+      });
+      return result.data;
+    } catch (error) {
+      throw new Error(`Find all categories failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count categories matching filters
+   * @param {Object} filters - Query filters
+   * @returns {Promise<number>} - Count of categories
+   */
+  async count(filters = {}) {
+    try {
+      return await this.repository.count(filters);
+    } catch (error) {
+      throw new Error(`Count categories failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Update category
    * @param {string} categoryId - Category ID
    * @param {Object} data - Update data
@@ -698,6 +733,82 @@ class CategoryService extends BaseService {
       return await this.repository.incrementVotes(categoryId, count);
     } catch (error) {
       throw new Error(`Increment votes failed: ${error.message}`);
+    }
+  }
+
+  // ==================== CATEGORY CANDIDATES ====================
+
+  /**
+   * Get candidates for a category
+   * @param {string} categoryId - Category ID
+   * @param {Object} options - Query options (skip, limit, sort)
+   * @returns {Promise<Array>} - List of candidates
+   */
+  async getCategoryCandidates(categoryId, options = {}) {
+    try {
+      // Validate categoryId format
+      if (!categoryId || categoryId === 'undefined' || categoryId === 'null') {
+        throw new Error("Category not found");
+      }
+
+      const category = await this.repository.findById(categoryId, {
+        populate: {
+          path: "candidates",
+          options: {
+            skip: options.skip || 0,
+            limit: options.limit || 20,
+            sort: options.sort || { total_votes: -1 },
+          },
+          match: { status: "approved", is_published: true },
+        },
+      });
+
+      if (!category) {
+        throw new Error("Category not found");
+      }
+
+      return category.candidates || [];
+    } catch (error) {
+      // Re-throw "not found" errors as-is for proper 404 handling
+      if (error.message.includes("not found")) {
+        throw error;
+      }
+      throw new Error(`Get category candidates failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Count candidates in a category
+   * @param {string} categoryId - Category ID
+   * @returns {Promise<number>} - Number of candidates
+   */
+  async countCategoryCandidates(categoryId) {
+    try {
+      // Validate categoryId format
+      if (!categoryId || categoryId === 'undefined' || categoryId === 'null') {
+        throw new Error("Category not found");
+      }
+
+      const category = await this.repository.findById(categoryId);
+
+      if (!category) {
+        throw new Error("Category not found");
+      }
+
+      // Import CandidateRepository dynamically to avoid circular dependency
+      const { default: CandidateRepository } = await import("../candidate/candidate.repository.js");
+      
+      return await CandidateRepository.count({
+        categories: categoryId,
+        status: "approved",
+        is_published: true,
+      });
+    } catch (error) {
+      // Re-throw "not found" errors as-is for proper 404 handling
+      if (error.message.includes("not found")) {
+        throw error;
+      }
+      throw new Error(`Count category candidates failed: ${error.message}`);
     }
   }
 }

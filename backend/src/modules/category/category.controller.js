@@ -34,12 +34,21 @@ class CategoryController extends BaseController {
   /**
    * Get all categories with pagination and filters
    * GET /api/categories
+   * Public access (returns only active/published categories for non-admin users)
    */
   async list(req, res) {
     const { page, limit, skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["status", "event", "is_featured"]);
     const sort = this.getSort(req, "display_order");
     const search = this.getSearch(req);
+
+    // If not authenticated or not admin, only show active categories
+    const user = req.user;
+    const isAdmin = user && (user.role === "super_admin" || user.role === "admin" || user.role === "organiser" || user.role === "moderator");
+    
+    if (!isAdmin) {
+      filters.status = "active";
+    }
 
     if (search) {
       filters.$or = [
@@ -68,6 +77,23 @@ class CategoryController extends BaseController {
   async getById(req, res) {
     const { id } = req.params;
     const category = await this.service("categoryService").getCategoryById(id);
+
+    if (!category) {
+      return this.notFound(res, { resource: "Category" });
+    }
+
+    return this.success(res, {
+      data: category,
+    });
+  }
+
+  /**
+   * Get category by slug
+   * GET /api/categories/slug/:slug
+   */
+  async getBySlug(req, res) {
+    const { slug } = req.params;
+    const category = await this.service("categoryService").getCategoryBySlug(slug);
 
     if (!category) {
       return this.notFound(res, { resource: "Category" });

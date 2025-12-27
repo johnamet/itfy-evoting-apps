@@ -49,6 +49,33 @@ export const slidesApi = {
   // ==================== Public Endpoints ====================
 
   /**
+   * Get active slides (public)
+   */
+  getActive: async (): Promise<SlidesListResponse> => {
+    return api.get<SlidesListResponse>('/slides/active', {
+      skipAuth: true,
+    });
+  },
+
+  /**
+   * Get slides by type (hero, banner, promotional)
+   */
+  getByType: async (type: 'hero' | 'banner' | 'promotional'): Promise<SlidesListResponse> => {
+    return api.get<SlidesListResponse>(`/slides/type/${type}`, {
+      skipAuth: true,
+    });
+  },
+
+  /**
+   * Get slides by position
+   */
+  getByPosition: async (position: string): Promise<SlidesListResponse> => {
+    return api.get<SlidesListResponse>(`/slides/position/${position}`, {
+      skipAuth: true,
+    });
+  },
+
+  /**
    * Get active slides for homepage (public)
    */
   getHomepageSlides: async (): Promise<SlidesListResponse> => {
@@ -58,12 +85,19 @@ export const slidesApi = {
   },
 
   /**
-   * Get active slides for an event (public)
+   * Get slides for an event (public)
    */
-  getEventSlides: async (eventId: string): Promise<SlidesListResponse> => {
-    return api.get<SlidesListResponse>(`/events/${eventId}/slides`, {
+  getByEvent: async (eventId: string): Promise<SlidesListResponse> => {
+    return api.get<SlidesListResponse>(`/slides/event/${eventId}`, {
       skipAuth: true,
     });
+  },
+
+  /**
+   * Get active slides for an event (public) - alias
+   */
+  getEventSlides: async (eventId: string): Promise<SlidesListResponse> => {
+    return slidesApi.getByEvent(eventId);
   },
 
   /**

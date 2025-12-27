@@ -333,9 +333,9 @@ export interface Category {
   description?: string;
   icon?: string | null;
   slug: string;
-  candidates: ObjectId[];
+  candidates: ObjectId[] | Candidate[];
   status: CategoryStatus;
-  event: ObjectId;
+  event: ObjectId | Event;
   is_voting_open: boolean;
   voting_start_date?: string | null;
   voting_deadline?: string | null;
@@ -351,8 +351,28 @@ export interface Category {
   show_results_before_deadline: boolean;
   color_theme?: string | null;
   image?: string | null;
+  nomination_form?: ObjectId | null;
+  created_by?: ObjectId;
+  updated_by?: ObjectId | null;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+  
+  // Virtuals from backend
+  isDeleted?: boolean;
+  isVotingActive?: boolean;
+  hasVotingEnded?: boolean;
+  isVotingUpcoming?: boolean;
+  daysUntilVotingStarts?: number;
+  daysUntilDeadline?: number;
+  hoursUntilDeadline?: number;
+  votingDurationInDays?: number;
+  candidateCount?: number;
+  hasMinimumCandidates?: boolean;
+  isAtMaxCandidates?: boolean;
+  remainingCandidateSlots?: number | null;
+  canViewResults?: boolean;
+  averageVotesPerCandidate?: number;
 }
 
 export interface CreateCategoryRequest {
@@ -527,6 +547,7 @@ export interface UpdateCandidateRequest {
   last_name?: string;
   phone_number?: string;
   bio?: string;
+  why_nominate_me?: string;
   profile_image?: string;
   cover_image?: string;
   gallery?: string[];
@@ -534,6 +555,8 @@ export interface UpdateCandidateRequest {
   projects?: CandidateProject[];
   skills?: string[];
   education?: CandidateEducation[];
+  experience?: CandidateExperience[];
+  achievements?: CandidateAchievement[];
   social_links?: CandidateSocialLinks;
 }
 

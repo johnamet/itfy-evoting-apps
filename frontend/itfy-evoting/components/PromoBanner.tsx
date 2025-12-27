@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockSlides } from '@/lib/mocks/slides';
+import { useSlidesByType } from '@/hooks/usePublicData';
 import type { Slide } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -35,13 +35,18 @@ export default function PromoBanner({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Fetch banner slides from API
+  const { data: slides, isLoading } = useSlidesByType('banner');
+
   // Filter banner slides
-  const banners = mockSlides.filter(
-    (s): s is Slide =>
-      s.slide_type === 'banner' &&
-      s.status === 'active' &&
-      (slideIds ? slideIds.includes(s._id) : true)
-  );
+  const banners = useMemo(() => {
+    const slidesList = slides || [];
+    return slidesList.filter(
+      (s: Slide) =>
+        s.status === 'active' &&
+        (slideIds ? slideIds.includes(s._id) : true)
+    );
+  }, [slides, slideIds]);
 
   const goToNext = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % banners.length);
@@ -58,6 +63,15 @@ export default function PromoBanner({
     const interval = setInterval(goToNext, rotateInterval);
     return () => clearInterval(interval);
   }, [autoRotate, banners.length, rotateInterval, isHovered, goToNext]);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className={cn("flex items-center justify-center h-[250px] bg-gray-800/50 rounded-2xl", className)}>
+        <Loader2 className="w-8 h-8 text-[#0152be] animate-spin" />
+      </div>
+    );
+  }
 
   if (banners.length === 0) return null;
 
@@ -115,7 +129,7 @@ export default function PromoBanner({
                     {currentBanner.description}
                   </p>
                 )}
-                {currentBanner.button && (
+                {currentBanner.button && currentBanner.button.url && (
                   <Button
                     asChild
                     size="lg"
@@ -209,7 +223,7 @@ export default function PromoBanner({
                   {currentBanner.subtitle}
                 </p>
               )}
-              {currentBanner.button && (
+              {currentBanner.button && currentBanner.button.url && (
                 <Button
                   asChild
                   className="bg-[#0152be] hover:bg-[#0152be]/90 text-white group"
@@ -279,7 +293,7 @@ export default function PromoBanner({
                     {banner.subtitle}
                   </p>
                 )}
-                {banner.button && (
+                {banner.button && banner.button.url && (
                   <Link
                     href={banner.button.url}
                     className="inline-flex items-center gap-2 text-[#0152be] bg-white px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors w-fit group/btn"

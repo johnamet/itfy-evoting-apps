@@ -74,7 +74,14 @@ export class UI {
   constructor() {
     this.colors = colors;
     this.icons = icons;
-    this.currentRl = null;
+    this.mainRl = null; // Reference to main readline interface
+  }
+
+  /**
+   * Set the main readline interface
+   */
+  setReadlineInterface(rl) {
+    this.mainRl = rl;
   }
 
   /**
@@ -284,42 +291,54 @@ ${colors.reset}`;
 
   /**
    * Ask a question and get input
+   * FIXED: Properly handle readline interface to prevent double input display
    */
   async question(prompt, options = {}) {
     const { hidden = false, defaultValue = null, validate = null } = options;
     
-    return new Promise((resolve) => {
-      const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
-
+    return new Promise((resolve, reject) => {
       const promptText = defaultValue 
         ? `${colors.yellow}${icons.arrow}${colors.reset} ${prompt} ${colors.dim}[${defaultValue}]${colors.reset}: `
         : `${colors.yellow}${icons.arrow}${colors.reset} ${prompt}: `;
 
       if (hidden) {
+        // Pause main readline to prevent conflicts
+        if (this.mainRl) {
+          this.mainRl.pause();
+        }
+
         // For hidden input (passwords)
         process.stdout.write(promptText);
         
         let input = '';
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
-        process.stdin.setEncoding('utf8');
+        const stdin = process.stdin;
+        
+        // Save original state
+        const wasRaw = stdin.isRaw;
+        
+        stdin.setRawMode(true);
+        stdin.resume();
+        stdin.setEncoding('utf8');
 
         const onData = (char) => {
           switch (char) {
             case '\n':
             case '\r':
             case '\u0004': // Ctrl+D
-              process.stdin.setRawMode(false);
-              process.stdin.pause();
-              process.stdin.removeListener('data', onData);
+              stdin.setRawMode(wasRaw);
+              stdin.pause();
+              stdin.removeListener('data', onData);
               console.log('');
-              rl.close();
+              
+              // Resume main readline
+              if (this.mainRl) {
+                this.mainRl.resume();
+              }
+              
               resolve(input || defaultValue);
               break;
             case '\u0003': // Ctrl+C
+              stdin.setRawMode(wasRaw);
               process.exit(0);
               break;
             case '\u007F': // Backspace
@@ -335,19 +354,51 @@ ${colors.reset}`;
           }
         };
 
-        process.stdin.on('data', onData);
+        stdin.on('data', onData);
       } else {
-        rl.question(promptText, (answer) => {
+        // For normal input, create a temporary readline interface
+        // Pause main interface to prevent conflicts
+        if (this.mainRl) {
+          this.mainRl.pause();
+        }
+
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+          terminal: true
+        });
+
+        rl.question(promptText, async (answer) => {
           rl.close();
+          
+          // Small delay to ensure interface is fully closed
+          await new Promise(r => setTimeout(r, 10));
+          
           const result = answer.trim() || defaultValue;
           
           if (validate && result) {
             const validationResult = validate(result);
             if (validationResult !== true) {
               this.error(validationResult);
-              resolve(this.question(prompt, options));
+              
+              // Resume main readline before recursive call
+              if (this.mainRl) {
+                this.mainRl.resume();
+              }
+              
+              try {
+                const retryResult = await this.question(prompt, options);
+                resolve(retryResult);
+              } catch (err) {
+                reject(err);
+              }
               return;
             }
+          }
+          
+          // Resume main readline
+          if (this.mainRl) {
+            this.mainRl.resume();
           }
           
           resolve(result);
@@ -378,17 +429,24 @@ ${colors.reset}`;
     });
     
     this.newLine();
-    const answer = await this.question('Enter your choice', {
-      validate: (val) => {
-        const num = parseInt(val);
-        if (isNaN(num) || num < 1 || num > choices.length) {
-          return `Please enter a number between 1 and ${choices.length}`;
-        }
-        return true;
-      }
-    });
     
-    return choices[parseInt(answer) - 1];
+    // Keep asking until we get a valid answer
+    while (true) {
+      const answer = await this.question('Enter your choice');
+      
+      if (!answer) {
+        this.error('Please enter a number');
+        continue;
+      }
+      
+      const num = parseInt(answer);
+      if (isNaN(num) || num < 1 || num > choices.length) {
+        this.error(`Please enter a number between 1 and ${choices.length}`);
+        continue;
+      }
+      
+      return choices[num - 1];
+    }
   }
 
   /**

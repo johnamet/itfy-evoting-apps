@@ -3,7 +3,7 @@
  * Category management endpoints
  */
 
-import { api, buildPaginationParams, uploadFile } from './client';
+import { api, apiRequest, buildPaginationParams, uploadFile } from './client';
 import type {
   Category,
   ApiResponse,
@@ -70,6 +70,16 @@ export const categoriesApi = {
   // ==================== Public Endpoints ====================
 
   /**
+   * Get featured categories (public)
+   */
+  getFeatured: async (params?: PaginationParams): Promise<CategoriesListResponse> => {
+    return api.get<CategoriesListResponse>('/categories/featured', {
+      params: buildPaginationParams(params),
+      skipAuth: true,
+    });
+  },
+
+  /**
    * Get categories for an event (public)
    */
   getByEvent: async (
@@ -92,6 +102,15 @@ export const categoriesApi = {
   },
 
   /**
+   * Get category by slug (public)
+   */
+  getBySlug: async (slug: string): Promise<ApiResponse<Category>> => {
+    return api.get<ApiResponse<Category>>(`/categories/slug/${slug}`, {
+      skipAuth: true,
+    });
+  },
+
+  /**
    * Get public category results
    */
   getPublicResults: async (categoryId: string): Promise<ApiResponse<CategoryResultsResponse>> => {
@@ -104,7 +123,7 @@ export const categoriesApi = {
   // ==================== Admin/Organiser Endpoints ====================
 
   /**
-   * List all categories
+   * List all categories (public access)
    */
   list: async (filters?: CategoryFilters): Promise<CategoriesListResponse> => {
     return api.get<CategoriesListResponse>('/categories', {
@@ -115,6 +134,7 @@ export const categoriesApi = {
         search: filters?.search,
         is_featured: filters?.is_featured,
       },
+      skipAuth: true,
     });
   },
 
@@ -230,6 +250,114 @@ export const categoriesApi = {
    */
   deactivate: async (categoryId: string): Promise<ApiResponse<Category>> => {
     return api.post<ApiResponse<Category>>(`/categories/${categoryId}/deactivate`);
+  },
+
+  // ==================== Voting Lifecycle Endpoints ====================
+
+  /**
+   * Open voting for a category
+   */
+  openVoting: async (categoryId: string): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/voting/open`);
+  },
+
+  /**
+   * Close voting for a category
+   */
+  closeVoting: async (categoryId: string): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/voting/close`);
+  },
+
+  /**
+   * Update voting deadline
+   */
+  updateDeadline: async (
+    categoryId: string,
+    deadline: string
+  ): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/voting/deadline`, {
+      voting_deadline: deadline,
+    });
+  },
+
+  /**
+   * Extend voting deadline
+   */
+  extendDeadline: async (
+    categoryId: string,
+    hours: number
+  ): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/voting/extend`, {
+      hours,
+    });
+  },
+
+  // ==================== Candidate Management Endpoints ====================
+
+  /**
+   * Add candidates to category
+   */
+  addCandidates: async (
+    categoryId: string,
+    candidateIds: string[]
+  ): Promise<ApiResponse<Category>> => {
+    return api.post<ApiResponse<Category>>(`/categories/${categoryId}/candidates`, {
+      candidateIds,
+    });
+  },
+
+  /**
+   * Remove candidates from category
+   */
+  removeCandidates: async (
+    categoryId: string,
+    candidateIds: string[]
+  ): Promise<ApiResponse<Category>> => {
+    return apiRequest<ApiResponse<Category>>(`/categories/${categoryId}/candidates`, {
+      method: 'DELETE',
+      body: { candidateIds },
+    });
+  },
+
+  // ==================== Featured & Order Endpoints ====================
+
+  /**
+   * Toggle featured status
+   */
+  toggleFeatured: async (categoryId: string): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/featured`);
+  },
+
+  /**
+   * Update display order
+   */
+  updateOrder: async (
+    categoryId: string,
+    displayOrder: number
+  ): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/order`, {
+      display_order: displayOrder,
+    });
+  },
+
+  // ==================== Results Endpoints ====================
+
+  /**
+   * Publish category results
+   */
+  publishResults: async (categoryId: string): Promise<ApiResponse<Category>> => {
+    return api.put<ApiResponse<Category>>(`/categories/${categoryId}/results/publish`);
+  },
+
+  /**
+   * Get vote counts by candidate
+   */
+  getVoteCounts: async (
+    categoryId: string
+  ): Promise<ApiResponse<{ voteCounts: Array<{ candidate: string; candidateName: string; voteCount: number }> }>> => {
+    return api.get<ApiResponse<{ voteCounts: Array<{ candidate: string; candidateName: string; voteCount: number }> }>>(
+      `/categories/${categoryId}/vote-counts`
+    );
   },
 };
 
