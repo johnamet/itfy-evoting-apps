@@ -112,6 +112,9 @@ export function ImageUploadCard({
                   alt={title}
                   fill
                   className="object-cover"
+                  sizes="100vw"
+                  style={{ objectFit: 'cover' }}
+                  priority
                 />
                 {isUploading && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">

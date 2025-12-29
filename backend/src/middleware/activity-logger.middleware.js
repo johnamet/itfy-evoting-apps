@@ -109,7 +109,7 @@ export const logActivity = (action, entityType, options = {}) => {
 
         // Extract event context if available
         const eventId =
-          req.params.eventId || req.body.event_id || res.locals.eventId || null;
+          req.params.eventId || (req.body && req.body.event_id) || res.locals.eventId || null;
 
         // Parse user agent and IP location
         const ipAddress = req.ip || req.connection.remoteAddress;

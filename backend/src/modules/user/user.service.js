@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * User Service
  * Business logic for user management
@@ -52,8 +53,8 @@ class UserService extends BaseService {
       // Create user
       const user = await this.repository.create(validated);
 
-      // Send welcome email
-      await EmailService.sendEmail({
+      // Send welcome email via agenda job
+      await agendaManager.now('send email', {
         to: user.email,
         subject: "Welcome to ITFY E-Voting Platform",
         template: "welcome",
@@ -819,6 +820,302 @@ class UserService extends BaseService {
       throw new Error(`Restore user failed: ${error.message}`);
     } 
   }
+
+  /**
+ * Enhanced User Service Methods
+ * Add these to your existing UserService class
+ */
+
+// ==================== SERVICE METHODS ====================
+
+/**
+ * Hard delete user - permanently remove from database (super admin only)
+ */
+async hardDeleteUser(userId, adminId) {
+  try {
+    const user = await this.repository.findById(userId, { includeDeleted: true });
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Log this critical action before deletion
+    await this.activityService.log({
+      userId: adminId,
+      action: ACTION_TYPE.USER_HARD_DELETED,
+      entityType: ENTITY_TYPE.USER,
+      entityId: userId,
+      description: `PERMANENTLY deleted user: ${user.email}`,
+      metadata: { userEmail: user.email, userRole: user.role },
+      severity: "critical",
+    }).catch(err => console.error("Activity log failed:", err));
+
+    // Perform hard delete
+    const result = await this.repository.hardDelete(userId);
+
+    return result;
+  } catch (error) {
+    throw new Error(`Hard delete user failed: ${error.message}`);
+  }
+}
+
+/**
+ * Bulk perform action on users
+ */
+async bulkAction(userIds, action, adminId, reason = null) {
+  try {
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    for (const userId of userIds) {
+      try {
+        switch (action) {
+          case "activate":
+            await this.activateUser(userId, adminId);
+            break;
+          case "deactivate":
+            await this.deactivateUser(userId, adminId, reason);
+            break;
+          case "suspend":
+            await this.suspendUser(userId, reason, adminId);
+            break;
+          case "delete":
+            await this.deleteUser(userId, adminId);
+            break;
+          case "verify_email":
+            await this.forceVerifyEmail(userId, adminId);
+            break;
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
+        results.success++;
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          userId,
+          error: error.message,
+        });
+      }
+    }
+
+    // Log bulk action
+    this.activityService.log({
+      userId: adminId,
+      action: ACTION_TYPE.USERS_BULK_ACTION,
+      entityType: ENTITY_TYPE.USER,
+      description: `Performed bulk ${action} on ${userIds.length} users`,
+      metadata: { action, totalUsers: userIds.length, results },
+    }).catch(err => console.error("Activity log failed:", err));
+
+    return results;
+  } catch (error) {
+    throw new Error(`Bulk action failed: ${error.message}`);
+  }
+}
+
+/**
+ * Bulk delete users
+ */
+async bulkDelete(userIds, adminId) {
+  try {
+    let deletedCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        await this.deleteUser(userId, adminId);
+        deletedCount++;
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk delete
+    this.activityService.log({
+      userId: adminId,
+      action: ACTION_TYPE.USERS_BULK_DELETED,
+      entityType: ENTITY_TYPE.USER,
+      description: `Bulk deleted ${deletedCount} users`,
+      metadata: { deletedCount, totalAttempted: userIds.length, errors },
+      severity: "warning",
+    }).catch(err => console.error("Activity log failed:", err));
+
+    return { deletedCount, errors };
+  } catch (error) {
+    throw new Error(`Bulk delete failed: ${error.message}`);
+  }
+}
+
+/**
+ * Bulk restore deleted users (super admin only)
+ */
+async bulkRestore(userIds, adminId) {
+  try {
+    let restoredCount = 0;
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        await this.restoreUser(userId, adminId);
+        restoredCount++;
+      } catch (error) {
+        errors.push({ userId, error: error.message });
+      }
+    }
+
+    // Log bulk restore
+    this.activityService.log({
+      userId: adminId,
+      action: ACTION_TYPE.USERS_BULK_RESTORED,
+      entityType: ENTITY_TYPE.USER,
+      description: `Bulk restored ${restoredCount} users`,
+      metadata: { restoredCount, totalAttempted: userIds.length, errors },
+      severity: "warning",
+    }).catch(err => console.error("Activity log failed:", err));
+
+    return { restoredCount, errors };
+  } catch (error) {
+    throw new Error(`Bulk restore failed: ${error.message}`);
+  }
+}
+
+/**
+ * Advanced user search
+ */
+async advancedSearch(searchTerm, filters = {}) {
+  try {
+    const query = {};
+
+    // Text search
+    if (searchTerm) {
+      query.$or = [
+        { name: { $regex: searchTerm, $options: "i" } },
+        { email: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+
+    // Role filters
+    if (filters.roles && filters.roles.length > 0) {
+      query.role = { $in: filters.roles };
+    }
+
+    // Status filters
+    if (filters.statuses && filters.statuses.length > 0) {
+      query.status = { $in: filters.statuses };
+    }
+
+    // Email verification filter
+    if (filters.emailVerified !== undefined) {
+      query.email_verified = filters.emailVerified;
+    }
+
+    // Include deleted filter (super admin only)
+    if (!filters.includeDeleted) {
+      query.deleted_at = null;
+    }
+
+    const users = await this.repository.findAll(query, 1, 100, {
+      sort: { created_at: -1 },
+    });
+
+    return users.data;
+  } catch (error) {
+    throw new Error(`Advanced search failed: ${error.message}`);
+  }
+}
+
+/**
+ * Export users to CSV
+ */
+exportToCSV(users) {
+  const headers = ["ID", "Name", "Email", "Role", "Status", "Email Verified", "Created At"];
+  const rows = users.map(user => [
+    user._id,
+    user.name,
+    user.email,
+    user.role,
+    user.status,
+    user.email_verified ? "Yes" : "No",
+    new Date(user.created_at).toISOString(),
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell}"`).join(","))
+    .join("\n");
+
+  return csv;
+}
+
+/**
+ * Export users to Excel (requires xlsx package)
+ */
+async exportToExcel(users) {
+  // This requires the 'xlsx' package
+  const XLSX = require("xlsx");
+
+  const data = users.map(user => ({
+    ID: user._id,
+    Name: user.name,
+    Email: user.email,
+    Role: user.role,
+    Status: user.status,
+    "Email Verified": user.email_verified ? "Yes" : "No",
+    "Last Login": user.last_login ? new Date(user.last_login).toISOString() : "Never",
+    "Created At": new Date(user.created_at).toISOString(),
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+}
+
+/**
+ * Send password reset by admin
+ */
+async sendPasswordResetByAdmin(userId, adminId) {
+  try {
+    const user = await this.repository.findById(userId);
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Generate password reset token (implement this in your auth service)
+    const resetToken = await AuthHelpers.generateAndStoreResetToken(userId);
+
+    // Send reset email via Agenda
+    await agendaManager.now('send email', {
+      to: user.email,
+      subject: "Password Reset Request (Admin Initiated)",
+      template: "admin-password-reset",
+      context: {
+        name: user.name,
+        resetToken,
+        resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
+      },
+    });
+
+    // Log activity
+    this.activityService.log({
+      userId: adminId,
+      action: ACTION_TYPE.PASSWORD_RESET_SENT,
+      entityType: ENTITY_TYPE.USER,
+      entityId: userId,
+      description: `Admin sent password reset for user: ${user.email}`,
+      metadata: { userEmail: user.email },
+    }).catch(err => console.error("Activity log failed:", err));
+
+    return true;
+  } catch (error) {
+    throw new Error(`Send password reset failed: ${error.message}`);
+  }
+}
+
    
 
   // ==================== HELPER METHODS ====================

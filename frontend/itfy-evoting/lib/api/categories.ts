@@ -69,6 +69,22 @@ export interface CategoryResultsResponse {
 export const categoriesApi = {
   // ==================== Public Endpoints ====================
 
+   /**
+   * List all categories (public access)
+   */
+  listPublic: async (filters?: CategoryFilters): Promise<CategoriesListResponse> => {
+    return api.get<CategoriesListResponse>('/categories/public', {
+      params: {
+        ...buildPaginationParams(filters),
+        event: filters?.event,
+        status: filters?.status,
+        search: filters?.search,
+        is_featured: filters?.is_featured,
+      },
+      skipAuth: true,
+    });
+  },
+
   /**
    * Get featured categories (public)
    */

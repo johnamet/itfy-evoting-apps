@@ -14,6 +14,12 @@ const router = Router();
 // ==================== PUBLIC ROUTES ====================
 
 /**
+ * GET /api/categories/public
+ * Get all active categories (public)
+ */
+router.get("/public", CategoryController.listPublic.bind(CategoryController)); 
+
+/**
  * GET /api/categories/featured
  * Get featured categories (public)
  */

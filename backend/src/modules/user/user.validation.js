@@ -139,6 +139,54 @@ class UserValidation {
     }),
   });
 
+  // Bulk action validation
+static bulkActionSchema = Joi.object({
+  userIds: Joi.array().items(ObjectId()).min(1).required().messages({
+    "array.min": "At least one user ID is required",
+    "any.required": "User IDs are required",
+  }),
+  action: Joi.string()
+    .valid("activate", "deactivate", "suspend", "delete", "verify_email")
+    .required()
+    .messages({
+      "any.only": "Invalid action specified",
+      "any.required": "Action is required",
+    }),
+  reason: Joi.string().trim().max(500).allow("", null).messages({
+    "string.max": "Reason cannot exceed 500 characters",
+  }),
+});
+
+// Bulk delete validation
+static bulkDeleteSchema = Joi.object({
+  userIds: Joi.array().items(ObjectId()).min(1).required().messages({
+    "array.min": "At least one user ID is required",
+    "any.required": "User IDs are required",
+  }),
+});
+
+// Bulk restore validation
+static bulkRestoreSchema = Joi.object({
+  userIds: Joi.array().items(ObjectId()).min(1).required().messages({
+    "array.min": "At least one user ID is required",
+    "any.required": "User IDs are required",
+  }),
+});
+
+// Advanced search validation
+static advancedSearchSchema = Joi.object({
+  searchTerm: Joi.string().trim().max(100).required().messages({
+    "string.max": "Search term cannot exceed 100 characters",
+    "any.required": "Search term is required",
+  }),
+  filters: Joi.object({
+    roles: Joi.array().items(Joi.string().valid(...Object.values(ROLES))),
+    statuses: Joi.array().items(Joi.string().valid(...Object.values(STATUS))),
+    emailVerified: Joi.boolean(),
+    includeDeleted: Joi.boolean(),
+  }).default({}),
+});
+
   // User ID parameter validation
   static userIdSchema = Joi.object({
     id: ObjectId().required().messages({

@@ -3,6 +3,7 @@
  * Vote bundle management endpoints
  */
 
+import { get } from 'http';
 import { api, buildPaginationParams, uploadFile } from './client';
 import type {
   Bundle,
@@ -50,6 +51,19 @@ export interface BundleStatsResponse {
 export const bundlesApi = {
   // ==================== Public Endpoints ====================
 
+   /**
+   * 
+   * Get available bundles (public)
+   * 
+   */
+  listPublic: async (
+    params?: PaginationParams
+  ): Promise<BundlesListResponse> => {
+    return api.get<BundlesListResponse>(`/bundles/public`, {
+      params: buildPaginationParams(params),
+      skipAuth: true,
+    })},
+
   /**
    * Get bundles for an event (public)
    */
@@ -57,17 +71,20 @@ export const bundlesApi = {
     eventId: string,
     params?: PaginationParams
   ): Promise<BundlesListResponse> => {
-    return api.get<BundlesListResponse>(`/events/${eventId}/bundles`, {
+    return api.get<BundlesListResponse>(`/bundles/event/${eventId}`, {
       params: buildPaginationParams(params),
       skipAuth: true,
     });
   },
 
+ 
+
   /**
    * Get featured bundles for an event (public)
    */
-  getFeatured: async (eventId: string): Promise<BundlesListResponse> => {
-    return api.get<BundlesListResponse>(`/events/${eventId}/bundles/featured`, {
+  getFeatured: async (eventId?: string): Promise<BundlesListResponse> => {
+    return api.get<BundlesListResponse>(`/bundles/featured`, {
+      params: eventId ? { event: eventId } : undefined,
       skipAuth: true,
     });
   },
@@ -76,11 +93,11 @@ export const bundlesApi = {
    * Get popular bundles for an event (public)
    */
   getPopular: async (
-    eventId: string,
+    eventId?: string,
     limit?: number
   ): Promise<BundlesListResponse> => {
-    return api.get<BundlesListResponse>(`/events/${eventId}/bundles/popular`, {
-      params: { limit },
+    return api.get<BundlesListResponse>(`/bundles/popular`, {
+      params: { event: eventId, limit },
       skipAuth: true,
     });
   },
@@ -98,12 +115,12 @@ export const bundlesApi = {
    * Get bundles by price range (public)
    */
   getByPriceRange: async (
-    eventId: string,
     minPrice: number,
-    maxPrice: number
+    maxPrice: number,
+    eventId?: string
   ): Promise<BundlesListResponse> => {
-    return api.get<BundlesListResponse>(`/events/${eventId}/bundles/price-range`, {
-      params: { min_price: minPrice, max_price: maxPrice },
+    return api.get<BundlesListResponse>(`/bundles/price-range`, {
+      params: { min_price: minPrice, max_price: maxPrice, event: eventId },
       skipAuth: true,
     });
   },

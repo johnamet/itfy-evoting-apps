@@ -1,680 +1,678 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import {
-    Vote,
     Search,
-    Package,
-    Users,
-    Award,
+    Filter,
     ChevronRight,
     Star,
-    Trophy,
+    Users,
+    Vote,
+    Award,
+    Globe,
+    Loader2,
+    Calendar,
     Ticket,
+    Package,
     ArrowRight,
     Flame,
-    Timer
+    LayoutGrid,
+    List,
+    Sparkles,
+    Zap,
+    Tag
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import Image from 'next/image';
-import Link from 'next/link';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import AnnouncementBar from '@/components/AnnouncementBar';
-import PromoBanner from '@/components/PromoBanner';
-import GlassCard from '@/components/ui/GlassCard';
+import { motion, AnimatePresence } from 'framer-motion';
+
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import GlassCard from '@/components/ui/GlassCard';
 import VoteBundleModal from '@/components/VoteBundleModal';
 import VoteDialog from '@/components/VoteDialog';
-import { cn } from '@/lib/utils';
-import { mockEvents } from '@/lib/mocks/events';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockCandidates } from '@/lib/mocks/candidates';
-import { mockBundles } from '@/lib/mocks/bundles';
-import type { Bundle, Category, Candidate } from '@/types';
-
-type EventFilter = 'all' | string;
-type SortOption = 'popular' | 'price-low' | 'price-high' | 'votes';
+import { eventsApi } from '@/lib/api/events';
+import { categoriesApi } from '@/lib/api/categories';
+import { candidatesApi } from '@/lib/api/candidates';
+import { bundlesApi } from '@/lib/api/bundles';
+import styles from './styles.module.css';
+import { Bundle, Candidate, Category, Event } from '@/types';
+import { formatDistanceToNow } from 'date-fns';
+import Header from '@/components/ui/Header';
 
 export default function VotePage() {
+    // Data State
+    const [events, setEvents] = useState<Event[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [candidates, setCandidates] = useState<Candidate[]>([]);
+    const [bundles, setBundles] = useState<Bundle[]>([]);
+
+    // Loading & Error State
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filters & UI State
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedEventFilter, setSelectedEventFilter] = useState<EventFilter>('all');
-    const [sortBy, setSortBy] = useState<SortOption>('popular');
+    const [selectedEventFilter, setSelectedEventFilter] = useState('all');
+    const [activeTab, setActiveTab] = useState('bundles');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+    // Modals state
     const [selectedBundle, setSelectedBundle] = useState<Bundle | null>(null);
-    const [isBundleModalOpen, setIsBundleModalOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [isVoteDialogOpen, setIsVoteDialogOpen] = useState(false);
 
-    // Get events with active voting
-    const activeEvents = useMemo(() => {
-        return mockEvents.filter(event =>
-            event.status === 'active' && event.is_published
-        );
+    // Fetch Data
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setIsLoading(true);
+                const [
+                    eventsRes,
+                    categoriesRes,
+                    candidatesRes,
+                    bundlesRes
+                ] = await Promise.all([
+                    eventsApi.getPublicEvents(),
+                    categoriesApi.listPublic(),
+                    candidatesApi.listPublic(),
+                    bundlesApi.listPublic()
+                ]);
+
+                if (eventsRes.success) setEvents(eventsRes.data);
+                if (categoriesRes.success) setCategories(categoriesRes.data);
+                if (candidatesRes.success) setCandidates(candidatesRes.data);
+                if (bundlesRes.success) setBundles(bundlesRes.data);
+            } catch (err) {
+                console.error('Failed to fetch voting data:', err);
+                setError('Failed to load voting data. Please try again later.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
     }, []);
 
-    // Get categories open for voting
-    const votingCategories = useMemo(() => {
-        return mockCategories.filter(category => {
-            const now = new Date();
-            const votingEnd = category.voting_deadline ? new Date(category.voting_deadline) : null;
 
-            // Filter by event if selected
-            if (selectedEventFilter !== 'all' && category.event !== selectedEventFilter) {
-                return false;
-            }
+    // Filter Logic
+    const filteredData = useMemo(() => {
+        const query = searchQuery.toLowerCase();
 
-            // Only show categories with open voting
-            if (!category.is_voting_open) return false;
-            if (votingEnd && votingEnd <= now) return false;
-
-            // Search filter
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                const event = mockEvents.find(e => e._id === category.event);
-                if (
-                    !category.name.toLowerCase().includes(query) &&
-                    !category.description?.toLowerCase().includes(query) &&
-                    !event?.name.toLowerCase().includes(query)
-                ) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-    }, [selectedEventFilter, searchQuery]);
-
-    // Get bundles for active events
-    const availableBundles = useMemo(() => {
-        let filtered = mockBundles.filter(bundle => {
-            if (bundle.status !== 'active') return false;
-
-            // Filter by event
-            if (selectedEventFilter !== 'all' && bundle.event !== selectedEventFilter) {
-                return false;
-            }
-
-            // Check validity period
-            const now = new Date();
-            if (bundle.valid_from && new Date(bundle.valid_from) > now) return false;
-            if (bundle.valid_until && new Date(bundle.valid_until) < now) return false;
-
-            // Search filter
-            if (searchQuery) {
-                const query = searchQuery.toLowerCase();
-                if (
-                    !bundle.name.toLowerCase().includes(query) &&
-                    !bundle.description?.toLowerCase().includes(query)
-                ) {
-                    return false;
-                }
-            }
-
-            return true;
+        // Filter Bundles
+        const filteredBundles = bundles.filter(bundle => {
+            const matchesSearch = bundle.name.toLowerCase().includes(query) ||
+                bundle.description?.toLowerCase().includes(query);
+            console.log(bundle.event.name, selectedEventFilter);
+            const matchesEvent = selectedEventFilter === 'all' || bundle.event._id === selectedEventFilter;
+            return matchesSearch && matchesEvent && bundle.status === 'active';
         });
 
-        // Sort bundles
-        switch (sortBy) {
-            case 'popular':
-                filtered = filtered.sort((a, b) => (b.is_popular ? 1 : 0) - (a.is_popular ? 1 : 0) || b.vote_count - a.vote_count);
-                break;
-            case 'price-low':
-                filtered = filtered.sort((a, b) => a.price - b.price);
-                break;
-            case 'price-high':
-                filtered = filtered.sort((a, b) => b.price - a.price);
-                break;
-            case 'votes':
-                filtered = filtered.sort((a, b) => b.vote_count - a.vote_count);
-                break;
-        }
+        // Filter Candidates
+        const filteredCandidates = candidates.filter(candidate => {
+            const matchesSearch =
+                `${candidate.first_name} ${candidate.last_name}`.toLowerCase().includes(query) ||
+                candidate.candidate_code.toLowerCase().includes(query);
 
-        return filtered;
-    }, [selectedEventFilter, searchQuery, sortBy]);
+            let matchesEvent = true;
+            if (selectedEventFilter !== 'all') {
+                // Find categories for this candidate that belong to the selected event
+                const candidateCategories = candidate.categories
+                matchesEvent = candidate.event._id === selectedEventFilter;
+            }
 
-    // Get candidates for a specific category
-    const getCandidatesByCategory = useCallback((categoryId: string) => {
-        return mockCandidates.filter(candidate =>
-            candidate.categories.includes(categoryId) &&
-            candidate.status === 'approved' &&
-            candidate.is_published
-        );
-    }, []);
+            return matchesSearch && matchesEvent && candidate.status === 'approved' && candidate.is_published;
+        });
 
-    // Get event by ID
-    const getEventById = useCallback((eventId: string) => {
-        return mockEvents.find(e => e._id === eventId);
-    }, []);
+        // Filter Categories (for display helpers)
+        const filteredCategories = categories.filter(category => {
+            const matchesEvent = selectedEventFilter === 'all' || category.event._id === selectedEventFilter;
+            return matchesEvent && category.is_voting_open;
+        });
 
-    // Handle bundle click
-    const handleBundleClick = (bundle: Bundle) => {
-        setSelectedBundle(bundle);
-        setIsBundleModalOpen(true);
-    };
+        return {
+            bundles: filteredBundles,
+            candidates: filteredCandidates,
+            categories: filteredCategories
+        };
+    }, [bundles, candidates, categories, searchQuery, selectedEventFilter]);
 
-    // Handle candidate vote click
-    const handleVoteClick = (candidate: Candidate, category: Category) => {
+    // Derived Statistics
+    const stats = useMemo(() => {
+        return {
+            activeEvents: events.filter(e => e.is_published).length,
+            totalVotes: bundles.reduce((acc, b) => acc + b.vote_count, 0), // This might be temporary logic
+            activeCandidates: candidates.filter(c => c.status === 'approved').length
+        };
+    }, [events, bundles, candidates]);
+
+    const handleVoteClick = (candidate: Candidate, category?: Category) => {
         setSelectedCandidate(candidate);
-        setSelectedCategory(category);
+        setSelectedCategory(category || null);
         setIsVoteDialogOpen(true);
     };
 
-    // Get voting time remaining
-    const getTimeRemaining = (deadline: string) => {
-        const now = new Date();
-        const end = new Date(deadline);
-        if (end <= now) return 'Ended';
-        return formatDistanceToNow(end, { addSuffix: true });
-    };
 
-    // Statistics
-    const stats = {
-        totalCategories: votingCategories.length,
-        totalBundles: availableBundles.length,
-        totalVotes: votingCategories.reduce((sum, cat) => sum + cat.total_votes, 0),
-        totalCandidates: votingCategories.reduce((sum, cat) => sum + cat.candidates.length, 0),
-    };
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="relative w-16 h-16 mx-auto">
+                        <div className="absolute inset-0 rounded-full border-t-2 border-[#0152be] animate-spin"></div>
+                        <div className="absolute inset-2 rounded-full border-r-2 border-purple-500 animate-spin-reverse"></div>
+                        <div className="absolute inset-4 rounded-full border-b-2 border-pink-500 animate-spin"></div>
+                    </div>
+                    <p className="text-gray-400 animate-pulse">Loading voting platform...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white">
-            {/* Announcement Bar */}
-            <AnnouncementBar />
-
+        <>
             <Header />
-
-            {/* Hero Section */}
-            <section className="relative pt-24 pb-16 overflow-hidden">
-                {/* Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" />
-                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5" />
-                <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-to-bl from-[#0152be]/20 to-transparent rounded-full blur-3xl" />
-
-                <div className="container mx-auto px-6 relative z-10">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#0152be]/20 rounded-full text-[#0152be] text-sm font-medium mb-6">
-                            <Vote className="w-4 h-4" />
-                            <span>Cast Your Vote Now</span>
-                        </div>
-
-                        <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                            Vote for Your <span className="text-[#0152be]">Favorites</span>
-                        </h1>
-
-                        <p className="text-lg md:text-xl text-gray-400 mb-8 max-w-2xl mx-auto">
-                            Support your favorite nominees by purchasing vote bundles. Every vote counts in helping them win!
-                        </p>
-
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                                <div className="text-3xl font-bold text-[#0152be]">{stats.totalCategories}</div>
-                                <div className="text-sm text-gray-400">Open Categories</div>
-                            </div>
-                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                                <div className="text-3xl font-bold text-green-400">{stats.totalBundles}</div>
-                                <div className="text-sm text-gray-400">Vote Bundles</div>
-                            </div>
-                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                                <div className="text-3xl font-bold text-purple-400">{stats.totalCandidates}</div>
-                                <div className="text-sm text-gray-400">Candidates</div>
-                            </div>
-                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                                <div className="text-3xl font-bold text-orange-400">{stats.totalVotes.toLocaleString()}</div>
-                                <div className="text-sm text-gray-400">Total Votes</div>
-                            </div>
-                        </div>
-                    </div>
+            <div className="min-h-screen bg-black text-white selection:bg-[#0152be]/30">
+                {/* Background Effects */}
+                <div className="fixed inset-0 pointer-events-none">
+                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#0152be]/20 rounded-full blur-[120px] mix-blend-screen" />
+                    <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] mix-blend-screen" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-900/10 rounded-full blur-[100px] mix-blend-screen" />
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
                 </div>
-            </section>
 
-            {/* Promo Banner */}
-            <PromoBanner variant="compact" className="my-8" />
-
-            {/* Main Content */}
-            <section className="py-12">
-                <div className="container mx-auto px-6">
-                    {/* Filters Section */}
-                    <div className="flex flex-col lg:flex-row gap-4 mb-8">
-                        {/* Search */}
-                        <div className="relative flex-1">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                            <Input
-                                placeholder="Search categories, bundles, or events..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-12 bg-white/5 border-white/10 focus:border-[#0152be] h-12"
-                            />
+                <div className="relative z-10 pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div className="space-y-4">
+                            <Badge variant="outline" className="border-[#0152be] text-[#0152be] bg-[#0152be]/10 px-4 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm">
+                                <Sparkles className="w-3.5 h-3.5 mr-2" />
+                                Official Voting Portal
+                            </Badge>
+                            <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400 leading-tight">
+                                Cast Your Vote,<br />
+                                <span className="text-[#0152be]">Make It Count.</span>
+                            </h1>
+                            <p className="text-gray-400 max-w-xl text-lg leading-relaxed">
+                                Support your favorite candidates across multiple categories. Secure, transparent, and instant voting powered by blockchain technology.
+                            </p>
                         </div>
 
-                        {/* Event Filter */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 lg:pb-0">
-                            <Button
-                                variant={selectedEventFilter === 'all' ? 'default' : 'outline'}
-                                onClick={() => setSelectedEventFilter('all')}
-                                className={cn(
-                                    "whitespace-nowrap",
-                                    selectedEventFilter === 'all'
-                                        ? "bg-[#0152be] hover:bg-[#0152be]/90"
-                                        : "border-white/20 hover:bg-white/10"
-                                )}
+                        {/* Quick Stats */}
+                        <GlassCard className="p-4 md:p-6 flex items-center gap-8 bg-white/5 border-gray-800">
+                            <div className="text-center">
+                                <p className="text-gray-400 text-xs uppercase tracking-wider font-medium mb-1">Active Events</p>
+                                <p className="text-2xl font-bold text-white">{stats.activeEvents}</p>
+                            </div>
+                            <div className="w-px h-10 bg-gray-800" />
+                            <div className="text-center">
+                                <p className="text-gray-400 text-xs uppercase tracking-wider font-medium mb-1">Total Candidates</p>
+                                <p className="text-2xl font-bold text-white">{stats.activeCandidates}</p>
+                            </div>
+                        </GlassCard>
+                    </div>
+
+                    {/* Filters & Controls */}
+                    <div className="sticky top-20 z-30 -mx-4 px-4 py-4 backdrop-blur-xl border-y border-white/5 bg-black/50 md:rounded-2xl md:mx-0 md:border md:top-24">
+                        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                            <div className="relative w-full md:w-96 group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#0152be] transition-colors" />
+                                <Input
+                                    placeholder="Search candidates, events, or bundles..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10 bg-white/5 border-white/10 focus:border-[#0152be] focus:ring-[#0152be]/20 transition-all h-11"
+                                />
+                            </div>
+
+                            <div className="flex w-full md:w-auto gap-3 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+                                <Select value={selectedEventFilter} onValueChange={setSelectedEventFilter}>
+                                    <SelectTrigger className="w-[180px] bg-white/5 border-white/10 h-11">
+                                        <div className="flex items-center gap-2 truncate">
+                                            <Filter className="w-4 h-4 text-gray-400" />
+                                            <SelectValue placeholder="All Events" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Events</SelectItem>
+                                        {events.map((event) => (
+                                            <SelectItem key={event._id} value={event._id}>{event.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 h-11">
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        className={`p-2 rounded-md transition-all ${viewMode === 'grid'
+                                            ? 'bg-[#0152be] text-white shadow-lg'
+                                            : 'text-gray-400 hover:text-white'
+                                            }`}
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('list')}
+                                        className={`p-2 rounded-md transition-all ${viewMode === 'list'
+                                            ? 'bg-[#0152be] text-white shadow-lg'
+                                            : 'text-gray-400 hover:text-white'
+                                            }`}
+                                    >
+                                        <List className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content Tabs */}
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+                        <TabsList className="bg-transparent border-b border-gray-800 w-full justify-start h-auto p-0 rounded-none gap-6">
+                            <TabsTrigger
+                                value="bundles"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0152be] data-[state=active]:bg-transparent data-[state=active]:text-[#0152be] px-0 py-3 text-base text-gray-400 hover:text-gray-200 transition-all"
                             >
-                                All Events
-                            </Button>
-                            {activeEvents.map(event => (
-                                <Button
-                                    key={event._id}
-                                    variant={selectedEventFilter === event._id ? 'default' : 'outline'}
-                                    onClick={() => setSelectedEventFilter(event._id)}
-                                    className={cn(
-                                        "whitespace-nowrap",
-                                        selectedEventFilter === event._id
-                                            ? "bg-[#0152be] hover:bg-[#0152be]/90"
-                                            : "border-white/20 hover:bg-white/10"
-                                    )}
-                                >
-                                    {event.name}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
+                                <Package className="w-4 h-4 mr-2" />
+                                Vote Bundles
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="candidates"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0152be] data-[state=active]:bg-transparent data-[state=active]:text-[#0152be] px-0 py-3 text-base text-gray-400 hover:text-gray-200 transition-all"
+                            >
+                                <Users className="w-4 h-4 mr-2" />
+                                All Candidates
+                            </TabsTrigger>
+                        </TabsList>
 
-                    {/* Sort Options */}
-                    <div className="flex items-center gap-4 mb-8">
-                        <span className="text-gray-400 text-sm">Sort by:</span>
-                        <div className="flex gap-2">
-                            {[
-                                { value: 'popular', label: 'Popular' },
-                                { value: 'price-low', label: 'Price: Low to High' },
-                                { value: 'price-high', label: 'Price: High to Low' },
-                                { value: 'votes', label: 'Most Votes' },
-                            ].map(option => (
-                                <button
-                                    key={option.value}
-                                    onClick={() => setSortBy(option.value as SortOption)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-sm transition-colors",
-                                        sortBy === option.value
-                                            ? "bg-[#0152be] text-white"
-                                            : "text-gray-400 hover:text-white hover:bg-white/10"
-                                    )}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Vote Bundles Section */}
-                    <div className="mb-16">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0152be] to-sky-500 flex items-center justify-center">
-                                    <Package className="w-5 h-5 text-white" />
+                        {/* Vote Bundles Tab */}
+                        {/* Vote Bundles Tab */}
+                        <TabsContent value="bundles" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {filteredData.bundles.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6 border border-gray-800">
+                                        <Package className="w-8 h-8 text-gray-600" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-2">No Bundles Found</h3>
+                                    <p className="text-gray-400 max-w-sm mx-auto">
+                                        Try adjusting your search or filters to find available voting bundles.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-6 border-gray-700 hover:bg-gray-800"
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setSelectedEventFilter('all');
+                                        }}
+                                    >
+                                        Clear Filters
+                                    </Button>
                                 </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white">Vote Bundles</h2>
-                                    <p className="text-gray-400 text-sm">Choose a bundle to support your favorites</p>
-                                </div>
-                            </div>
-                        </div>
+                            ) : (
+                                <div className={`grid gap-6 ${viewMode === 'grid'
+                                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                                    : 'grid-cols-1'
+                                    }`}>
+                                    {filteredData.bundles.map((bundle) => {
+                                        const hasDiscount = bundle.discount_percentage && bundle.discount_percentage > 0;
 
-                        {availableBundles.length === 0 ? (
-                            <div className="text-center py-16 bg-white/5 rounded-2xl border border-white/10">
-                                <Package className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-                                <h3 className="text-xl font-semibold text-gray-300 mb-2">No Bundles Available</h3>
-                                <p className="text-gray-500">Check back later for available vote bundles.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {availableBundles.map((bundle) => {
-                                    const event = getEventById(bundle.event);
-                                    const hasDiscount = bundle.discount_percentage && bundle.discount_percentage > 0;
+                                        return (
+                                            <motion.div
+                                                key={bundle._id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                whileHover={{ y: -5 }}
+                                                transition={{ duration: 0.2 }}
+                                                onClick={() => setSelectedBundle(bundle)}
+                                                className="group cursor-pointer"
+                                            >
+                                                <GlassCard className="h-full overflow-hidden border-gray-800 bg-gray-900/40 hover:bg-gray-900/60 hover:border-[#0152be]/50 hover:shadow-2xl hover:shadow-[#0152be]/10 transition-all duration-300 flex flex-col">
+                                                    {/* Bundle Header */}
+                                                    <div className="relative p-6 bg-gradient-to-br from-gray-800/50 to-transparent flex-1">
+                                                        {/* Badges */}
+                                                        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                                                            {bundle.is_popular && (
+                                                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50 hover:bg-orange-500/30">
+                                                                    <Flame className="w-3 h-3 mr-1" /> Popular
+                                                                </Badge>
+                                                            )}
+                                                            {bundle.is_featured && !bundle.is_popular && (
+                                                                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50 hover:bg-yellow-500/30">
+                                                                    <Star className="w-3 h-3 mr-1" /> Featured
+                                                                </Badge>
+                                                            )}
+                                                            {bundle.daysUntilExpiry && bundle.daysUntilExpiry <= 7 && (
+                                                                <Badge className="bg-red-500/20 text-red-400 border-red-500/50 animate-pulse">
+                                                                    Ends in {bundle.daysUntilExpiry} days
+                                                                </Badge>
+                                                            )}
+                                                        </div>
 
-                                    return (
-                                        <GlassCard
-                                            key={bundle._id}
-                                            onClick={() => handleBundleClick(bundle)}
-                                            className={cn(
-                                                "relative group cursor-pointer overflow-hidden",
-                                                "border border-gray-800/50 bg-gradient-to-br from-gray-900/80 via-black/90 to-gray-950/80",
-                                                "backdrop-blur-xl shadow-lg",
-                                                "hover:border-[#0152be]/50 hover:shadow-xl hover:shadow-[#0152be]/20",
-                                                "transition-all duration-300",
-                                                "hover:-translate-y-1"
-                                            )}
-                                        >
+                                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0152be] to-sky-500 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#0152be]/20">
+                                                            <div className="w-full h-full bg-gray-950 rounded-[14px] flex items-center justify-center">
+                                                                <Package className="w-7 h-7 text-white" />
+                                                            </div>
+                                                        </div>
 
-                                            {/* Popular/Featured Badge - Top Right */}
-                                            {(bundle.is_popular || bundle.is_featured) && (
-                                                <div className="absolute top-3 right-3 z-20">
-                                                    <Badge
-                                                        className={cn(
-                                                            "shadow-lg border-0 px-2 py-1 text-xs font-semibold",
-                                                            bundle.is_popular
-                                                                ? "bg-gradient-to-r from-orange-500 to-red-600 text-white"
-                                                                : "bg-gradient-to-r from-[#0152be] to-sky-500 text-white"
-                                                        )}
-                                                    >
-                                                        {bundle.is_popular ? (
-                                                            <>
-                                                                <Flame className="w-3 h-3 mr-1" />
-                                                                HOT
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Star className="w-3 h-3 mr-1" />
-                                                                FEATURED
-                                                            </>
-                                                        )}
-                                                    </Badge>
-                                                </div>
-                                            )}
-
-                                            {/* Discount Badge - Top Left */}
-                                            {hasDiscount && (
-                                                <div className="absolute top-3 left-3 z-20">
-                                                    <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 px-2 py-1 shadow-lg font-semibold text-xs">
-                                                        -{bundle.discount_percentage}%
-                                                    </Badge>
-                                                </div>
-                                            )}
-
-                                            <div className="relative z-10 p-5 pt-10">
-                                                {/* Bundle Icon with Glow */}
-                                                <div className="w-14 h-14 rounded-2xl mx-auto mb-4 relative group-hover:scale-110 transition-transform duration-300">
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-[#0152be]/40 to-sky-500/40 rounded-2xl blur-lg" />
-                                                    <div className="relative w-full h-full rounded-2xl bg-gradient-to-br from-[#0152be]/30 to-sky-500/20 backdrop-blur-sm border border-[#0152be]/30 flex items-center justify-center">
-                                                        <Ticket className="w-7 h-7 text-[#0152be]" />
-                                                    </div>
-                                                </div>
-
-                                                {/* Bundle Name */}
-                                                <h3 className="text-lg font-bold text-white text-center mb-1 group-hover:text-[#0152be] transition-colors">
-                                                    {bundle.name}
-                                                </h3>
-
-                                                {/* Event Name */}
-                                                {event && (
-                                                    <p className="text-center text-gray-400 mb-4 text-xs uppercase tracking-wider">
-                                                        {event.name}
-                                                    </p>
-                                                )}
-
-                                                {/* Vote Count with Bar */}
-                                                <div className="mb-4">
-                                                    <div className="flex items-center justify-between mb-1.5">
-                                                        <span className="text-xs text-gray-400">Votes</span>
-                                                        <span className="text-xl font-bold text-[#0152be]">
-                                                            {bundle.vote_count.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-800/50 rounded-full h-1.5 overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-gradient-to-r from-[#0152be] to-sky-500 rounded-full"
-                                                            style={{ width: `${Math.min(100, bundle.vote_count / 1000 * 100)}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Price Section */}
-                                                <div className="mb-4 text-center">
-                                                    <div className="flex items-baseline justify-center gap-2">
-                                                        <span className="text-2xl font-bold text-white">
-                                                            {bundle.currency} {bundle.price.toFixed(2)}
-                                                        </span>
-                                                        {hasDiscount && bundle.original_price && (
-                                                            <span className="text-sm text-gray-500 line-through">
-                                                                {bundle.currency} {bundle.original_price.toFixed(2)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {hasDiscount && bundle.original_price && (
-                                                        <p className="text-green-400 font-medium mt-1 text-xs">
-                                                            Save {bundle.currency} {(bundle.original_price - bundle.price).toFixed(2)}
+                                                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#0152be] transition-colors">
+                                                            {bundle.name}
+                                                        </h3>
+                                                        <p className="text-gray-400 text-sm line-clamp-2 min-h-[40px] mb-2">
+                                                            {bundle.description || `Get ${bundle.vote_count} votes for ${bundle.event.name}`}
                                                         </p>
-                                                    )}
-                                                </div>
 
-                                                {/* Description */}
-                                                {bundle.description && (
-                                                    <p className="text-gray-400 text-center text-xs leading-relaxed mb-4 line-clamp-2">
-                                                        {bundle.description}
-                                                    </p>
-                                                )}
-
-                                                {/* CTA Button */}
-                                                <Button
-                                                    size="sm"
-                                                    className={cn(
-                                                        "w-full relative overflow-hidden font-semibold",
-                                                        "bg-gradient-to-r from-[#0152be] to-sky-500",
-                                                        "hover:from-[#014099] hover:to-sky-600",
-                                                        "shadow-lg shadow-[#0152be]/30",
-                                                        "group/btn"
-                                                    )}
-                                                >
-                                                    <span className="relative z-10 flex items-center justify-center">
-                                                        Select Bundle
-                                                        <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                                                    </span>
-                                                </Button>
-                                            </div>
-                                        </GlassCard>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Categories Section */}
-                    <div>
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                    <Award className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-white">Open for Voting</h2>
-                                    <p className="text-gray-400 text-sm">Categories currently accepting votes</p>
-                                </div>
-                            </div>
-                            <Link href="/categories">
-                                <Button variant="outline" className="border-white/20 hover:bg-white/10">
-                                    View All Categories
-                                    <ChevronRight className="w-4 h-4 ml-2" />
-                                </Button>
-                            </Link>
-                        </div>
-
-                        {votingCategories.length === 0 ? (
-                            <div className="text-center py-16 bg-white/5 rounded-2xl border border-white/10">
-                                <Award className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-                                <h3 className="text-xl font-semibold text-gray-300 mb-2">No Active Voting</h3>
-                                <p className="text-gray-500">There are no categories open for voting at the moment.</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-8">
-                                {votingCategories.map((category) => {
-                                    const event = getEventById(category.event);
-                                    const candidates = getCandidatesByCategory(category._id);
-                                    const timeRemaining = category.voting_deadline ? getTimeRemaining(category.voting_deadline) : null;
-
-                                    return (
-                                        <div key={category._id} className="bg-white/5 rounded-2xl border border-white/10 overflow-hidden">
-                                            {/* Category Header */}
-                                            <div className="p-6 border-b border-white/10">
-                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                    <div className="flex items-center gap-4">
-                                                        {category.image ? (
-                                                            <div className="w-16 h-16 rounded-xl overflow-hidden">
-                                                                <Image
-                                                                    src={category.image}
-                                                                    alt={category.name}
-                                                                    width={64}
-                                                                    height={64}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <div
-                                                                className="w-16 h-16 rounded-xl flex items-center justify-center"
-                                                                style={{ backgroundColor: category.color_theme || '#0152be' }}
-                                                            >
-                                                                <Trophy className="w-8 h-8 text-white" />
-                                                            </div>
-                                                        )}
-                                                        <div>
-                                                            <h3 className="text-xl font-bold text-white">{category.name}</h3>
-                                                            {event && (
-                                                                <p className="text-sm text-gray-400">{event.name}</p>
+                                                        {/* Rich Stats */}
+                                                        <div className="flex flex-wrap gap-2 mt-3">
+                                                            {bundle.pricePerVote && (
+                                                                <Badge variant="outline" className="border-gray-700 text-gray-400 text-xs">
+                                                                    {bundle.currency} {bundle.pricePerVote.toFixed(2)}/vote
+                                                                </Badge>
+                                                            )}
+                                                            {bundle.savingsAmount && bundle.savingsAmount > 0 && (
+                                                                <Badge variant="outline" className="border-green-800 text-green-400 bg-green-500/5 text-xs">
+                                                                    Save {bundle.currency}{bundle.savingsAmount.toFixed(0)}
+                                                                </Badge>
                                                             )}
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-4">
-                                                        {/* Time Remaining */}
-                                                        {timeRemaining && (
-                                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 rounded-lg text-orange-400 text-sm">
-                                                                <Timer className="w-4 h-4" />
-                                                                <span>Ends {timeRemaining}</span>
+                                                    {/* Bundle Details */}
+                                                    <div className="p-6 border-t border-gray-800/50 space-y-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-baseline gap-1.5">
+                                                                <span className="text-3xl font-bold text-white tracking-tight">
+                                                                    {bundle.currency} {bundle.price.toFixed(2)}
+                                                                </span>
+                                                                {hasDiscount && (
+                                                                    <span className="text-sm text-gray-500 line-through">
+                                                                        {bundle.original_price?.toFixed(2)}
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                        )}
-
-                                                        {/* Total Votes */}
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0152be]/20 rounded-lg text-[#0152be] text-sm">
-                                                            <Vote className="w-4 h-4" />
-                                                            <span>{category.total_votes.toLocaleString()} votes</span>
+                                                            {hasDiscount && (
+                                                                <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                                                                    Save {bundle.discount_percentage}%
+                                                                </Badge>
+                                                            )}
                                                         </div>
 
-                                                        {/* Candidates Count */}
-                                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/20 rounded-lg text-purple-400 text-sm">
-                                                            <Users className="w-4 h-4" />
-                                                            <span>{candidates.length} candidates</span>
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center justify-between text-sm py-2 border-b border-gray-800/50">
+                                                                <span className="text-gray-400 flex items-center gap-2">
+                                                                    <Ticket className="w-4 h-4 text-[#0152be]" />
+                                                                    Vote Count
+                                                                </span>
+                                                                <span className="font-semibold text-white">{bundle.vote_count.toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-sm py-2">
+                                                                <span className="text-gray-400 flex items-center gap-2">
+                                                                    <Calendar className="w-4 h-4 text-purple-400" />
+                                                                    Event
+                                                                </span>
+                                                                <span className="font-semibold text-white truncate max-w-[150px]">
+                                                                    {bundle.event.name}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </div>
 
-                                                {category.description && (
-                                                    <p className="text-gray-400 text-sm mt-4">{category.description}</p>
-                                                )}
-                                            </div>
-
-                                            {/* Candidates Grid */}
-                                            <div className="p-6">
-                                                {candidates.length === 0 ? (
-                                                    <div className="text-center py-8 text-gray-500">
-                                                        No candidates in this category yet.
+                                                        <Button className="w-full bg-white text-black hover:bg-gray-200 group-hover:bg-[#0152be] group-hover:text-white transition-all duration-300 font-semibold shadow-xl shadow-black/20">
+                                                            Select Bundle
+                                                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                                        </Button>
                                                     </div>
-                                                ) : (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                                        {candidates.slice(0, 5).map((candidate) => (
-                                                            <div
-                                                                key={candidate._id}
-                                                                className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-[#0152be]/50 transition-all group cursor-pointer"
-                                                                onClick={() => handleVoteClick(candidate, category)}
-                                                            >
-                                                                {/* Candidate Image */}
-                                                                <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-3">
+                                                </GlassCard>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </TabsContent>
+
+                        {/* Candidates Tab */}
+                        < TabsContent value="candidates" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500" >
+                            {
+                                filteredData.candidates.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6 border border-gray-800">
+                                            <Users className="w-8 h-8 text-gray-600" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-white mb-2">No Candidates Found</h3>
+                                        <p className="text-gray-400 max-w-sm mx-auto">
+                                            We couldn't find any candidates matching your current filters.
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            className="mt-6 border-gray-700 hover:bg-gray-800"
+                                            onClick={() => {
+                                                setSearchQuery('');
+                                                setSelectedEventFilter('all');
+                                            }}
+                                        >
+                                            Clear Filters
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className={`grid gap-6 ${viewMode === 'grid'
+                                        ? 'grid-cols-1 md:grid-cols-3 lg:grid-cols-4'
+                                        : 'grid-cols-1'
+                                        }`}>
+                                        {filteredData.candidates.map((candidate) => {
+                                            if (viewMode === 'list') {
+                                                return (
+                                                    <motion.div
+                                                        key={candidate._id}
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    >
+                                                        <GlassCard className="p-4 flex items-center gap-6 hover:bg-gray-900/60 transition-colors group cursor-pointer" onClick={() => handleVoteClick(candidate)}>
+                                                            <div className="relative w-16 h-16 flex-shrink-0">
+                                                                <div className="w-full h-full rounded-full overflow-hidden ring-2 ring-gray-800 group-hover:ring-[#0152be] transition-all">
                                                                     {candidate.profile_image ? (
                                                                         <Image
                                                                             src={candidate.profile_image}
                                                                             alt={`${candidate.first_name} ${candidate.last_name}`}
                                                                             fill
-                                                                            className="object-cover group-hover:scale-110 transition-transform"
+                                                                            className="object-cover"
                                                                         />
                                                                     ) : (
                                                                         <div className="w-full h-full bg-gradient-to-br from-[#0152be] to-sky-500 flex items-center justify-center">
-                                                                            <span className="text-3xl font-bold text-white">
+                                                                            <span className="font-bold text-white text-xl">
                                                                                 {candidate.first_name[0]}{candidate.last_name[0]}
                                                                             </span>
                                                                         </div>
                                                                     )}
-
-                                                                    {/* Featured Badge */}
-                                                                    {candidate.is_featured && (
-                                                                        <div className="absolute top-2 right-2">
-                                                                            <Badge className="bg-yellow-500 text-black border-0 text-xs">
-                                                                                <Star className="w-3 h-3 mr-1" />
-                                                                                Featured
-                                                                            </Badge>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
+                                                                {candidate.is_featured && (
+                                                                    <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1 shadow-lg ring-2 ring-black">
+                                                                        <Star className="w-3 h-3 text-white fill-current" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
 
-                                                                {/* Candidate Info */}
-                                                                <h4 className="font-semibold text-white text-sm truncate">
-                                                                    {candidate.first_name} {candidate.last_name}
-                                                                </h4>
-                                                                <p className="text-xs text-gray-400 mb-2">{candidate.candidate_code}</p>
-
-                                                                {/* Vote Count */}
-                                                                <div className="flex items-center justify-between text-xs">
-                                                                    <span className="text-gray-400">{candidate.vote_count.toLocaleString()} votes</span>
-                                                                    <Button size="sm" className="h-7 text-xs bg-[#0152be] hover:bg-[#0152be]/90">
-                                                                        <Vote className="w-3 h-3 mr-1" />
-                                                                        Vote
-                                                                    </Button>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <h3 className="text-lg font-bold text-white truncate group-hover:text-[#0152be] transition-colors">
+                                                                        {candidate.first_name} {candidate.last_name}
+                                                                    </h3>
+                                                                    <Badge variant="outline" className="border-gray-700 text-gray-400 text-xs">
+                                                                        {candidate.candidate_code}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                                                    <span className="flex items-center gap-1.5 truncate">
+                                                                        <Award className="w-3.5 h-3.5 text-purple-400" />
+                                                                        {candidate.categories[0].name || 'Uncategorized'}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1.5 truncate">
+                                                                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                                                                        {candidate.event.name}
+                                                                    </span>
                                                                 </div>
                                                             </div>
-                                                        ))}
 
-                                                        {/* View All Link if more candidates */}
-                                                        {candidates.length > 5 && (
-                                                            <Link
-                                                                href={`/categories/${category.slug}`}
-                                                                className="bg-white/5 rounded-xl p-4 border border-white/10 border-dashed hover:border-[#0152be]/50 transition-all flex flex-col items-center justify-center text-center"
-                                                            >
-                                                                <div className="w-12 h-12 rounded-full bg-[#0152be]/20 flex items-center justify-center mb-2">
-                                                                    <Users className="w-6 h-6 text-[#0152be]" />
+                                                            <div className="text-right flex-shrink-0">
+                                                                <div className="text-2xl font-bold text-white mb-1">
+                                                                    {candidate.vote_count.toLocaleString()}
                                                                 </div>
-                                                                <span className="text-sm font-medium text-white">View All</span>
-                                                                <span className="text-xs text-gray-400">+{candidates.length - 5} more</span>
-                                                            </Link>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </section>
+                                                                <div className="text-xs text-gray-500 font-medium uppercase tracking-wider">Votes</div>
+                                                            </div>
 
-            {/* Bottom Promo Banner */}
-            <PromoBanner variant="compact" className="my-8" />
+                                                            <Button
+                                                                className="bg-[#0152be] hover:bg-[#014099] ml-4"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleVoteClick(candidate);
+                                                                }}
+                                                            >
+                                                                <Vote className="w-4 h-4 mr-2" />
+                                                                Vote
+                                                            </Button>
+                                                        </GlassCard>
+                                                    </motion.div>
+                                                );
+                                            }
 
-            <Footer />
+                                            // Grid View
+                                            return (
+                                                <motion.div
+                                                    key={candidate._id}
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    whileHover={{ y: -5 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="group cursor-pointer"
+                                                    onClick={() => handleVoteClick(candidate)}
+                                                >
+                                                    <GlassCard className="overflow-hidden bg-gray-900/40 hover:bg-gray-900/60 transition-all duration-300 border-gray-800 hover:border-[#0152be]/50 hover:shadow-xl hover:shadow-[#0152be]/10">
+                                                        <div className="relative aspect-auto h-48 overflow-hidden bg-gray-800">
+                                                            {candidate.profile_image ? (
+                                                                <Image
+                                                                    src={candidate.profile_image}
+                                                                    alt={`${candidate.first_name} ${candidate.last_name}`}
+                                                                    fill
+                                                                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-gradient-to-br from-[#0152be] to-sky-500 flex items-center justify-center">
+                                                                    <span className="text-6xl font-bold text-white/20">
+                                                                        {candidate.first_name[0]}{candidate.last_name[0]}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
-            {/* Vote Bundle Modal */}
-            {selectedBundle && (
-                <VoteBundleModal
-                    open={isBundleModalOpen}
-                    onOpenChange={setIsBundleModalOpen}
-                    bundle={selectedBundle}
-                    onVoteClick={(candidate: Candidate, category: Category) => {
-                        setIsBundleModalOpen(false);
-                        handleVoteClick(candidate, category);
-                    }}
-                />
-            )}
+                                                            {/* Floating Badges */}
+                                                            <div className="absolute top-3 right-3 flex flex-col gap-2">
+                                                                {candidate.is_featured && (
+                                                                    <Badge className="bg-yellow-500 text-black border-none shadow-lg font-bold">
+                                                                        <Star className="w-3 h-3 mr-1 fill-current" /> Featured
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
 
-            {/* Vote Dialog */}
-            {selectedCandidate && selectedCategory && (
-                <VoteDialog
-                    open={isVoteDialogOpen}
-                    onOpenChange={setIsVoteDialogOpen}
-                    candidate={selectedCandidate}
-                    category={selectedCategory}
-                    eventId={selectedCategory.event}
-                    eventName={getEventById(selectedCategory.event)?.name}
-                />
-            )}
-        </div>
+                                                            <div className="absolute bottom-4 left-4 right-4 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                                                                <h3 className="text-xl font-bold text-white truncate mb-1">
+                                                                    {candidate.first_name} {candidate.last_name}
+                                                                </h3>
+                                                                <div className="flex items-center gap-2 text-sm text-gray-300">
+                                                                    <Badge variant="outline" className="bg-black/50 backdrop-blur border-white/10 text-white">
+                                                                        Code: {candidate.candidate_code}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="p-4 space-y-4">
+                                                            <div className="space-y-2">
+                                                                <div className="flex items-center justify-between text-sm text-gray-400">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <Award className="w-3.5 h-3.5 text-purple-400" />
+                                                                        Category
+                                                                    </span>
+                                                                    <span className="text-white truncate max-w-[120px]" title={candidate.categories[0].name}>
+                                                                        {candidate.categories[0].name || 'N/A'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between text-sm text-gray-400">
+                                                                    <span className="flex items-center gap-1.5">
+                                                                        <Globe className="w-3.5 h-3.5 text-blue-400" />
+                                                                        Event
+                                                                    </span>
+                                                                    <span className="text-white truncate max-w-[120px]" title={candidate.event.name}>
+                                                                        {candidate.event.name}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="pt-4 border-t border-gray-800 flex items-center justify-between">
+                                                                <div>
+                                                                    <p className="text-2xl font-bold text-white leading-none">
+                                                                        {candidate.vote_count.toLocaleString()}
+                                                                    </p>
+                                                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mt-1">
+                                                                        Total Votes
+                                                                    </p>
+                                                                </div>
+                                                                <Button size="sm" className="bg-[#0152be] hover:bg-[#014099] rounded-full px-4 shadow-lg shadow-[#0152be]/20">
+                                                                    Vote Now
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </GlassCard>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                )
+                            }
+                        </TabsContent >
+                    </Tabs >
+                </div >
+
+                {/* Modals */}
+                {
+                    selectedBundle && (
+                        <VoteBundleModal
+                            open={!!selectedBundle}
+                            onOpenChange={(open) => !open && setSelectedBundle(null)}
+                            bundle={selectedBundle}
+                            events={events}
+                            categories={categories}
+                            candidates={candidates}
+                            onVoteClick={(candidate, category) => {
+                                setSelectedBundle(null);
+                                handleVoteClick(candidate, category);
+                            }}
+                        />
+                    )
+                }
+                {
+                    selectedCandidate && (
+                        <VoteDialog
+                            open={isVoteDialogOpen}
+                            onOpenChange={(open) => {
+                                setIsVoteDialogOpen(open);
+                                if (!open) {
+                                    setSelectedCandidate(null);
+                                    setSelectedCategory(null);
+                                }
+                            }}
+                            candidate={selectedCandidate}
+                            category={selectedCandidate.categories[0]._id || undefined}
+                            eventId={selectedCandidate?.event._id as unknown as string}
+                            eventName={selectedCategory?.event.name}
+                        />
+                    )
+                }
+            </div >
+        </>
     );
 }

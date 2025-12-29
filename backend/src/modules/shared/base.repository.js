@@ -301,6 +301,7 @@ class BaseRepository {
         await this._invalidateCache("forceDelete", deletedDoc, options);
       }
       
+      console.log('Force deleted document:', deletedDoc);
       return deletedDoc;
     } catch (error) {
       throw new Error(`Force delete failed: ${error.message}`);

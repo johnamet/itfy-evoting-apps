@@ -14,6 +14,14 @@ const router = Router();
 // ==================== PUBLIC ROUTES ====================
 
 /**
+ * GET /api/bundles/public
+ * Get all public bundles
+ * Public access
+ */
+router.get("/public", optionalAuth, BundleController.getPublicBundles.bind(BundleController));  
+
+
+/**
  * GET /api/bundles/featured
  * Get featured bundles
  * Public access (optional auth for personalization)

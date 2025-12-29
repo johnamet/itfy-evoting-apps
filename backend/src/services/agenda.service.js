@@ -156,7 +156,7 @@ class AgendaManager {
           const { default: ActivityService } = await import("../modules/activity/activity.service.js");
 
           // Detect suspicious patterns (same IP, rapid votes, etc.)
-          await ActivityService.detectSuspiciousVotingPatterns(eventId);
+          await ActivityService.detectSuspiciousPatterns();
 
           console.log("✅ Fraud detection completed");
         } catch (error) {

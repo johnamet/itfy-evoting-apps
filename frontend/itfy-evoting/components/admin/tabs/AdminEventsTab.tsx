@@ -59,66 +59,7 @@ const statusColors: Record<EventStatus, string> = {
   pending: "bg-orange-500/20 text-orange-400 border-orange-500/30",
 };
 
-// Mock events
-const mockEvents: Event[] = [
-  {
-    _id: "1",
-    name: "Ghana Music Awards 2025",
-    slug: "ghana-music-awards-2025",
-    description: "The biggest music awards in Ghana",
-    status: "active",
-    visibility: "public",
-    event_type: "conference",
-    start_date: "2025-03-15T18:00:00Z",
-    end_date: "2025-03-15T23:00:00Z",
-    voting_start_date: "2025-01-01T00:00:00Z",
-    voting_end_date: "2025-03-10T23:59:59Z",
-    is_featured: true,
-    is_published: true,
-    vote_price: 1,
-    currency: "GHS",
-    created_at: "2024-10-01T10:00:00Z",
-    updated_at: "2024-12-15T14:30:00Z",
-  },
-  {
-    _id: "2",
-    name: "Youth Excellence Awards",
-    slug: "youth-excellence-awards",
-    description: "Celebrating young achievers",
-    status: "upcoming",
-    visibility: "public",
-    event_type: "seminar",
-    start_date: "2025-05-20T17:00:00Z",
-    end_date: "2025-05-20T22:00:00Z",
-    voting_start_date: "2025-04-01T00:00:00Z",
-    voting_end_date: "2025-05-15T23:59:59Z",
-    is_featured: false,
-    is_published: true,
-    vote_price: 0.5,
-    currency: "GHS",
-    created_at: "2024-11-15T09:00:00Z",
-    updated_at: "2024-12-10T11:20:00Z",
-  },
-  {
-    _id: "3",
-    name: "Sports Personality Awards",
-    slug: "sports-personality-awards",
-    description: "Honoring sports excellence",
-    status: "archived",
-    visibility: "public",
-    event_type: "conference",
-    start_date: "2024-11-30T19:00:00Z",
-    end_date: "2024-11-30T23:00:00Z",
-    voting_start_date: "2024-10-01T00:00:00Z",
-    voting_end_date: "2024-11-25T23:59:59Z",
-    is_featured: false,
-    is_published: true,
-    vote_price: 1,
-    currency: "GHS",
-    created_at: "2024-08-20T12:00:00Z",
-    updated_at: "2024-12-01T10:00:00Z",
-  },
-];
+
 
 // Event card component
 function EventCard({
@@ -217,9 +158,7 @@ function EventCard({
               <Clock className="w-3 h-3" />
               {new Date(event.start_date).toLocaleDateString()}
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-slate-400">GHS {event.vote_price}/vote</span>
-            </div>
+
           </div>
         </CardContent>
       </Card>
@@ -385,8 +324,8 @@ export default function AdminEventsTab() {
             <EventCard
               key={event._id}
               event={event}
-              onView={() => {}}
-              onEdit={() => {}}
+              onView={() => { }}
+              onEdit={() => { }}
               onDelete={async () => {
                 try {
                   await eventsApi.delete(event._id);

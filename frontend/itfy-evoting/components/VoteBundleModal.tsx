@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { 
-  Package, 
-  Vote, 
+import {
+  Package,
+  Vote,
   Search,
   X,
   ChevronDown,
@@ -29,23 +29,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import PurchaseVotesDialog from '@/components/PurchaseVotesDialog';
-import { Bundle, Candidate, Category } from '@/types';
+import { Bundle, Candidate, Category, Event } from '@/types';
 import { cn } from '@/lib/utils';
-import { mockCategories } from '@/lib/mocks/categories';
-import { mockCandidates } from '@/lib/mocks/candidates';
-import { mockEvents } from '@/lib/mocks/events';
 
 interface VoteBundleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bundle: Bundle;
+  events: Event[];
+  categories: Category[];
+  candidates: Candidate[];
   onVoteClick?: (candidate: Candidate, category: Category) => void;
 }
 
-export default function VoteBundleModal({ 
-  open, 
-  onOpenChange, 
+export default function VoteBundleModal({
+  open,
+  onOpenChange,
   bundle,
+  events,
+  categories,
+  candidates,
   onVoteClick
 }: VoteBundleModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,11 +56,19 @@ export default function VoteBundleModal({
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [selectedCandidateForPurchase, setSelectedCandidateForPurchase] = useState<Candidate | null>(null);
 
-  const event = useMemo(() => mockEvents.find(e => e._id === bundle.event), [bundle.event]);
+  // Helper to safely get event name
+  const getEventName = (eventIdOrObj: string | any) => {
+    if (!eventIdOrObj) return 'Unknown Event';
+    if (typeof eventIdOrObj === 'object' && eventIdOrObj.name) return eventIdOrObj.name;
+    const eventId = typeof eventIdOrObj === 'object' ? eventIdOrObj._id : eventIdOrObj;
+    return events.find(e => e._id === String(eventId))?.name || 'Unknown Event';
+  };
+
+  const event = useMemo(() => events.find(e => e._id === bundle.event), [bundle.event, events]);
 
   const getCandidatesByCategory = (categoryId: string): Candidate[] => {
-    return mockCandidates.filter(candidate => 
-      candidate.categories.includes(categoryId) && 
+    return candidates.filter(candidate =>
+      candidate.categories.includes(categoryId) &&
       candidate.status === 'approved' &&
       candidate.is_published
     );
@@ -65,40 +76,40 @@ export default function VoteBundleModal({
 
   const bundleCategories = useMemo(() => {
     if (bundle.categories && bundle.categories.length > 0) {
-      return mockCategories.filter(cat => 
+      return categories.filter(cat =>
         bundle.categories?.includes(cat._id) && cat.is_voting_open
       );
     }
-    return mockCategories.filter(cat => 
+    return categories.filter(cat =>
       cat.event === bundle.event && cat.is_voting_open
     );
-  }, [bundle.categories, bundle.event]);
+  }, [bundle.categories, bundle.event, categories]);
 
   const filteredCategories = useMemo(() => {
     if (!searchQuery) return bundleCategories;
-    
+
     const query = searchQuery.toLowerCase();
     return bundleCategories.filter(category => {
       if (category.name.toLowerCase().includes(query)) return true;
-      
-      const candidates = mockCandidates.filter(c => 
-        c.categories.includes(category._id) && 
+
+      const catCandidates = candidates.filter(c =>
+        c.categories.includes(category._id) &&
         c.status === 'approved' &&
         c.is_published
       );
-      return candidates.some(c => 
+      return catCandidates.some(c =>
         `${c.first_name} ${c.last_name}`.toLowerCase().includes(query) ||
         c.candidate_code.toLowerCase().includes(query)
       );
     });
-  }, [bundleCategories, searchQuery]);
+  }, [bundleCategories, searchQuery, candidates]);
 
   const getFilteredCandidates = (categoryId: string) => {
-    const candidates = getCandidatesByCategory(categoryId);
-    if (!searchQuery) return candidates;
-    
+    const catCandidates = getCandidatesByCategory(categoryId);
+    if (!searchQuery) return catCandidates;
+
     const query = searchQuery.toLowerCase();
-    return candidates.filter(c => 
+    return catCandidates.filter(c =>
       `${c.first_name} ${c.last_name}`.toLowerCase().includes(query) ||
       c.candidate_code.toLowerCase().includes(query)
     );
@@ -122,7 +133,8 @@ export default function VoteBundleModal({
     setIsPurchaseDialogOpen(true);
   };
 
-  const getTimeRemaining = (deadline: string) => {
+  const getTimeRemaining = (deadline: string | null) => {
+    if (!deadline) return 'Ongoing';
     const end = new Date(deadline);
     if (end <= new Date()) return 'Voting Ended';
     return formatDistanceToNow(end, { addSuffix: true });
@@ -135,7 +147,7 @@ export default function VoteBundleModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-black border-gray-800 text-white w-[95vw] max-w-[1400px] max-h-[85vh] overflow-scroll flex flex-col rounded-xl shadow-2xl">
+        <DialogContent className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-black border-gray-800 text-white w-[95vw] max-w-[1400px] max-h-[85vh] overflow-hidden flex flex-col rounded-xl shadow-2xl">
           {/* Header - Fixed */}
           <DialogHeader className="p-5 flex-shrink-0 bg-black/30 backdrop-blur-xl border-b border-gray-800">
             <div className="flex items-center justify-between gap-4">
@@ -186,7 +198,7 @@ export default function VoteBundleModal({
                     </Badge>
                   )}
                 </div>
-                <Button 
+                <Button
                   size="sm"
                   onClick={() => handlePurchaseBundle()}
                   className="bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 shadow-lg"
@@ -263,7 +275,7 @@ export default function VoteBundleModal({
                 {filteredCategories.map((category) => {
                   const candidates = getFilteredCandidates(category._id);
                   const isExpanded = expandedCategories.has(category._id);
-                  const timeRemaining = category.voting_deadline ? getTimeRemaining(category.voting_deadline) : null;
+                  const timeRemaining = getTimeRemaining(category.voting_deadline || null);
 
                   return (
                     <div
@@ -280,7 +292,7 @@ export default function VoteBundleModal({
                               <Image src={category.image} alt={category.name} width={40} height={40} className="object-cover" />
                             </div>
                           ) : (
-                            <div 
+                            <div
                               className="w-10 h-10 rounded-lg flex items-center justify-center"
                               style={{ backgroundColor: category.color_theme || '#0152be' }}
                             >
@@ -312,8 +324,8 @@ export default function VoteBundleModal({
                           <Badge variant={category.is_voting_open ? "default" : "secondary"}
                             className={cn(
                               "text-xs px-2 py-0.5",
-                              category.is_voting_open 
-                                ? "bg-green-500/20 text-green-400 border-green-500/40" 
+                              category.is_voting_open
+                                ? "bg-green-500/20 text-green-400 border-green-500/40"
                                 : "bg-gray-600/30 text-gray-400"
                             )}
                           >
@@ -330,7 +342,7 @@ export default function VoteBundleModal({
                               <div
                                 key={candidate._id}
                                 onClick={() => handleCandidateClick(candidate, category)}
-                                className="group relative bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-lg p-3 border border-gray-700 hover:border-[#0152be] hover:shadow-lg hover:shadow-[#0152be]/20 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5"
+                                className="group relative bg-gradient-to-b from-gray-800/50 to-gray-900/50 rounded-lg p-3 border border-gray-700 hover:border-[#0152be] hover:shadow-lg hover:shadow-[#0152be]/20 transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5 min-h-[140px] flex flex-col justify-between"
                               >
                                 <div className="flex flex-col items-center text-center">
                                   <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-gray-700 group-hover:ring-[#0152be] transition-all mb-2">
@@ -369,6 +381,7 @@ export default function VoteBundleModal({
                                     e.stopPropagation();
                                     handleCandidateClick(candidate, category);
                                   }}
+                                  disabled={!category.is_voting_open} // Disable button if voting is closed
                                 >
                                   <Vote className="w-3 h-3 mr-1" />
                                   Vote
@@ -406,7 +419,16 @@ export default function VoteBundleModal({
           </div>
         </DialogContent>
       </Dialog>
-
+      {selectedCandidate && (
+        <VoteDialog
+          open={!!selectedCandidate}
+          onOpenChange={(open) => !open && setSelectedCandidate(null)}
+          candidate={selectedCandidate}
+          category={selectedCategory || undefined}
+          eventId={typeof selectedCategory?.event === 'object' ? (selectedCategory.event as any)._id : selectedCategory?.event}
+          eventName={getEventName(selectedCategory?.event)}
+        />
+      )}
       <PurchaseVotesDialog
         open={isPurchaseDialogOpen}
         onOpenChange={setIsPurchaseDialogOpen}

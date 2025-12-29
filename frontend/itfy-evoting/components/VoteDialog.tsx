@@ -2,28 +2,35 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { 
-  Vote, 
-  Check, 
-  AlertCircle, 
-  Loader2, 
-  Minus, 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Vote,
+  Check,
+  AlertCircle,
+  Loader2,
+  Minus,
   Plus,
-  X
+  X,
+  Sparkles,
+  Award,
+  Ticket,
+  ArrowRight,
+  Heart,
+  ChevronLeft,
+  ShieldCheck,
+  Zap
 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import  GlassCard from '@/components/ui/GlassCard';
+import { Badge } from '@/components/ui/badge';
 import PurchaseVotesDialog from '@/components/PurchaseVotesDialog';
 import { Candidate, Category } from '@/types';
+import { votesApi } from '@/lib/api/votes';
 
 interface VoteDialogProps {
   open: boolean;
@@ -36,9 +43,17 @@ interface VoteDialogProps {
 
 type VoteStep = 'code' | 'quantity' | 'confirm' | 'success' | 'error';
 
-export default function VoteDialog({ 
-  open, 
-  onOpenChange, 
+const stepConfig = {
+  code: { title: 'Enter Vote Code', icon: Ticket },
+  quantity: { title: 'Select Quantity', icon: Zap },
+  confirm: { title: 'Confirm Vote', icon: ShieldCheck },
+  success: { title: 'Vote Successful!', icon: Heart },
+  error: { title: 'Something Went Wrong', icon: AlertCircle },
+};
+
+export default function VoteDialog({
+  open,
+  onOpenChange,
   candidate,
   category,
   eventId,
@@ -82,24 +97,20 @@ export default function VoteDialog({
     setError(null);
 
     try {
-      // Simulate API call - in production, use votesApi.validateCode
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock response - replace with actual API call
-      const mockResponse = {
-        valid: true,
-        remainingVotes: 10,
-        eventName: eventName || 'Tech Awards 2025'
-      };
+      const response = await votesApi.validateCode(voteCode, eventId);
 
-      if (mockResponse.valid) {
-        setCodeInfo(mockResponse);
+      if (response.success && response.data.valid) {
+        setCodeInfo({
+          valid: true,
+          remainingVotes: response.data.remaining_votes,
+          eventName: response.data.bundle_name
+        });
         setStep('quantity');
       } else {
-        setError('Invalid vote code. Please check and try again.');
+        setError(response.error || 'Invalid vote code. Please check and try again.');
       }
-    } catch {
-      setError('Failed to validate code. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to validate code. Please try again.');
     } finally {
       setIsValidating(false);
     }
@@ -114,17 +125,31 @@ export default function VoteDialog({
   };
 
   const handleSubmitVote = async () => {
+    if (!category) {
+      setError('Category is required to vote');
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
 
     try {
-      // Simulate API call - in production, use votesApi.cast
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Mock success - replace with actual API call
-      setStep('success');
-    } catch {
-      setError('Failed to submit vote. Please try again.');
+      const response = await votesApi.castBulk({
+        vote_code: voteCode,
+        votes: [{
+          candidate_id: candidate._id,
+          category_id: category._id,
+          quantity: voteQuantity
+        }]
+      });
+
+      if (response.success) {
+        setStep('success');
+      } else {
+        setError(response.error || 'Failed to submit vote');
+        setStep('error');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to submit vote. Please try again.');
       setStep('error');
     } finally {
       setIsSubmitting(false);
@@ -143,288 +168,450 @@ export default function VoteDialog({
     }
   };
 
+  const currentStepConfig = stepConfig[step];
+  const StepIcon = currentStepConfig.icon;
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
-            <Vote className="w-5 h-5 text-[#0152be]" />
-            {step === 'success' ? 'Vote Submitted!' : 'Cast Your Vote'}
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            {step === 'code' && 'Enter your vote code to continue'}
-            {step === 'quantity' && 'Select the number of votes to cast'}
-            {step === 'confirm' && 'Review and confirm your vote'}
-            {step === 'success' && 'Your vote has been recorded successfully'}
-            {step === 'error' && 'Something went wrong'}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Candidate Info */}
-        <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-          <div className="relative w-14 h-14 rounded-full overflow-hidden bg-gray-800 flex-shrink-0">
-            {candidate.profile_image ? (
-              <Image
-                src={candidate.profile_image}
-                alt={`${candidate.first_name} ${candidate.last_name}`}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full bg-[#0152be]/20 text-[#0152be] font-bold">
-                {candidate.first_name[0]}{candidate.last_name[0]}
-              </div>
-            )}
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-black border-gray-800 text-white max-w-lg overflow-hidden rounded-2xl shadow-2xl shadow-black/50">
+          {/* Background Effects */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#0152be]/20 rounded-full blur-[80px]" />
+            <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-purple-600/15 rounded-full blur-[80px]" />
           </div>
-          <div>
-            <p className="font-semibold text-white">
-              {candidate.first_name} {candidate.last_name}
-            </p>
-            <p className="text-sm text-gray-400">{candidate.candidate_code}</p>
-            {category && (
-              <p className="text-xs text-[#0152be]">{category.name}</p>
-            )}
-          </div>
-        </div>
 
-        {/* Step Content */}
-        <div className="space-y-4">
-          {step === 'code' && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="voteCode" className="text-gray-300">Vote Code</Label>
-                <Input
-                  id="voteCode"
-                  type="text"
-                  placeholder="Enter your vote code"
-                  value={voteCode}
-                  onChange={(e) => setVoteCode(e.target.value.toUpperCase())}
-                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-[#0152be] focus:ring-[#0152be]/50"
-                />
-              </div>
-              
-              {error && (
-                <div className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
-
-              <Button
-                onClick={handleValidateCode}
-                disabled={isValidating || !voteCode.trim()}
-                className="w-full bg-[#0152be] hover:bg-[#0152be]/90 text-white"
-              >
-                {isValidating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  'Continue'
-                )}
-              </Button>
-
-              <p className="text-center text-xs text-gray-500">
-                Don&apos;t have a vote code?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsPurchaseDialogOpen(true)}
-                  className="text-[#0152be] hover:underline font-medium"
-                >
-                  Purchase votes
-                </button>
-              </p>
-
-              {/* Purchase Votes Dialog */}
-              <PurchaseVotesDialog
-                open={isPurchaseDialogOpen}
-                onOpenChange={setIsPurchaseDialogOpen}
-                eventId={eventId || 'event1'}
-                eventName={eventName}
-                candidateId={candidate._id as string}
-                candidateName={`${candidate.first_name} ${candidate.last_name}`}
-                onPurchaseComplete={(code) => {
-                  setVoteCode(code);
-                  setIsPurchaseDialogOpen(false);
-                }}
-              />
-            </>
-          )}
-
-          {step === 'quantity' && codeInfo && (
-            <>
-              <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                <div className="flex items-center gap-2 text-green-400 mb-2">
-                  <Check className="w-4 h-4" />
-                  <span className="font-medium">Code Valid</span>
-                </div>
-                <p className="text-sm text-gray-400">
-                  You have <span className="text-white font-medium">{codeInfo.remainingVotes}</span> votes remaining
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-gray-300">Number of Votes</Label>
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={decrementQuantity}
-                    disabled={voteQuantity <= 1}
-                    aria-label="Decrease vote quantity"
-                    className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Minus className="w-5 h-5" />
-                  </button>
-                  <span className="text-3xl font-bold text-white min-w-[60px] text-center">
-                    {voteQuantity}
-                  </span>
-                  <button
-                    onClick={incrementQuantity}
-                    disabled={voteQuantity >= codeInfo.remainingVotes}
-                    aria-label="Increase vote quantity"
-                    className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('code')}
-                  className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleConfirmVote}
-                  className="flex-1 bg-[#0152be] hover:bg-[#0152be]/90 text-white"
-                >
-                  Continue
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === 'confirm' && (
-            <>
-              <GlassCard className="p-4">
-                <h4 className="font-medium text-white mb-3">Vote Summary</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Candidate</span>
-                    <span className="text-white">{candidate.first_name} {candidate.last_name}</span>
+          <div className="relative z-10">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-gray-800/50 bg-black/30 backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0152be] to-sky-500 p-0.5 shadow-lg shadow-[#0152be]/20">
+                  <div className="w-full h-full bg-gray-950 rounded-[10px] flex items-center justify-center">
+                    <StepIcon className="w-5 h-5 text-white" />
                   </div>
-                  {category && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Category</span>
-                      <span className="text-white">{category.name}</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">{currentStepConfig.title}</h2>
+                  <p className="text-xs text-gray-400">
+                    {step === 'code' && 'Enter your vote code to proceed'}
+                    {step === 'quantity' && 'Choose how many votes to cast'}
+                    {step === 'confirm' && 'Review your vote before submitting'}
+                    {step === 'success' && 'Your vote has been recorded'}
+                    {step === 'error' && 'We encountered an issue'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="flex gap-1.5 mt-4">
+                {['code', 'quantity', 'confirm'].map((s, i) => (
+                  <div
+                    key={s}
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${step === 'success' || step === 'error'
+                      ? step === 'success' ? 'bg-green-500' : 'bg-red-500'
+                      : i <= ['code', 'quantity', 'confirm'].indexOf(step)
+                        ? 'bg-[#0152be]'
+                        : 'bg-gray-800'
+                      }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Candidate Card */}
+            <div className="px-6 py-4 bg-gradient-to-r from-gray-800/30 to-gray-900/30 border-b border-gray-800/30">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden ring-2 ring-[#0152be]/30 shadow-lg">
+                    {candidate.profile_image ? (
+                      <Image
+                        src={candidate.profile_image}
+                        alt={`${candidate.first_name} ${candidate.last_name}`}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#0152be] to-sky-500 flex items-center justify-center">
+                        <span className="text-xl font-bold text-white">
+                          {candidate.first_name[0]}{candidate.last_name[0]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {candidate.is_featured && (
+                    <div className="absolute -top-1 -right-1 bg-yellow-500 rounded-full p-1 shadow-lg ring-2 ring-black">
+                      <Award className="w-3 h-3 text-white" />
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Votes</span>
-                    <span className="text-white font-bold">{voteQuantity}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-700">
-                    <span className="text-gray-400">Vote Code</span>
-                    <span className="text-[#0152be] font-mono">{voteCode}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-bold text-white truncate">
+                    {candidate.first_name} {candidate.last_name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="border-gray-700 text-gray-400 text-xs px-2 py-0.5">
+                      {candidate.candidate_code}
+                    </Badge>
+                    {category && (
+                      <Badge className="bg-[#0152be]/20 text-[#0152be] border-[#0152be]/30 text-xs px-2 py-0.5">
+                        {category.name}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-              </GlassCard>
-
-              {error && (
-                <div className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-lg border border-red-500/20">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
+                <div className="text-right hidden sm:block">
+                  <p className="text-2xl font-bold text-white">{candidate.vote_count.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Current Votes</p>
                 </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep('quantity')}
-                  disabled={isSubmitting}
-                  className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={handleSubmitVote}
-                  disabled={isSubmitting}
-                  className="flex-1 bg-[#0152be] hover:bg-[#0152be]/90 text-white"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Vote className="w-4 h-4 mr-2" />
-                      Confirm Vote
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
-
-          {step === 'success' && (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check className="w-8 h-8 text-green-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Thank You!</h3>
-              <p className="text-gray-400 mb-4">
-                Your {voteQuantity} vote{voteQuantity > 1 ? 's' : ''} for{' '}
-                <span className="text-white font-medium">{candidate.first_name} {candidate.last_name}</span>{' '}
-                {voteQuantity > 1 ? 'have' : 'has'} been recorded.
-              </p>
-              <Button
-                onClick={handleClose}
-                className="bg-[#0152be] hover:bg-[#0152be]/90 text-white"
-              >
-                Done
-              </Button>
-            </div>
-          )}
-
-          {step === 'error' && (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <X className="w-8 h-8 text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Vote Failed</h3>
-              <p className="text-gray-400 mb-4">
-                {error || 'An unexpected error occurred. Please try again.'}
-              </p>
-              <div className="flex gap-3 justify-center">
-                <Button
-                  variant="outline"
-                  onClick={resetDialog}
-                  className="border-gray-700 text-gray-300 hover:bg-gray-800"
-                >
-                  Try Again
-                </Button>
-                <Button
-                  onClick={handleClose}
-                  className="bg-gray-800 hover:bg-gray-700 text-white"
-                >
-                  Close
-                </Button>
               </div>
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* Step Content */}
+            <div className="p-6">
+              <AnimatePresence mode="wait">
+                {step === 'code' && (
+                  <motion.div
+                    key="code"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-5"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="voteCode" className="text-gray-300 text-sm font-medium">Vote Code</Label>
+                      <div className="relative group">
+                        <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-[#0152be] transition-colors" />
+                        <Input
+                          id="voteCode"
+                          type="text"
+                          placeholder="Enter your vote code (e.g., VOTE-XXXX)"
+                          value={voteCode}
+                          onChange={(e) => setVoteCode(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => e.key === 'Enter' && handleValidateCode()}
+                          className="pl-10 h-12 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-[#0152be] focus:ring-[#0152be]/20 transition-all rounded-xl text-base tracking-wider font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-xl border border-red-500/20"
+                      >
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </motion.div>
+                    )}
+
+                    <Button
+                      onClick={handleValidateCode}
+                      disabled={isValidating || !voteCode.trim()}
+                      className="w-full h-12 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white font-semibold rounded-xl shadow-lg shadow-[#0152be]/20 transition-all disabled:opacity-50"
+                    >
+                      {isValidating ? (
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-5 h-5">
+                            <div className="absolute inset-0 rounded-full border-t-2 border-white animate-spin"></div>
+                            <div className="absolute inset-[3px] rounded-full border-r-2 border-sky-300 animate-spin" style={{ animationDirection: 'reverse' }}></div>
+                          </div>
+                          Validating...
+                        </div>
+                      ) : (
+                        <>
+                          Validate Code
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-800"></div>
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="px-3 bg-gray-900 text-gray-500">or</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsPurchaseDialogOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-gray-700 text-gray-400 hover:text-[#0152be] hover:border-[#0152be]/50 hover:bg-[#0152be]/5 transition-all group"
+                    >
+                      <Sparkles className="w-4 h-4 group-hover:text-[#0152be]" />
+                      <span className="text-sm font-medium">Purchase Vote Bundle</span>
+                    </button>
+                  </motion.div>
+                )}
+
+                {step === 'quantity' && codeInfo && (
+                  <motion.div
+                    key="quantity"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-5"
+                  >
+                    {/* Valid Code Banner */}
+                    <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl border border-green-500/20">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <Check className="w-5 h-5 text-green-400" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-green-400">Code Validated!</p>
+                          <p className="text-sm text-gray-400">
+                            <span className="text-white font-bold">{codeInfo.remainingVotes}</span> votes available
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quantity Selector */}
+                    <div className="space-y-3">
+                      <Label className="text-gray-300 text-sm font-medium">Select Number of Votes</Label>
+                      <div className="flex items-center justify-center gap-6 p-6 bg-gray-800/30 rounded-2xl border border-gray-700/50">
+                        <button
+                          onClick={decrementQuantity}
+                          disabled={voteQuantity <= 1}
+                          className="w-14 h-14 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg"
+                        >
+                          <Minus className="w-6 h-6" />
+                        </button>
+                        <div className="text-center min-w-[100px]">
+                          <span className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">
+                            {voteQuantity}
+                          </span>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mt-1">Votes</p>
+                        </div>
+                        <button
+                          onClick={incrementQuantity}
+                          disabled={voteQuantity >= codeInfo.remainingVotes}
+                          className="w-14 h-14 rounded-xl bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg"
+                        >
+                          <Plus className="w-6 h-6" />
+                        </button>
+                      </div>
+                      <p className="text-center text-xs text-gray-500">
+                        Max: {codeInfo.remainingVotes} votes
+                      </p>
+                    </div>
+
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-xl border border-red-500/20"
+                      >
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </motion.div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setStep('code')}
+                        className="flex-1 h-12 border-gray-700 text-gray-300 hover:bg-gray-800 rounded-xl"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Back
+                      </Button>
+                      <Button
+                        onClick={handleConfirmVote}
+                        className="flex-1 h-12 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white font-semibold rounded-xl shadow-lg shadow-[#0152be]/20"
+                      >
+                        Continue
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {step === 'confirm' && (
+                  <motion.div
+                    key="confirm"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-5"
+                  >
+                    {/* Summary Card */}
+                    <div className="p-5 bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700/50 space-y-4">
+                      <h4 className="font-semibold text-white flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-[#0152be]" />
+                        Vote Summary
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-700/50">
+                          <span className="text-gray-400 text-sm">Candidate</span>
+                          <span className="text-white font-medium">{candidate.first_name} {candidate.last_name}</span>
+                        </div>
+                        {category && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-700/50">
+                            <span className="text-gray-400 text-sm">Category</span>
+                            <span className="text-white font-medium">{category.name}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center py-2 border-b border-gray-700/50">
+                          <span className="text-gray-400 text-sm">Vote Code</span>
+                          <span className="text-[#0152be] font-mono text-sm bg-[#0152be]/10 px-2 py-1 rounded">{voteCode}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="text-gray-400 text-sm">Votes to Cast</span>
+                          <span className="text-2xl font-bold text-white">{voteQuantity}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex items-center gap-2 text-red-400 text-sm p-3 bg-red-500/10 rounded-xl border border-red-500/20"
+                      >
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </motion.div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setStep('quantity')}
+                        disabled={isSubmitting}
+                        className="flex-1 h-12 border-gray-700 text-gray-300 hover:bg-gray-800 rounded-xl"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Back
+                      </Button>
+                      <Button
+                        onClick={handleSubmitVote}
+                        disabled={isSubmitting}
+                        className="flex-1 h-12 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white font-semibold rounded-xl shadow-lg shadow-[#0152be]/20"
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center gap-3">
+                            <div className="relative w-5 h-5">
+                              <div className="absolute inset-0 rounded-full border-t-2 border-white animate-spin"></div>
+                              <div className="absolute inset-[3px] rounded-full border-r-2 border-sky-300 animate-spin" style={{ animationDirection: 'reverse' }}></div>
+                            </div>
+                            Submitting...
+                          </div>
+                        ) : (
+                          <>
+                            <Vote className="w-4 h-4 mr-2" />
+                            Confirm Vote
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {step === 'success' && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3, type: 'spring' }}
+                    className="text-center py-6"
+                  >
+                    <div className="relative mx-auto mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-full flex items-center justify-center mx-auto">
+                        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30">
+                          <Check className="w-7 h-7 text-white" />
+                        </div>
+                      </div>
+                      {/* Confetti-like dots */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24">
+                        {[...Array(6)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.5] }}
+                            transition={{ delay: 0.2 + i * 0.1, duration: 0.6 }}
+                            className="absolute w-2 h-2 rounded-full bg-green-400"
+                            style={{
+                              left: `${50 + 40 * Math.cos((i * 60 * Math.PI) / 180)}%`,
+                              top: `${50 + 40 * Math.sin((i * 60 * Math.PI) / 180)}%`,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Thank You!</h3>
+                    <p className="text-gray-400 mb-6 max-w-xs mx-auto">
+                      Your <span className="text-white font-semibold">{voteQuantity}</span> vote{voteQuantity > 1 ? 's' : ''} for{' '}
+                      <span className="text-[#0152be] font-semibold">{candidate.first_name} {candidate.last_name}</span>{' '}
+                      {voteQuantity > 1 ? 'have' : 'has'} been recorded successfully.
+                    </p>
+                    <Button
+                      onClick={handleClose}
+                      className="px-8 h-12 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white font-semibold rounded-xl shadow-lg shadow-[#0152be]/20"
+                    >
+                      Done
+                    </Button>
+                  </motion.div>
+                )}
+
+                {step === 'error' && (
+                  <motion.div
+                    key="error"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-center py-6"
+                  >
+                    <div className="w-20 h-20 bg-gradient-to-br from-red-500/30 to-rose-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-500 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
+                        <X className="w-7 h-7 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Vote Failed</h3>
+                    <p className="text-gray-400 mb-6 max-w-xs mx-auto">
+                      {error || 'An unexpected error occurred. Please try again.'}
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={resetDialog}
+                        className="h-12 px-6 border-gray-700 text-gray-300 hover:bg-gray-800 rounded-xl"
+                      >
+                        Try Again
+                      </Button>
+                      <Button
+                        onClick={handleClose}
+                        className="h-12 px-6 bg-gray-800 hover:bg-gray-700 text-white rounded-xl"
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase Votes Dialog */}
+      <PurchaseVotesDialog
+        open={isPurchaseDialogOpen}
+        onOpenChange={setIsPurchaseDialogOpen}
+        eventId={eventId}
+        eventName={eventName}
+        candidateId={candidate._id as string}
+        candidateName={`${candidate.first_name} ${candidate.last_name}`}
+        onPurchaseComplete={(code) => {
+          setVoteCode(code);
+          setIsPurchaseDialogOpen(false);
+        }}
+      />
+    </>
   );
 }

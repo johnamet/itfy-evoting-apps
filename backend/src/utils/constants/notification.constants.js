@@ -65,6 +65,7 @@ export const NOTIFICATION_TYPE = {
   SYSTEM_MAINTENANCE: "system_maintenance",
   WEEKLY_DIGEST: "weekly_digest",
   ACHIEVEMENT_UNLOCKED: "achievement_unlocked",
+  SYSTEM: "system",
 };
 
 /**

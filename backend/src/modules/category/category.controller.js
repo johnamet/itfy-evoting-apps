@@ -31,44 +31,86 @@ class CategoryController extends BaseController {
     });
   }
 
-  /**
-   * Get all categories with pagination and filters
-   * GET /api/categories
-   * Public access (returns only active/published categories for non-admin users)
-   */
-  async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
-    const filters = this.getFilters(req, ["status", "event", "is_featured"]);
-    const sort = this.getSort(req, "display_order");
-    const search = this.getSearch(req);
+ /**
+ * Get public categories (active, voting open, and deadline not passed)
+ * GET /api/categories/active
+ */
+async listPublic(req, res) {
+  const { page, limit, skip } = this.getPagination(req);
+  const filters = this.getFilters(req, ["event", "is_featured"]); // allow any additional public filters if needed
+  const sort = this.getSort(req, "display_order");
+  const search = this.getSearch(req);
 
-    // If not authenticated or not admin, only show active categories
-    const user = req.user;
-    const isAdmin = user && (user.role === "super_admin" || user.role === "admin" || user.role === "organiser" || user.role === "moderator");
-    
-    if (!isAdmin) {
-      filters.status = "active";
-    }
+  // Public access: force these conditions
+  filters.status = "active";
+  filters.is_voting_open = true;
+  filters.voting_deadline = { $gte: new Date() }; // deadline not in the past
 
-    if (search) {
-      filters.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const [categories, total] = await Promise.all([
-      this.service("categoryService").findAll(filters, { skip, limit, sort }),
-      this.service("categoryService").count(filters),
-    ]);
-
-    return this.paginated(res, {
-      data: categories,
-      page,
-      limit,
-      total_items: total,
-    });
+  if (search) {
+    filters.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
   }
+
+  const [categories, total] = await Promise.all([
+    this.service("categoryService").findAll(filters, { skip, limit, sort }),
+    this.service("categoryService").count(filters),
+  ]);
+
+  console.log("Public Categories", categories);
+
+  return this.paginated(res, {
+    data: categories,
+    page,
+    limit,
+    total_items: total,
+  });
+}
+
+/**
+ * Get all categories with pagination and filters
+ * GET /api/categories
+ * Public access returns only active/published categories for non-admin users
+ */
+async list(req, res) {
+  const { page, limit, skip } = this.getPagination(req);
+  const filters = this.getFilters(req, ["status", "event", "is_featured"]);
+  const sort = this.getSort(req, "display_order");
+  const search = this.getSearch(req);
+
+  const user = req.user;
+  const isAdmin = user && (
+    user.role === "super_admin" ||
+    user.role === "admin" ||
+    user.role === "organiser" ||
+    user.role === "moderator"
+  );
+
+  // Non-admins only see active categories
+  if (!isAdmin) {
+    filters.status = "active";
+  }
+
+  if (search) {
+    filters.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  const [categories, total] = await Promise.all([
+    this.service("categoryService").findAll(filters, { skip, limit, sort }),
+    this.service("categoryService").count(filters),
+  ]);
+
+  return this.paginated(res, {
+    data: categories,
+    page,
+    limit,
+    total_items: total,
+  });
+}
 
   /**
    * Get category by ID

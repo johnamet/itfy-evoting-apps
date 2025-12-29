@@ -647,8 +647,6 @@ export interface Bundle {
   name: string;
   description?: string;
   slug: string;
-  event: ObjectId;
-  categories?: ObjectId[];
   vote_count: number;
   price: number;
   currency: string;
@@ -662,6 +660,19 @@ export interface Bundle {
   valid_until?: string;
   created_at: string;
   updated_at: string;
+  // Populated fields & Virtuals
+  event: ObjectId | Event; 
+  categories: ObjectId[] | Category[];
+  
+  // Virtuals from backend response
+  isDeleted?: boolean;
+  isValid?: boolean;
+  isAvailable?: boolean;
+  pricePerVote?: number;
+  savingsAmount?: number;
+  isRestricted?: boolean;
+  daysUntilExpiry?: number;
+  averageRevenuePerPurchase?: number;
 }
 
 export interface CreateBundleRequest {

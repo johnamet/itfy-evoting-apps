@@ -224,6 +224,46 @@ class BundleController extends BaseController {
   // ==================== SPECIAL QUERIES ====================
 
   /**
+   * Get public bundles
+   * GET /api/bundles/public
+   */
+  async getPublicBundles(req, res) {
+    const { page, limit } = this.getPagination(req);
+    const filters = {
+      status: "active",
+    };
+    const sort = this.getSort(req, "display_order");
+    const search = this.getSearch(req);
+
+    if (search) {
+      filters.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const result = await this.service("bundleService").repository.findAll(
+      filters,
+      page,
+      limit,
+      {
+        sort,
+        populate: [
+          { path: "event", select: "name id" },
+          { path: "categories", select: "name id is_voting_open" },
+        ],
+      }
+    );
+
+    return this.paginated(res, {
+      data: result.data,
+      page,
+      limit,
+      total_items: result.total,
+    });
+  }
+
+  /**
    * Get featured bundles
    * GET /api/bundles/featured
    */

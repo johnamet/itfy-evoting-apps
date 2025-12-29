@@ -49,6 +49,70 @@ router.get(
   UserController.getStats.bind(UserController)
 );
 
+/**
+ * GET /api/users/:id/statistics
+ * Get individual user statistics
+ * Requires: Admin
+ */
+router.get(
+  "/:id/statistics",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  UserController.getUserStatistics.bind(UserController)
+);
+
+// ==================== DELETED USERS (SUPER ADMIN ONLY) ====================
+
+/**
+ * GET /api/users/deleted
+ * List all soft-deleted users
+ * Requires: Super Admin
+ */
+router.get(
+  "/deleted",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN),
+  logActivity(ACTION_TYPE.USERS_ACCESSED, ENTITY_TYPE.USER, {
+    getDescription: () => "Accessed deleted users list",
+    severity: "info",
+  }),
+  UserController.listDeleted.bind(UserController)
+);
+
+/**
+ * POST /api/users/:id/restore
+ * Restore a soft-deleted user
+ * Requires: Super Admin
+ */
+router.post(
+  "/:id/restore",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN),
+  logActivity(ACTION_TYPE.USER_RESTORED, ENTITY_TYPE.USER, {
+    getEntityId: (req) => req.params.id,
+    getDescription: (req) => `Restored deleted user ${req.params.id}`,
+    severity: "warning",
+  }),
+  UserController.restoreUser.bind(UserController)
+);
+
+/**
+ * DELETE /api/users/:id/hard
+ * Permanently delete user (hard delete)
+ * Requires: Super Admin
+ */
+router.delete(
+  "/:id/hard",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN),
+  logActivity(ACTION_TYPE.USER_HARD_DELETED, ENTITY_TYPE.USER, {
+    getEntityId: (req) => req.params.id,
+    getDescription: (req) => `PERMANENTLY deleted user ${req.params.id}`,
+    severity: "critical",
+  }),
+  UserController.hardDeleteUser.bind(UserController)
+);
+
 // ==================== ADMIN BULK OPERATIONS ====================
 
 /**
@@ -62,6 +126,96 @@ router.post(
   authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
   logActivity(ACTION_TYPE.USERS_BULK_STATUS_UPDATED, ENTITY_TYPE.USER),
   UserController.bulkUpdateStatus.bind(UserController)
+);
+
+/**
+ * POST /api/users/bulk/action
+ * Bulk perform action on users
+ * Requires: Admin
+ */
+router.post(
+  "/bulk/action",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.USERS_BULK_ACTION, ENTITY_TYPE.USER, {
+    getDescription: (req) => `Performed bulk action: ${req.body.action}`,
+  }),
+  UserController.bulkAction.bind(UserController)
+);
+
+/**
+ * POST /api/users/bulk/delete
+ * Bulk soft delete users
+ * Requires: Admin
+ */
+router.post(
+  "/bulk/delete",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.USERS_BULK_DELETED, ENTITY_TYPE.USER, {
+    getDescription: (req) => `Bulk deleted ${req.body.userIds?.length} users`,
+    severity: "warning",
+  }),
+  UserController.bulkDelete.bind(UserController)
+);
+
+/**
+ * POST /api/users/bulk/restore
+ * Bulk restore deleted users
+ * Requires: Super Admin
+ */
+router.post(
+  "/bulk/restore",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN),
+  logActivity(ACTION_TYPE.USERS_BULK_RESTORED, ENTITY_TYPE.USER, {
+    getDescription: (req) => `Bulk restored ${req.body.userIds?.length} users`,
+    severity: "warning",
+  }),
+  UserController.bulkRestore.bind(UserController)
+);
+
+// ==================== SEARCH & EXPORT ====================
+
+/**
+ * POST /api/users/search
+ * Advanced user search
+ * Requires: Admin
+ */
+router.post(
+  "/search",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  UserController.searchUsers.bind(UserController)
+);
+
+/**
+ * GET /api/users/export
+ * Export users to CSV/Excel
+ * Requires: Admin
+ */
+router.get(
+  "/export",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.USERS_EXPORTED, ENTITY_TYPE.USER, {
+    getDescription: (req) => `Exported users in ${req.query.format || 'csv'} format`,
+  }),
+  UserController.exportUsers.bind(UserController)
+);
+
+// ==================== ACTIVITY LOGS ====================
+
+/**
+ * GET /api/users/:id/activity
+ * Get user activity log
+ * Requires: Admin
+ */
+router.get(
+  "/:id/activity",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  UserController.getUserActivity.bind(UserController)
 );
 
 // ==================== ADMIN CRUD ROUTES ====================
@@ -82,6 +236,7 @@ router.post(
 /**
  * GET /api/users
  * List all users with filters
+ * Supports include_deleted parameter for Super Admin
  * Requires: Admin
  */
 router.get(
@@ -94,6 +249,7 @@ router.get(
 /**
  * GET /api/users/:id
  * Get user by ID
+ * Supports include_deleted parameter
  * Requires: Admin
  */
 router.get(
@@ -245,6 +401,22 @@ router.put(
     getDescription: (req) => `Admin force verified email for user ${req.params.id}`,
   }),
   UserController.forceVerifyEmail.bind(UserController)
+);
+
+/**
+ * POST /api/users/:id/send-password-reset
+ * Send password reset email
+ * Requires: Admin
+ */
+router.post(
+  "/:id/send-password-reset",
+  authenticate,
+  authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  logActivity(ACTION_TYPE.PASSWORD_RESET_SENT, ENTITY_TYPE.USER, {
+    getEntityId: (req) => req.params.id,
+    getDescription: (req) => `Admin sent password reset for user ${req.params.id}`,
+  }),
+  UserController.sendPasswordReset.bind(UserController)
 );
 
 export default router;

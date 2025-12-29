@@ -4,16 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to {{appName}}</title>
+  <style>
+    /* Fallback for older clients – inline styles are primary, but this helps some */
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0F172A; }
+    a { text-decoration: none; }
+    ul { list-style: none; padding: 0; margin: 0; }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 20px 60px rgba(139, 92, 246, 0.2);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #1E293B; border-radius: 20px; overflow: hidden; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 20px 60px rgba(139, 92, 246, 0.2);">
           
-          <!-- Animated Header -->
+          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 50%, #F59E0B 100%); padding: 60px 40px; text-align: center; position: relative;">
+            <td style="background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 50%, #F59E0B 100%); padding: 60px 40px; text-align: center;">
               <div style="width: 100px; height: 100px; background: rgba(255,255,255,0.15); border-radius: 50%; margin: 0 auto 20px; backdrop-filter: blur(10px); border: 3px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
                 <span style="font-size: 50px;">🎉</span>
               </div>
@@ -22,7 +28,7 @@
             </td>
           </tr>
 
-          <!-- Content -->
+          <!-- Main Content -->
           <tr>
             <td style="padding: 50px 40px;">
               <p style="color: #F1F5F9; font-size: 20px; line-height: 1.6; margin: 0 0 15px; font-weight: 600;">
@@ -30,80 +36,78 @@
               </p>
 
               <p style="color: #CBD5E1; font-size: 16px; line-height: 1.8; margin: 0 0 30px;">
-                Welcome aboard! We're thrilled to have you join our cutting-edge e-voting platform. Get ready to participate in exciting events and make your voice heard in a whole new way!
+                Congratulations! You've been added to the <strong>{{appName}}</strong> team as a <strong>{{role}}</strong>. We're excited to have you help us manage events, users, and nominations.
               </p>
 
-              <!-- Feature Cards -->
-              <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 16px; padding: 30px; margin: 30px 0;">
-                <h3 style="color: #F1F5F9; font-size: 18px; margin: 0 0 25px; font-weight: 700; text-align: center;">✨ What You Can Do</h3>
-                
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 15px 0;">
-                      <div style="background: rgba(139, 92, 246, 0.15); border-left: 4px solid #8B5CF6; padding: 15px 20px; border-radius: 8px;">
-                        <div style="color: #8B5CF6; font-size: 24px; margin-bottom: 5px;">🗳️</div>
-                        <p style="color: #E2E8F0; font-size: 15px; margin: 0; font-weight: 600;">Vote for your favorite candidates</p>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 15px 0;">
-                      <div style="background: rgba(6, 182, 212, 0.15); border-left: 4px solid #06B6D4; padding: 15px 20px; border-radius: 8px;">
-                        <div style="color: #06B6D4; font-size: 24px; margin-bottom: 5px;">🎯</div>
-                        <p style="color: #E2E8F0; font-size: 15px; margin: 0; font-weight: 600;">Nominate candidates for various categories</p>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 15px 0;">
-                      <div style="background: rgba(245, 158, 11, 0.15); border-left: 4px solid #F59E0B; padding: 15px 20px; border-radius: 8px;">
-                        <div style="color: #F59E0B; font-size: 24px; margin-bottom: 5px;">📊</div>
-                        <p style="color: #E2E8F0; font-size: 15px; margin: 0; font-weight: 600;">Track live results and real-time standings</p>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 15px 0;">
-                      <div style="background: rgba(16, 185, 129, 0.15); border-left: 4px solid #10B981; padding: 15px 20px; border-radius: 8px;">
-                        <div style="color: #10B981; font-size: 24px; margin-bottom: 5px;">🔔</div>
-                        <p style="color: #E2E8F0; font-size: 15px; margin: 0; font-weight: 600;">Get instant notifications about events</p>
-                      </div>
-                    </td>
-                  </tr>
+              <!-- Your Role & Permissions -->
+              <div style="background: linear-gradient(135deg, #06B6D4 0%, #8B5CF6 100%); border: 1px solid #06B6D4; border-radius: 16px; padding: 24px; margin: 30px 0;">
+                <h3 style="color: #F1F5F9; font-size: 18px; margin: 0 0 16px; font-weight: 700; text-align: center;">Your Role & Permissions</h3>
+                <p style="color: #E0E7EF; font-size: 15px; margin: 0 0 12px; text-align: center;">
+                  <strong>Role:</strong> <span style="color:#FBBF24; font-weight: 700;">{{role}}</span>
+                </p>
+                {{#if permissions}}
+                <div style="margin: 0 auto; max-width: 460px;">
+                  <p style="color: #A5B4FC; font-size: 14px; margin: 0 0 10px; text-align: center;">You have the following permissions:</p>
+                  <ul style="color: #F1F5F9; font-size: 14px; margin: 0; padding: 0; text-align: left;">
+                    {{#each permissions}}
+                    <li style="margin-bottom: 10px; padding-left: 24px; position: relative;">
+                      <span style="position: absolute; left: 0; top: 2px; color: #8B5CF6;">•</span> {{this}}
+                    </li>
+                    {{/each}}
+                  </ul>
+                </div>
+                {{else}}
+                <p style="color: #CBD5E1; font-size: 14px; text-align: center; margin: 10px 0 0;">Your specific permissions will be visible once you log in.</p>
+                {{/if}}
+              </div>
+
+              <!-- Role Explanation -->
+              <div style="background: linear-gradient(135deg, #1E293B 0%, #8B5CF6 100%); border: 1px solid #8B5CF6; border-radius: 16px; padding: 30px; margin: 30px 0;">
+                <h3 style="color: #F1F5F9; font-size: 18px; margin: 0 0 20px; font-weight: 700; text-align: center;">🔎 Role Overview</h3>
+                <table width="100%" cellpadding="0" cellspacing="0" style="color: #E0E7EF; font-size: 15px;">
+                  <tr><td style="padding: 12px 0;"><strong>Super Admin</strong> — Full control over all features, users, events, and system settings. <span style="color:#F59E0B;">(Trusted top-level only)</span></td></tr>
+                  <tr><td style="padding: 12px 0;"><strong>Admin</strong> — Manage users, events, and nominations; approve/suspend users. <span style="color:#F59E0B;">(Cannot manage Super Admins or core settings)</span></td></tr>
+                  <tr><td style="padding: 12px 0;"><strong>Organiser</strong> — Create/manage events, oversee nominations, and communicate with participants. <span style="color:#F59E0B;">(No user management or admin analytics)</span></td></tr>
+                  <tr><td style="padding: 12px 0;"><strong>Moderator</strong> — Monitor activity, moderate content, and assist with events. <span style="color:#F59E0B;">(No event creation or user management)</span></td></tr>
                 </table>
+                <p style="color: #A5B4FC; font-size: 14px; margin: 20px 0 0; text-align: center;">Questions about your role? Contact your Super Admin or support.</p>
+              </div>
+
+              <!-- Set Password -->
+              <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%); border: 2px solid rgba(139, 92, 246, 0.4); padding: 30px; margin: 30px 0; border-radius: 16px; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 15px;">🔑</div>
+                <p style="color: #A5B4FC; font-size: 18px; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Set Your Password</p>
+                <p style="color: #CBD5E1; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">
+                  For security, we don't send passwords via email. Click below to go to the login page and use "Forgot Password" to create one.
+                </p>
+                <a href="{{loginUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 50px; font-weight: 700; font-size: 16px; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+                  Go to Login
+                </a>
               </div>
 
               {{#if verificationUrl}}
-              <!-- Verification CTA -->
+              <!-- Email Verification -->
               <div style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%); border: 2px solid rgba(139, 92, 246, 0.4); padding: 30px; margin: 30px 0; border-radius: 16px; text-align: center;">
                 <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
-                <p style="color: #A5B4FC; font-size: 18px; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-                  One More Step
-                </p>
+                <p style="color: #A5B4FC; font-size: 18px; margin: 0 0 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Verify Your Email</p>
                 <p style="color: #CBD5E1; font-size: 15px; margin: 0 0 25px; line-height: 1.6;">
-                  Verify your email address to unlock full access to the platform
+                  One final step — verify your email to unlock full access.
                 </p>
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td align="center">
-                      <a href="{{verificationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 50px; font-weight: 700; font-size: 16px; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
-                        Verify Email Now
-                      </a>
-                    </td>
-                  </tr>
-                </table>
+                <a href="{{verificationUrl}}" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 50px; font-weight: 700; font-size: 16px; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
+                  Verify Email Now
+                </a>
               </div>
               {{/if}}
 
               <!-- Security Note -->
-              <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 20px; margin-top: 30px; border-radius: 12px;">
+              <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); padding: 20px; margin: 30px 0 0; border-radius: 12px;">
                 <p style="color: #FCD34D; font-size: 14px; margin: 0; line-height: 1.7;">
-                  <strong style="color: #FBBF24;">🔒 Your Security Matters:</strong> We use bank-level encryption to protect your data. Your votes are anonymous and securely stored.
+                  <strong style="color: #FBBF24;">🔒 Security first:</strong> We use bank-level encryption. All data and votes are protected and anonymous.
                 </p>
               </div>
 
               <p style="color: #CBD5E1; font-size: 16px; line-height: 1.7; margin: 40px 0 0;">
-                Questions? We're here to help!<br>
+                Need help getting started?<br>
                 <strong style="background: linear-gradient(90deg, #8B5CF6, #06B6D4, #F59E0B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-size: 18px;">The {{appName}} Team</strong>
               </p>
             </td>
@@ -113,20 +117,19 @@
           <tr>
             <td style="background: rgba(0,0,0,0.3); padding: 35px 40px; text-align: center; border-top: 1px solid rgba(139, 92, 246, 0.2);">
               <p style="color: #94A3B8; font-size: 14px; margin: 0 0 15px; line-height: 1.8;">
-                Need help? We're just a message away<br>
+                Questions? Reach out anytime<br>
                 <a href="mailto:{{supportEmail}}" style="color: #8B5CF6; text-decoration: none; font-weight: 600;">{{supportEmail}}</a>
               </p>
               <div style="margin: 20px 0;">
-                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(139, 92, 246, 0.2); border-radius: 50%; margin: 0 5px; line-height: 40px; text-decoration: none; font-size: 18px;">📱</a>
-                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(6, 182, 212, 0.2); border-radius: 50%; margin: 0 5px; line-height: 40px; text-decoration: none; font-size: 18px;">💬</a>
-                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(245, 158, 11, 0.2); border-radius: 50%; margin: 0 5px; line-height: 40px; text-decoration: none; font-size: 18px;">🌐</a>
+                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(139, 92, 246, 0.2); border-radius: 50%; margin: 0 8px; line-height: 40px; font-size: 18px; color: #8B5CF6;">📱</a>
+                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(6, 182, 212, 0.2); border-radius: 50%; margin: 0 8px; line-height: 40px; font-size: 18px; color: #06B6D4;">💬</a>
+                <a href="#" style="display: inline-block; width: 40px; height: 40px; background: rgba(245, 158, 11, 0.2); border-radius: 50%; margin: 0 8px; line-height: 40px; font-size: 18px; color: #F59E0B;">🌐</a>
               </div>
               <p style="color: #64748B; font-size: 12px; margin: 15px 0 0;">
                 © {{currentYear}} {{appName}}. Empowering voices, one vote at a time.
               </p>
             </td>
           </tr>
-
         </table>
       </td>
     </tr>
