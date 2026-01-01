@@ -181,7 +181,7 @@ class AgendaManager {
         try {
           console.log("📧 Sending vote confirmation email for vote:", voteId);
 
-          const { default: VoteRepository } = await import("../modules/vote/vote.repository.js");
+          const { default: VoteRepository } = await import("../../modules/vote/vote/vote.repository.js");
 
           const vote = await VoteRepository.findById(voteId, {
             populate: ["voter", "candidate", "event", "category"],
@@ -320,6 +320,49 @@ class AgendaManager {
         } catch (error) {
           console.error(`❌ Failed to send ${template} email:`, error);
           throw error;
+        }
+      }
+    );
+
+    /**
+     * Send payment success notification email
+     */
+    this.agenda.define(
+      "send-payment-success-email",
+      { priority: "high", concurrency: 20 },
+      async (job) => {
+        const {
+          voterEmail,
+          voterName,
+          eventName,
+          bundleName,
+          voteCode,
+          votesCount,
+          amountPaid,
+          currency,
+          transactionReference,
+          paidAt
+        } = job.attrs.data;
+
+        try {
+          console.log("📧 Sending payment success email to:", voterEmail);
+
+          await EmailService.sendPaymentSuccessEmail({
+            to: voterEmail,
+            name: voterName,
+            eventName,
+            bundleName,
+            voteCode,
+            votesCount,
+            amount: amountPaid,
+            currency,
+            transactionReference,
+            paidAt,
+          });
+
+          console.log("✅ Payment success email sent");
+        } catch (error) {
+          console.error("❌ Failed to send payment success email:", error);
         }
       }
     );
@@ -487,10 +530,10 @@ class AgendaManager {
           for (const event of expiredEvents.data) {
             // Close the event
             await EventRepository.updateById(event._id, { status: "closed" });
-            
+
             // Trigger immediate cascading cleanup
             await this.now("close-event-cascade", { eventId: event._id });
-            
+
             count++;
           }
 
@@ -521,9 +564,9 @@ class AgendaManager {
           const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
 
           // 1. Unfeature the event if it's featured
-          await EventRepository.updateById(eventId, { 
+          await EventRepository.updateById(eventId, {
             is_featured: false,
-            featured_at: null 
+            featured_at: null
           });
           console.log("✅ Event unfeatured");
 
@@ -535,7 +578,7 @@ class AgendaManager {
           );
 
           for (const category of categories.data) {
-            await CategoryRepository.updateById(category._id, { 
+            await CategoryRepository.updateById(category._id, {
               status: "archived",
               archived_at: new Date(),
               is_featured: false,
@@ -653,7 +696,7 @@ class AgendaManager {
             to: candidate.email,
             name: candidate.name,
             eventName: candidate.event?.title,
-            reason: reason === "event_ended" 
+            reason: reason === "event_ended"
               ? "The voting event has ended and your account has been archived."
               : "Your account has been locked.",
             lockedAt: candidate.locked_at

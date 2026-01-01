@@ -133,10 +133,12 @@ export default function VotePage() {
             return matchesSearch && matchesEvent && candidate.status === 'approved' && candidate.is_published;
         });
 
-        // Filter Categories (for display helpers)
+        // Filter Categories
         const filteredCategories = categories.filter(category => {
-            const matchesEvent = selectedEventFilter === 'all' || category.event._id === selectedEventFilter;
-            return matchesEvent && category.is_voting_open;
+            const matchesSearch = category.name.toLowerCase().includes(query) ||
+                category.description?.toLowerCase().includes(query);
+            const matchesEvent = selectedEventFilter === 'all' || (typeof category.event !== 'string' && category.event._id === selectedEventFilter);
+            return matchesSearch && matchesEvent && category.is_voting_open;
         });
 
         return {
@@ -289,6 +291,13 @@ export default function VotePage() {
                             >
                                 <Users className="w-4 h-4 mr-2" />
                                 All Candidates
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="categories"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-[#0152be] data-[state=active]:bg-transparent data-[state=active]:text-[#0152be] px-0 py-3 text-base text-gray-400 hover:text-gray-200 transition-all"
+                            >
+                                <Tag className="w-4 h-4 mr-2" />
+                                Categories
                             </TabsTrigger>
                         </TabsList>
 
@@ -509,7 +518,7 @@ export default function VotePage() {
                                                                 <div className="flex items-center gap-4 text-sm text-gray-400">
                                                                     <span className="flex items-center gap-1.5 truncate">
                                                                         <Award className="w-3.5 h-3.5 text-purple-400" />
-                                                                        {candidate.categories[0].name || 'Uncategorized'}
+                                                                        {candidate.categories?.map(cat => cat.name).join(', ') || 'Uncategorized'}
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5 truncate">
                                                                         <Calendar className="w-3.5 h-3.5 text-blue-400" />
@@ -598,7 +607,7 @@ export default function VotePage() {
                                                                         Category
                                                                     </span>
                                                                     <span className="text-white truncate max-w-[120px]" title={candidate.categories[0].name}>
-                                                                        {candidate.categories[0].name || 'N/A'}
+                                                                        {candidate.categories.map(cat => cat.name).join(", ") || 'N/A'}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex items-center justify-between text-sm text-gray-400">
@@ -633,8 +642,144 @@ export default function VotePage() {
                                     </div>
                                 )
                             }
-                        </TabsContent >
-                    </Tabs >
+                        </TabsContent>
+
+                        {/* Categories Tab */}
+                        <TabsContent value="categories" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            {filteredData.categories.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-center">
+                                    <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6 border border-gray-800">
+                                        <Tag className="w-8 h-8 text-gray-600" />
+                                    </div>
+                                    <h3 className="text-xl font-semibold text-white mb-2">No Active Categories</h3>
+                                    <p className="text-gray-400 max-w-sm mx-auto">
+                                        There are no categories with open voting at the moment.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        className="mt-6 border-gray-700 hover:bg-gray-800"
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setSelectedEventFilter('all');
+                                        }}
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className={`grid gap-6 ${viewMode === 'grid'
+                                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                                    : 'grid-cols-1'
+                                    }`}>
+                                    {filteredData.categories.map((category) => {
+                                        const daysUntilDeadline = category.voting_deadline
+                                            ? Math.ceil((new Date(category.voting_deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                                            : null;
+
+                                        return (
+                                            <motion.div
+                                                key={category._id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                whileHover={{ y: -5 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="group cursor-pointer"
+                                            >
+                                                <GlassCard className="h-full overflow-hidden border-gray-800 bg-gray-900/40 hover:bg-gray-900/60 hover:border-[#0152be]/50 hover:shadow-2xl hover:shadow-[#0152be]/10 transition-all duration-300 flex flex-col">
+                                                    {/* Category Header */}
+                                                    <div className="relative p-6 bg-gradient-to-br from-gray-800/50 to-transparent flex-1">
+                                                        {/* Badges */}
+                                                        <div className="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                                                            {category.is_featured && (
+                                                                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50 hover:bg-yellow-500/30">
+                                                                    <Star className="w-3 h-3 mr-1" /> Featured
+                                                                </Badge>
+                                                            )}
+                                                            {daysUntilDeadline !== null && daysUntilDeadline <= 3 && daysUntilDeadline > 0 && (
+                                                                <Badge className="bg-red-500/20 text-red-400 border-red-500/50 animate-pulse">
+                                                                    Ends in {daysUntilDeadline} day{daysUntilDeadline > 1 ? 's' : ''}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 p-0.5 mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-purple-500/20">
+                                                            <div className="w-full h-full bg-gray-950 rounded-[14px] flex items-center justify-center">
+                                                                <Tag className="w-7 h-7 text-white" />
+                                                            </div>
+                                                        </div>
+
+                                                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[#0152be] transition-colors">
+                                                            {category.name}
+                                                        </h3>
+                                                        <p className="text-gray-400 text-sm line-clamp-2 min-h-[40px] mb-2">
+                                                            {category.description || `Vote for your favorite in ${category.name}`}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Category Details */}
+                                                    <div className="p-6 border-t border-gray-800/50 space-y-4">
+                                                        <div className="space-y-3">
+                                                            <div className="flex items-center justify-between text-sm py-2 border-b border-gray-800/50">
+                                                                <span className="text-gray-400 flex items-center gap-2">
+                                                                    <Users className="w-4 h-4 text-[#0152be]" />
+                                                                    Candidates
+                                                                </span>
+                                                                <span className="font-semibold text-white">{category.candidates?.length || 0}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-sm py-2 border-b border-gray-800/50">
+                                                                <span className="text-gray-400 flex items-center gap-2">
+                                                                    <Vote className="w-4 h-4 text-green-400" />
+                                                                    Total Votes
+                                                                </span>
+                                                                <span className="font-semibold text-white">{category.total_votes?.toLocaleString() || 0}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-sm py-2">
+                                                                <span className="text-gray-400 flex items-center gap-2">
+                                                                    <Calendar className="w-4 h-4 text-purple-400" />
+                                                                    Event
+                                                                </span>
+                                                                <span className="font-semibold text-white truncate max-w-[150px]">
+                                                                    {typeof category.event === 'string' ? category.event : (category.event?.name || 'N/A')}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {category.voting_deadline && (
+                                                            <div className="pt-2 text-center">
+                                                                <Badge variant="outline" className="border-gray-700 text-gray-400 text-xs">
+                                                                    <Calendar className="w-3 h-3 mr-1.5" />
+                                                                    Deadline: {formatDistanceToNow(new Date(category.voting_deadline), { addSuffix: true })}
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+
+                                                        <Button
+                                                            className="w-full bg-white text-black hover:bg-gray-200 group-hover:bg-[#0152be] group-hover:text-white transition-all duration-300 font-semibold shadow-xl shadow-black/20"
+                                                            onClick={() => {
+                                                                setActiveTab('candidates');
+                                                                filteredData.candidates = category.candidates.map((c) => {
+                                                                    return {
+                                                                        ...c,
+                                                                        categories: [category]
+                                                                    }
+                                                                })
+
+                                                                console.log(filteredData.candidates)
+
+                                                            }}
+                                                        >
+                                                            View Candidates
+                                                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                                                        </Button>
+                                                    </div>
+                                                </GlassCard>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
                 </div >
 
                 {/* Modals */}
@@ -666,7 +811,8 @@ export default function VotePage() {
                                 }
                             }}
                             candidate={selectedCandidate}
-                            category={selectedCandidate.categories[0]._id || undefined}
+                            category={undefined}
+                            categories={selectedCandidate.categories as unknown as Category[]}
                             eventId={selectedCandidate?.event._id as unknown as string}
                             eventName={selectedCategory?.event.name}
                         />

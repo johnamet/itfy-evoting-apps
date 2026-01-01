@@ -7,6 +7,7 @@
 import { BaseRepository } from "../shared/base.repository.js";
 import PaymentModel from "./payment.model.js";
 import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.js";
+import { populate } from "dotenv";
 
 class PaymentRepository extends BaseRepository {
   constructor() {
@@ -22,7 +23,7 @@ class PaymentRepository extends BaseRepository {
   async create(paymentData, options = {}) {
     try {
       // Validate required fields
-      if (!paymentData.bundle) {
+      if (!paymentData.bundles) {
         throw new Error("Bundle ID is required");
       }
       if (!paymentData.event) {
@@ -51,7 +52,7 @@ class PaymentRepository extends BaseRepository {
    * @param {Object} [options] - Query options
    * @returns {Promise<Object>} - Updated payment
    */
-  async update(paymentId, updates, options = {}) {
+  async updatePaymentById(paymentId, updates, options = {}) {
     try {
       return await this.updateById(paymentId, updates, options);
     } catch (error) {
@@ -135,6 +136,7 @@ class PaymentRepository extends BaseRepository {
     }
   }
 
+
   /**
    * Find payment by Paystack reference
    * @param {string} paystackReference - Paystack reference
@@ -143,7 +145,7 @@ class PaymentRepository extends BaseRepository {
    */
   async findByPaystackReference(paystackReference, options = {}) {
     try {
-      const query = this.model.findOne({ paystack_reference: paystackReference });
+      const query = this.model.findOne({ paystack_reference: paystackReference },);
 
       this._applyOptions(query, options);
       return await query.lean(options.lean).exec();

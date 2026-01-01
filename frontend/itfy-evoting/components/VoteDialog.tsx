@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,7 +18,9 @@ import {
   Heart,
   ChevronLeft,
   ShieldCheck,
-  Zap
+  Zap,
+  LayoutGrid,
+  Hourglass
 } from 'lucide-react';
 import {
   Dialog,
@@ -37,18 +39,21 @@ interface VoteDialogProps {
   onOpenChange: (open: boolean) => void;
   candidate: Candidate;
   category?: Category;
+  categories?: Category[];
   eventId?: string;
   eventName?: string;
 }
 
-type VoteStep = 'code' | 'quantity' | 'confirm' | 'success' | 'error';
+type VoteStep = 'category' | 'code' | 'quantity' | 'confirm' | 'success' | 'error' | 'voting_closed';
 
 const stepConfig = {
-  code: { title: 'Enter Vote Code', icon: Ticket },
-  quantity: { title: 'Select Quantity', icon: Zap },
-  confirm: { title: 'Confirm Vote', icon: ShieldCheck },
-  success: { title: 'Vote Successful!', icon: Heart },
-  error: { title: 'Something Went Wrong', icon: AlertCircle },
+  category: { title: 'Select Category', icon: LayoutGrid, step: 0 },
+  code: { title: 'Enter Vote Code', icon: Ticket, step: 1 },
+  quantity: { title: 'Select Quantity', icon: Zap, step: 2 },
+  confirm: { title: 'Confirm Vote', icon: ShieldCheck, step: 3 },
+  success: { title: 'Vote Successful!', icon: Heart, step: 4 },
+  error: { title: 'Something Went Wrong', icon: AlertCircle, step: 4 },
+  voting_closed: { title: 'Voting Closed', icon: Hourglass, step: 4 },
 };
 
 export default function VoteDialog({
@@ -56,9 +61,11 @@ export default function VoteDialog({
   onOpenChange,
   candidate,
   category,
+  categories,
   eventId,
   eventName
 }: VoteDialogProps) {
+  const [selectedCategory, setSelectedCategory] = useState<Category | undefined>(category);
   const [step, setStep] = useState<VoteStep>('code');
   const [voteCode, setVoteCode] = useState('');
   const [voteQuantity, setVoteQuantity] = useState(1);
@@ -72,8 +79,42 @@ export default function VoteDialog({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter valid categories
+  const validCategories = categories?.filter(c => c.is_voting_open) || [];
+
+  // Initialize
+  useEffect(() => {
+    if (open) {
+      if (category && category.is_voting_open) {
+        setSelectedCategory(category);
+        setStep('code');
+      } else if (validCategories.length > 1) {
+        setStep('category');
+      } else if (validCategories.length === 1) {
+        setSelectedCategory(validCategories[0]);
+        setStep('code');
+      } else {
+        // No valid categories available
+        setStep('voting_closed');
+      }
+    }
+  }, [open, category, categories]);
+
   const resetDialog = () => {
-    setStep('code');
+    if (category && category.is_voting_open) {
+      setStep('code');
+      setSelectedCategory(category);
+    } else if (validCategories.length > 1) {
+      setStep('category');
+      setSelectedCategory(undefined);
+    } else {
+      if (validCategories.length === 1) {
+        setSelectedCategory(validCategories[0]);
+        setStep('code');
+      } else {
+        setStep('voting_closed');
+      }
+    }
     setVoteCode('');
     setVoteQuantity(1);
     setCodeInfo(null);
@@ -125,7 +166,7 @@ export default function VoteDialog({
   };
 
   const handleSubmitVote = async () => {
-    if (!category) {
+    if (!selectedCategory && !category) {
       setError('Category is required to vote');
       return;
     }
@@ -137,7 +178,7 @@ export default function VoteDialog({
         vote_code: voteCode,
         votes: [{
           candidate_id: candidate._id,
-          category_id: category._id,
+          category_id: selectedCategory?._id as string,
           quantity: voteQuantity
         }]
       });
@@ -174,7 +215,7 @@ export default function VoteDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-black border-gray-800 text-white max-w-lg overflow-hidden rounded-2xl shadow-2xl shadow-black/50">
+        <DialogContent className="p-0 bg-gradient-to-br from-gray-950 via-gray-900 to-black border-gray-800 text-white max-w-lg overflow-auto rounded-2xl shadow-2xl shadow-black/50">
           {/* Background Effects */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#0152be]/20 rounded-full blur-[80px]" />
@@ -204,12 +245,18 @@ export default function VoteDialog({
 
               {/* Progress Steps */}
               <div className="flex gap-1.5 mt-4">
-                {['code', 'quantity', 'confirm'].map((s, i) => (
+                {['category', 'code', 'quantity', 'confirm'].filter(s => {
+                  if (s === 'category' && validCategories.length <= 1) return false;
+                  return true;
+                }).map((s, i) => (
                   <div
                     key={s}
                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${step === 'success' || step === 'error'
                       ? step === 'success' ? 'bg-green-500' : 'bg-red-500'
-                      : i <= ['code', 'quantity', 'confirm'].indexOf(step)
+                      : i <= ['category', 'code', 'quantity', 'confirm'].filter(st => {
+                        if (st === 'category' && validCategories.length <= 1) return false;
+                        return true;
+                      }).indexOf(step)
                         ? 'bg-[#0152be]'
                         : 'bg-gray-800'
                       }`}
@@ -252,9 +299,9 @@ export default function VoteDialog({
                     <Badge variant="outline" className="border-gray-700 text-gray-400 text-xs px-2 py-0.5">
                       {candidate.candidate_code}
                     </Badge>
-                    {category && (
+                    {(selectedCategory || category) && (
                       <Badge className="bg-[#0152be]/20 text-[#0152be] border-[#0152be]/30 text-xs px-2 py-0.5">
-                        {category.name}
+                        {selectedCategory?.name || category?.name}
                       </Badge>
                     )}
                   </div>
@@ -269,6 +316,39 @@ export default function VoteDialog({
             {/* Step Content */}
             <div className="p-6">
               <AnimatePresence mode="wait">
+                {step === 'category' && (
+                  <motion.div
+                    key="category"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <Label className="text-gray-300 text-sm font-medium">Select a Category</Label>
+                    <div className="grid gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      {validCategories.map((cat) => (
+                        <button
+                          key={cat._id}
+                          onClick={() => {
+                            setSelectedCategory(cat);
+                            setStep('code');
+                          }}
+                          className="flex items-center gap-4 p-4 rounded-xl border border-gray-800 bg-gray-900/40 hover:bg-[#0152be]/10 hover:border-[#0152be]/50 hover:shadow-lg hover:shadow-[#0152be]/5 transition-all group text-left"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center group-hover:bg-[#0152be] transition-colors">
+                            <Award className="w-5 h-5 text-gray-400 group-hover:text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-white group-hover:text-[#0152be] transition-colors">{cat.name}</h4>
+                            <p className="text-xs text-gray-500">Click to select</p>
+                          </div>
+                          <ChevronLeft className="w-4 h-4 ml-auto rotate-180 text-gray-600 group-hover:text-[#0152be] transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
                 {step === 'code' && (
                   <motion.div
                     key="code"
@@ -428,6 +508,16 @@ export default function VoteDialog({
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </div>
+
+                    {validCategories.length > 1 && !category && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setStep('category')}
+                        className="w-full mt-2 text-xs text-gray-500 hover:text-white"
+                      >
+                        Change Category
+                      </Button>
+                    )}
                   </motion.div>
                 )}
 
@@ -451,10 +541,10 @@ export default function VoteDialog({
                           <span className="text-gray-400 text-sm">Candidate</span>
                           <span className="text-white font-medium">{candidate.first_name} {candidate.last_name}</span>
                         </div>
-                        {category && (
+                        {(selectedCategory || category) && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-700/50">
                             <span className="text-gray-400 text-sm">Category</span>
-                            <span className="text-white font-medium">{category.name}</span>
+                            <span className="text-white font-medium">{selectedCategory?.name || category?.name}</span>
                           </div>
                         )}
                         <div className="flex justify-between items-center py-2 border-b border-gray-700/50">
@@ -593,6 +683,44 @@ export default function VoteDialog({
                     </div>
                   </motion.div>
                 )}
+
+                {step === 'voting_closed' && (
+                  <motion.div
+                    key="voting_closed"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-center py-6"
+                  >
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-500/30 to-orange-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/30">
+                        <Hourglass className="w-7 h-7 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-2">Voting is Closed</h3>
+                    <p className="text-gray-400 mb-6 max-w-xs mx-auto">
+                      Voting is currently not open for this candidate's categories.
+                      <br /><br />
+                      <span className="text-white font-medium">Get ready!</span> Purchase vote bundles now to be prepared when voting opens.
+                    </p>
+                    <div className="flex flex-col gap-3 justify-center">
+                      <button
+                        onClick={() => setIsPurchaseDialogOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-gradient-to-r from-[#0152be] to-sky-500 text-white font-semibold shadow-lg shadow-[#0152be]/20 hover:from-[#014099] hover:to-sky-600 transition-all"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        Purchase Vote Bundle
+                      </button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleClose}
+                        className="h-12 px-6 text-gray-400 hover:text-white hover:bg-gray-800 rounded-xl"
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
               </AnimatePresence>
             </div>
           </div>
@@ -603,10 +731,11 @@ export default function VoteDialog({
       <PurchaseVotesDialog
         open={isPurchaseDialogOpen}
         onOpenChange={setIsPurchaseDialogOpen}
-        eventId={eventId}
+        eventId={eventId || candidate.event._id || categories[0].event._id}
         eventName={eventName}
         candidateId={candidate._id as string}
         candidateName={`${candidate.first_name} ${candidate.last_name}`}
+        candidateCategories={categories}
         onPurchaseComplete={(code) => {
           setVoteCode(code);
           setIsPurchaseDialogOpen(false);

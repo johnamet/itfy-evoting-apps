@@ -1,6 +1,6 @@
 /**
  * The payment model definition for the vote module
- * Integrated with Paystack payment gateway
+ * Updated to support multiple bundles per payment
  */
 
 import mongoose from "mongoose";
@@ -13,7 +13,6 @@ class Payment extends BaseModel {
     const schemaDefinition = {
       transaction_reference: {
         type: String,
-        required: true,
         unique: true,
         index: true,
       },
@@ -27,12 +26,49 @@ class Payment extends BaseModel {
         type: String,
         index: true,
       },
-      bundle: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Bundle",
-        required: true,
-        index: true,
-      },
+      // Changed from single bundle to array of bundles
+      bundles: [
+        {
+          bundle: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Bundle",
+            required: true,
+          },
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+            default: 1,
+          },
+          votes_allocated: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          votes_used: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          price_per_unit: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          total_price: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          applicable_categories: [
+            {
+              type: mongoose.Schema.Types.ObjectId,
+              ref: "Category",
+            },
+          ],
+          _id: false,
+        },
+      ],
       event: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Event",
@@ -65,6 +101,37 @@ class Payment extends BaseModel {
         default: 0,
         min: 0,
       },
+      // Track votes by category
+      votes_by_category: [
+        {
+          category: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Category",
+            required: true,
+          },
+          votes_available: {
+            type: Number,
+            required: true,
+            min: 0,
+          },
+          votes_used: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          bundle_sources: [
+            {
+              bundle: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Bundle",
+              },
+              votes_allocated: Number,
+              votes_used: Number,
+            },
+          ],
+          _id: false,
+        },
+      ],
       amount_paid: {
         type: Number,
         required: true,
@@ -104,7 +171,8 @@ class Payment extends BaseModel {
       payment_method: {
         type: String,
         enum: Object.values(PAYMENT_METHOD),
-        default: PAYMENT_METHOD.CARD,
+        default: null,
+        required: false,
       },
       payment_status: {
         type: String,
@@ -195,7 +263,7 @@ class Payment extends BaseModel {
       },
       metadata: {
         type: Map,
-        of: String,
+        of: mongoose.Schema.Types.Mixed,
         default: {},
       },
     };
@@ -213,6 +281,8 @@ class Payment extends BaseModel {
     this.schema.index({ payment_status: 1, webhook_received: 1 });
     this.schema.index({ created_at: -1 });
     this.schema.index({ confirmed_at: -1 });
+    this.schema.index({ "bundles.bundle": 1 });
+    this.schema.index({ "votes_by_category.category": 1 });
 
     // Pre-save hook
     this.schema.pre("save", async function (next) {
@@ -232,8 +302,16 @@ class Payment extends BaseModel {
           this.ip_hash = crypto.createHash("sha256").update(this.ip_address).digest("hex");
         }
 
-        // Calculate votes remaining
+        // Calculate total votes remaining
         this.votes_remaining = this.votes_purchased - this.votes_cast;
+
+        // Update bundle-level votes used/remaining
+        this.bundles.forEach((bundleItem) => {
+          bundleItem.votes_used = Math.min(
+            bundleItem.votes_allocated,
+            bundleItem.votes_allocated - (this.votes_remaining > 0 ? Math.min(this.votes_remaining, bundleItem.votes_allocated) : 0)
+          );
+        });
 
         // Set confirmed_at when status changes to completed
         if (
@@ -268,54 +346,87 @@ class Payment extends BaseModel {
       }
     });
 
-    // Virtual: Is completed
-    this.schema.virtual("isCompleted").get(function () {
-      return this.payment_status === STATUS.COMPLETED;
-    });
+    // Instance method: Get available votes for a specific category
+    this.schema.methods.getAvailableVotesForCategory = function (categoryId) {
+      const categoryVotes = this.votes_by_category.find(
+        (vc) => vc.category.toString() === categoryId.toString()
+      );
+      return categoryVotes ? categoryVotes.votes_available - categoryVotes.votes_used : 0;
+    };
 
-    // Virtual: Is pending
-    this.schema.virtual("isPending").get(function () {
-      return this.payment_status === STATUS.PENDING;
-    });
+    // Instance method: Use votes for a specific category
+    this.schema.methods.useVotesForCategory = async function (categoryId, votesToUse = 1) {
+      console.log("useVotesForCategory", categoryId, votesToUse, this.votes_by_category);
+      const categoryIndex = this.votes_by_category.findIndex(
+        (vc) => vc.category._id.toString() === categoryId.toString()
+      );
 
-    // Virtual: Is failed
-    this.schema.virtual("isFailed").get(function () {
-      return this.payment_status === STATUS.FAILED;
-    });
+      if (categoryIndex === -1) {
+        throw new Error("Category not available for voting with this payment");
+      }
 
-    // Virtual: Is refunded
-    this.schema.virtual("isRefunded").get(function () {
-      return this.payment_status === STATUS.REFUNDED;
-    });
+      const categoryVotes = this.votes_by_category[categoryIndex];
+      const availableVotes = categoryVotes.votes_available - categoryVotes.votes_used;
 
-    // Virtual: Has unused votes
-    this.schema.virtual("hasUnusedVotes").get(function () {
-      return this.votes_remaining > 0;
-    });
+      if (availableVotes < votesToUse) {
+        throw new Error(`Insufficient votes for this category. Available: ${availableVotes}, Requested: ${votesToUse}`);
+      }
 
-    // Virtual: Vote usage percentage
-    this.schema.virtual("voteUsagePercentage").get(function () {
-      if (this.votes_purchased === 0) return 0;
-      return Math.round((this.votes_cast / this.votes_purchased) * 100);
-    });
+      // Update category votes
+      categoryVotes.votes_used += votesToUse;
 
-    // Virtual: Days since payment
-    this.schema.virtual("daysSincePayment").get(function () {
-      if (!this.confirmed_at) return 0;
-      const now = new Date();
-      return Math.floor((now - this.confirmed_at) / (1000 * 60 * 60 * 24));
-    });
+      // Update bundle-level tracking
+      let remainingToAllocate = votesToUse;
+      for (const bundleSource of categoryVotes.bundle_sources) {
+        if (remainingToAllocate <= 0) break;
 
-    // Virtual: Has discount
-    this.schema.virtual("hasDiscount").get(function () {
-      return this.discount_amount > 0;
-    });
+        const bundleAvailable = bundleSource.votes_allocated - bundleSource.votes_used;
+        const toUse = Math.min(bundleAvailable, remainingToAllocate);
 
-    // Virtual: Discount percentage
-    this.schema.virtual("discountPercentage").get(function () {
-      if (this.original_amount === 0) return 0;
-      return Math.round((this.discount_amount / this.original_amount) * 100);
-    });
+        if (toUse > 0) {
+          bundleSource.votes_used += toUse;
+          remainingToAllocate -= toUse;
+
+          // Update main bundles array
+          const mainBundleIndex = this.bundles.findIndex(
+            (b) => b.bundle.toString() === bundleSource.bundle.toString()
+          );
+          if (mainBundleIndex !== -1) {
+            this.bundles[mainBundleIndex].votes_used += toUse;
+          }
+        }
+      }
+
+      // Update overall votes cast
+      this.votes_cast += votesToUse;
+      this.votes_remaining = this.votes_purchased - this.votes_cast;
+
+      return await this.save();
+    };
+
+    // Instance method: Get voting summary
+    this.schema.methods.getVotingSummary = function () {
+      return {
+        vote_code: this.vote_code,
+        total_votes: this.votes_purchased,
+        votes_used: this.votes_cast,
+        votes_remaining: this.votes_remaining,
+        bundles: this.bundles.map((b) => ({
+          bundle_id: b.bundle,
+          quantity: b.quantity,
+          votes_allocated: b.votes_allocated,
+          votes_used: b.votes_used,
+          votes_remaining: b.votes_allocated - b.votes_used,
+          applicable_categories: b.applicable_categories,
+        })),
+        categories: this.votes_by_category.map((vc) => ({
+          category_id: vc.category,
+          votes_available: vc.votes_available,
+          votes_used: vc.votes_used,
+          votes_remaining: vc.votes_available - vc.votes_used,
+        })),
+      };
+    };
 
     // Static method: Generate vote code
     this.schema.statics.generateVoteCode = function () {
@@ -344,194 +455,6 @@ class Payment extends BaseModel {
     // Instance method: Generate transaction reference
     this.schema.methods.generateTransactionReference = function () {
       return this.constructor.generateTransactionReference();
-    };
-
-    // Static method: Find by vote code
-    this.schema.statics.findByVoteCode = async function (voteCode, options = {}) {
-      const query = this.findOne({ vote_code: voteCode.toUpperCase() });
-      if (options.populate) query.populate(options.populate);
-      return await query.exec();
-    };
-
-    // Static method: Find by email
-    this.schema.statics.findByEmail = async function (email, eventId = null, options = {}) {
-      const filter = { voter_email: email.toLowerCase() };
-      if (eventId) filter.event = eventId;
-
-      const query = this.find(filter).sort({ created_at: -1 });
-      if (options.populate) query.populate(options.populate);
-      return await query.exec();
-    };
-
-    // Static method: Find by paystack reference
-    this.schema.statics.findByPaystackReference = async function (reference, options = {}) {
-      const query = this.findOne({ paystack_reference: reference });
-      if (options.populate) query.populate(options.populate);
-      return await query.exec();
-    };
-
-    // Static method: Find pending payments
-    this.schema.statics.findPending = async function (options = {}) {
-      const query = this.find({ payment_status: STATUS.PENDING }).sort({ created_at: -1 });
-      if (options.populate) query.populate(options.populate);
-      return await query.exec();
-    };
-
-    // Static method: Find completed payments
-    this.schema.statics.findCompleted = async function (eventId = null, options = {}) {
-      const filter = { payment_status: STATUS.COMPLETED };
-      if (eventId) filter.event = eventId;
-
-      const query = this.find(filter).sort({ confirmed_at: -1 });
-      if (options.populate) query.populate(options.populate);
-      return await query.exec();
-    };
-
-    // Static method: Get payment statistics
-    this.schema.statics.getStatistics = async function (eventId = null) {
-      const matchStage = eventId ? { event: eventId } : {};
-
-      const [stats] = await this.aggregate([
-        { $match: matchStage },
-        {
-          $facet: {
-            total: [{ $count: "count" }],
-            completed: [{ $match: { payment_status: STATUS.COMPLETED } }, { $count: "count" }],
-            pending: [{ $match: { payment_status: STATUS.PENDING } }, { $count: "count" }],
-            failed: [{ $match: { payment_status: STATUS.FAILED } }, { $count: "count" }],
-            refunded: [{ $match: { payment_status: STATUS.REFUNDED } }, { $count: "count" }],
-            totalRevenue: [
-              { $match: { payment_status: STATUS.COMPLETED } },
-              {
-                $group: {
-                  _id: null,
-                  total: { $sum: "$amount_paid" },
-                },
-              },
-            ],
-            totalVotesPurchased: [
-              { $match: { payment_status: STATUS.COMPLETED } },
-              {
-                $group: {
-                  _id: null,
-                  total: { $sum: "$votes_purchased" },
-                },
-              },
-            ],
-            totalVotesCast: [
-              { $match: { payment_status: STATUS.COMPLETED } },
-              {
-                $group: {
-                  _id: null,
-                  total: { $sum: "$votes_cast" },
-                },
-              },
-            ],
-            avgAmount: [
-              { $match: { payment_status: STATUS.COMPLETED } },
-              {
-                $group: {
-                  _id: null,
-                  average: { $avg: "$amount_paid" },
-                },
-              },
-            ],
-          },
-        },
-        {
-          $project: {
-            total: { $arrayElemAt: ["$total.count", 0] },
-            completed: { $arrayElemAt: ["$completed.count", 0] },
-            pending: { $arrayElemAt: ["$pending.count", 0] },
-            failed: { $arrayElemAt: ["$failed.count", 0] },
-            refunded: { $arrayElemAt: ["$refunded.count", 0] },
-            totalRevenue: { $arrayElemAt: ["$totalRevenue.total", 0] },
-            totalVotesPurchased: { $arrayElemAt: ["$totalVotesPurchased.total", 0] },
-            totalVotesCast: { $arrayElemAt: ["$totalVotesCast.total", 0] },
-            averageAmount: { $arrayElemAt: ["$avgAmount.average", 0] },
-          },
-        },
-      ]);
-
-      return {
-        total: stats?.total || 0,
-        completed: stats?.completed || 0,
-        pending: stats?.pending || 0,
-        failed: stats?.failed || 0,
-        refunded: stats?.refunded || 0,
-        totalRevenue: Math.round((stats?.totalRevenue || 0) * 100) / 100,
-        totalVotesPurchased: stats?.totalVotesPurchased || 0,
-        totalVotesCast: stats?.totalVotesCast || 0,
-        totalVotesRemaining:
-          (stats?.totalVotesPurchased || 0) - (stats?.totalVotesCast || 0),
-        averageAmount: Math.round((stats?.averageAmount || 0) * 100) / 100,
-      };
-    };
-
-    // Instance method: Mark as completed
-    this.schema.methods.markAsCompleted = async function (paystackData = {}) {
-      this.payment_status = STATUS.COMPLETED;
-      this.confirmed_at = new Date();
-      this.webhook_received = true;
-
-      if (paystackData.reference) {
-        this.paystack_reference = paystackData.reference;
-      }
-
-      if (paystackData.authorization) {
-        this.authorization = paystackData.authorization;
-      }
-
-      if (paystackData.customer) {
-        this.customer = paystackData.customer;
-      }
-
-      if (paystackData.metadata) {
-        this.paystack_metadata = paystackData.metadata;
-      }
-
-      return await this.save();
-    };
-
-    // Instance method: Mark as failed
-    this.schema.methods.markAsFailed = async function (reason) {
-      this.payment_status = STATUS.FAILED;
-      this.failed_at = new Date();
-      this.failure_reason = reason;
-      return await this.save();
-    };
-
-    // Instance method: Process refund
-    this.schema.methods.processRefund = async function (reason, amount = null) {
-      if (this.payment_status !== STATUS.COMPLETED) {
-        throw new Error("Can only refund completed payments");
-      }
-
-      this.payment_status = STATUS.REFUNDED;
-      this.refunded_at = new Date();
-      this.refund_reason = reason;
-      this.refund_amount = amount || this.amount_paid;
-
-      return await this.save();
-    };
-
-    // Instance method: Increment votes cast
-    this.schema.methods.incrementVotesCast = async function (count = 1) {
-      if (this.votes_cast + count > this.votes_purchased) {
-        throw new Error("Cannot cast more votes than purchased");
-      }
-
-      this.votes_cast += count;
-      this.votes_remaining = this.votes_purchased - this.votes_cast;
-
-      return await this.save();
-    };
-
-    // Instance method: Record webhook
-    this.schema.methods.recordWebhook = async function () {
-      this.webhook_attempts += 1;
-      this.last_webhook_at = new Date();
-      return await this.save();
     };
 
     // Ensure virtuals are included in JSON and Object outputs

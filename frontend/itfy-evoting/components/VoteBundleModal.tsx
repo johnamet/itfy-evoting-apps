@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import PurchaseVotesDialog from '@/components/PurchaseVotesDialog';
 import { Bundle, Candidate, Category, Event } from '@/types';
 import { cn } from '@/lib/utils';
+import VoteDialog from './VoteDialog';
 
 interface VoteBundleModalProps {
   open: boolean;
@@ -419,12 +420,12 @@ export default function VoteBundleModal({
           </div>
         </DialogContent>
       </Dialog>
-      {selectedCandidate && (
+      {selectedCandidateForPurchase && (
         <VoteDialog
-          open={!!selectedCandidate}
+          open={!!selectedCandidateForPurchase}
           onOpenChange={(open) => !open && setSelectedCandidate(null)}
-          candidate={selectedCandidate}
-          category={selectedCategory || undefined}
+          candidate={selectedCandidateForPurchase}
+          category={selectedCandidateForPurchase.categories[0] || undefined}
           eventId={typeof selectedCategory?.event === 'object' ? (selectedCategory.event as any)._id : selectedCategory?.event}
           eventName={getEventName(selectedCategory?.event)}
         />
@@ -432,10 +433,11 @@ export default function VoteBundleModal({
       <PurchaseVotesDialog
         open={isPurchaseDialogOpen}
         onOpenChange={setIsPurchaseDialogOpen}
-        eventId={bundle.event}
+        eventId={bundle.event._id}
         eventName={event?.name}
         candidateId={selectedCandidateForPurchase?._id}
         candidateName={selectedCandidateForPurchase ? `${selectedCandidateForPurchase.first_name} ${selectedCandidateForPurchase.last_name}` : undefined}
+        candidateCategories={categories}
       />
     </>
   );

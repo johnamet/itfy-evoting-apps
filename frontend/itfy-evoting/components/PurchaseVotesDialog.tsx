@@ -23,7 +23,12 @@ import {
   Phone,
   Copy,
   CheckCircle2,
-  Zap
+  Award,
+  Zap,
+  Loader2,
+  XCircle,
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
 import {
   Dialog,
@@ -33,7 +38,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Bundle, ApplyCouponResponse } from '@/types';
+import { Bundle, ApplyCouponResponse, Category } from '@/types';
+
 import { bundlesApi } from '@/lib/api/bundles';
 import { couponsApi } from '@/lib/api/coupons';
 import { paymentsApi } from '@/lib/api/payments';
@@ -51,12 +57,14 @@ interface PurchaseVotesDialogProps {
   eventName?: string;
   candidateId?: string;
   candidateName?: string;
+  candidateCategories?: Category[];
   onPurchaseComplete?: (voteCode: string) => void;
 }
 
 interface SelectedBundle {
   bundle: Bundle;
   quantity: number;
+  category?: Category;
 }
 
 type PurchaseStep = 'bundles' | 'details' | 'summary' | 'processing' | 'success';
@@ -96,6 +104,7 @@ export default function PurchaseVotesDialog({
   eventName,
   candidateId,
   candidateName,
+  candidateCategories,
   onPurchaseComplete
 }: PurchaseVotesDialogProps) {
   const [step, setStep] = useState<PurchaseStep>('bundles');
@@ -110,7 +119,17 @@ export default function PurchaseVotesDialog({
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<ApplyCouponResponse | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponValidation, setCouponValidation] = useState<{
+    isValidating: boolean;
+    isValid: boolean | null;
+    message: string;
+    couponData: any | null;
+  }>({
+    isValidating: false,
+    isValid: null,
+    message: "",
+    couponData: null,
+  });
 
   // Voter details
   const [voterName, setVoterName] = useState('');
@@ -119,6 +138,9 @@ export default function PurchaseVotesDialog({
 
   // Error state
   const [error, setError] = useState<string | null>(null);
+
+  // Refs to prevent multiple API calls
+  const validatingCouponRef = useState(false); // Using state ref pattern for simplicity or actual useRef if needed, but here simple state is enough for UI. Actually user used useRef. I will use state valid flag.
 
   const loadBundles = useCallback(async () => {
     setIsLoadingBundles(true);
@@ -191,9 +213,14 @@ export default function PurchaseVotesDialog({
   const resetDialog = () => {
     setStep('bundles');
     setSelectedBundles([]);
+    setCouponValidation({
+      isValidating: false,
+      isValid: null,
+      message: "",
+      couponData: null,
+    });
     setCouponCode('');
     setAppliedCoupon(null);
-    setCouponError(null);
     setVoterName('');
     setVoterEmail('');
     setVoterPhone('');
@@ -212,21 +239,23 @@ export default function PurchaseVotesDialog({
     return found?.quantity || 0;
   };
 
-  const addBundleQuantity = (bundle: Bundle) => {
+  const addBundleQuantity = (bundle: Bundle, category?: Category) => {
     setSelectedBundles(prev => {
       const existing = prev.find(sb => sb.bundle._id === bundle._id);
       if (existing) {
         return prev.map(sb =>
           sb.bundle._id === bundle._id
-            ? { ...sb, quantity: sb.quantity + 1 }
+            ? { ...sb, quantity: sb.quantity + 1, category: category ?? sb.category }
             : sb
         );
       }
-      return [...prev, { bundle, quantity: 1 }];
+      return [...prev, { bundle, quantity: 1, category }];
     });
     setAppliedCoupon(null);
     setCouponCode('');
   };
+
+  console.log(selectedBundles)
 
   const removeBundleQuantity = (bundleId: string) => {
     setSelectedBundles(prev => {
@@ -280,18 +309,19 @@ export default function PurchaseVotesDialog({
       priceAfterBundleDiscount,
       couponDiscount,
       finalPrice,
-      currency: selectedBundles[0]?.bundle.currency || 'GHS'
+      currency: selectedBundles[0]?.bundle.currency || 'GHS',
+      categories: selectedBundles.map(sb => sb.category),
     };
   }, [selectedBundles, appliedCoupon]);
+
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || selectedBundles.length === 0) return;
 
-    setIsValidatingCoupon(true);
-    setCouponError(null);
+    setCouponValidation(prev => ({ ...prev, isValidating: true, message: 'Validating coupon...' }));
 
-    const primaryBundle = selectedBundles[0].bundle;
     const totalAmount = cartTotals.priceAfterBundleDiscount;
+    const primaryBundle = selectedBundles[0].bundle;
 
     try {
       const validateResponse = await couponsApi.validate(
@@ -301,34 +331,43 @@ export default function PurchaseVotesDialog({
         totalAmount
       );
 
-      if (!validateResponse.success || !validateResponse.data?.valid) {
-        const mockResult = mockValidateCoupon(couponCode, primaryBundle._id as string, totalAmount);
-        if (mockResult.valid && mockResult.coupon) {
-          const { discountAmount, finalAmount } = mockApplyCouponDiscount(mockResult.coupon, totalAmount);
-          setAppliedCoupon({
-            coupon: mockResult.coupon,
-            original_amount: totalAmount,
-            discount_amount: discountAmount,
-            final_amount: finalAmount
+      if (validateResponse.success && validateResponse.data?.valid) {
+        const coupon = validateResponse.data.coupon || validateResponse.data; // Handle potential structure diff
+        const minOrderAmount = (coupon as any).minOrderAmount || 0;
+
+        if (minOrderAmount > totalAmount) {
+          setCouponValidation({
+            isValidating: false,
+            isValid: false,
+            message: `This coupon requires a minimum order of ${formatCurrency(minOrderAmount, cartTotals.currency)}.`,
+            couponData: null
           });
-          setCouponError(null);
-        } else {
-          setCouponError(mockResult.message || validateResponse.data?.message || 'Invalid coupon code');
+          setAppliedCoupon(null);
+          return;
         }
-        return;
-      }
 
-      const applyResponse = await couponsApi.apply(
-        couponCode,
-        eventId,
-        totalAmount,
-        primaryBundle._id as string
-      );
+        // Apply
+        const applyResponse = await couponsApi.apply(
+          couponCode,
+          eventId,
+          totalAmount,
+          primaryBundle._id as string
+        );
 
-      if (applyResponse.success && applyResponse.data) {
-        setAppliedCoupon(applyResponse.data);
-        setCouponError(null);
+        if (applyResponse.success && applyResponse.data) {
+          setAppliedCoupon(applyResponse.data);
+          setCouponValidation({
+            isValidating: false,
+            isValid: true,
+            message: `Coupon "${couponCode}" applied successfully!`,
+            couponData: applyResponse.data
+          });
+        } else {
+          throw new Error('Failed to apply coupon');
+        }
+
       } else {
+        // Mock fallback for development/testing if API fails or returns invalid
         const mockResult = mockValidateCoupon(couponCode, primaryBundle._id as string, totalAmount);
         if (mockResult.valid && mockResult.coupon) {
           const { discountAmount, finalAmount } = mockApplyCouponDiscount(mockResult.coupon, totalAmount);
@@ -338,12 +377,24 @@ export default function PurchaseVotesDialog({
             discount_amount: discountAmount,
             final_amount: finalAmount
           });
-          setCouponError(null);
+          setCouponValidation({
+            isValidating: false,
+            isValid: true,
+            message: `Coupon "${couponCode}" applied successfully!`,
+            couponData: mockResult.coupon
+          });
         } else {
-          setCouponError('Failed to apply coupon');
+          setCouponValidation({
+            isValidating: false,
+            isValid: false,
+            message: mockResult.message || validateResponse.data?.message || 'Invalid coupon code',
+            couponData: null
+          });
+          setAppliedCoupon(null);
         }
       }
-    } catch {
+    } catch (err: any) {
+      // Fallback catch
       const mockResult = mockValidateCoupon(couponCode, primaryBundle._id as string, totalAmount);
       if (mockResult.valid && mockResult.coupon) {
         const { discountAmount, finalAmount } = mockApplyCouponDiscount(mockResult.coupon, totalAmount);
@@ -353,19 +404,33 @@ export default function PurchaseVotesDialog({
           discount_amount: discountAmount,
           final_amount: finalAmount
         });
-        setCouponError(null);
+        setCouponValidation({
+          isValidating: false,
+          isValid: true,
+          message: `Coupon "${couponCode}" applied successfully!`,
+          couponData: mockResult.coupon
+        });
       } else {
-        setCouponError(mockResult.message || 'Failed to validate coupon');
+        setCouponValidation({
+          isValidating: false,
+          isValid: false,
+          message: err.message || 'Failed to validate coupon',
+          couponData: null
+        });
+        setAppliedCoupon(null);
       }
-    } finally {
-      setIsValidatingCoupon(false);
     }
   };
 
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
-    setCouponError(null);
+    setCouponValidation({
+      isValidating: false,
+      isValid: null,
+      message: "",
+      couponData: null,
+    });
   };
 
   const handleContinueToSummary = () => {
@@ -392,18 +457,22 @@ export default function PurchaseVotesDialog({
     setError(null);
     setStep('processing');
 
-    const primaryBundle = selectedBundles[0].bundle;
-    const totalQuantity = selectedBundles.reduce((acc, sb) => acc + sb.quantity, 0);
+    // const primaryBundle = selectedBundles[0].bundle;
+    // const totalQuantity = selectedBundles.reduce((acc, sb) => acc + sb.quantity, 0);
 
     try {
+      console.log(selectedBundles)
       const response = await paymentsApi.initialize({
-        bundle: primaryBundle._id as string,
-        quantity: totalQuantity,
+        bundles: selectedBundles.map(sb => ({
+          bundle_id: sb.bundle._id as string,
+          quantity: sb.quantity,
+          category: sb.category?._id
+        })),
         voter_email: voterEmail,
         event_id: eventId,
         voter_name: voterName,
         voter_phone: voterPhone || undefined,
-        candidate: candidateId,
+        candidate_id: candidateId,
         coupon_code: appliedCoupon ? couponCode : undefined,
         callback_url: `${window.location.origin}/payment/callback`
       });
@@ -442,7 +511,7 @@ export default function PurchaseVotesDialog({
   const formatCurrency = (amount: number, currency: string = 'GHS') => {
     return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: currency === "GH₵"? "GHS": currency
+      currency: currency === "GH₵" ? "GHS" : currency
     }).format(amount);
   };
 
@@ -549,119 +618,254 @@ export default function PurchaseVotesDialog({
                     </div>
                   )}
 
-                  {bundles.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Package className="w-8 h-8 text-gray-600" />
-                      </div>
-                      <p className="text-gray-400">No vote bundles available for this event</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {bundles.map((bundle) => {
-                        const quantity = getBundleQuantity(bundle._id as string);
-                        const isSelected = quantity > 0;
-                        const bundlePrice = bundle.discount_percentage
-                          ? bundle.price - (bundle.price * bundle.discount_percentage) / 100
-                          : bundle.price;
+                  {/* Tabs configuration for categories - REPLACED WITH NESTED LIST */}
+                  {candidateCategories && candidateCategories.length > 0 ? (
+                    <div className="space-y-8">
+                      {candidateCategories.map((category) => {
+                        const categoryBundles = bundles.filter(b => {
+                          if (!b.categories || b.categories.length === 0) return true;
+                          return b.categories.some((bc: any) => {
+                            const bId = typeof bc === 'object' ? bc._id : bc;
+                            return bId === category._id;
+                          });
+                        });
+
+                        if (categoryBundles.length === 0) return null;
 
                         return (
-                          <motion.div
-                            key={bundle._id as string}
-                            whileHover={{ scale: 1.01 }}
-                            className={cn(
-                              "p-4 rounded-xl border transition-all",
-                              isSelected
-                                ? "bg-[#0152be]/10 border-[#0152be]/50 shadow-lg shadow-[#0152be]/10"
-                                : "bg-gray-800/30 border-gray-700 hover:border-gray-600"
-                            )}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  <h4 className="font-semibold text-white">{bundle.name}</h4>
-                                  {bundle.is_featured && (
-                                    <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] px-1.5 py-0">
-                                      <Sparkles className="w-2.5 h-2.5 mr-0.5" />
-                                      Featured
-                                    </Badge>
-                                  )}
-                                  {bundle.is_popular && (
-                                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">
-                                      <Flame className="w-2.5 h-2.5 mr-0.5" />
-                                      Popular
-                                    </Badge>
-                                  )}
-                                </div>
-                                {bundle.description && (
-                                  <p className="text-xs text-gray-400 line-clamp-1">{bundle.description}</p>
-                                )}
-                                <div className="flex items-center gap-3 mt-2">
-                                  <span className="text-sm text-gray-400">
-                                    <span className="text-white font-bold">{bundle.vote_count}</span> votes
-                                  </span>
-                                  {bundle.discount_percentage && bundle.discount_percentage > 0 && (
-                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
-                                      <Percent className="w-2.5 h-2.5 mr-0.5" />
-                                      {bundle.discount_percentage}% off
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="text-right flex flex-col items-end gap-2">
-                                {bundle.discount_percentage && bundle.discount_percentage > 0 ? (
-                                  <>
-                                    <span className="text-gray-500 line-through text-xs">
-                                      {formatCurrency(bundle.price, bundle.currency)}
-                                    </span>
-                                    <p className="text-lg font-bold text-[#0152be]">
-                                      {formatCurrency(bundlePrice, bundle.currency)}
-                                    </p>
-                                  </>
-                                ) : (
-                                  <p className="text-lg font-bold text-[#0152be]">
-                                    {formatCurrency(bundle.price, bundle.currency)}
-                                  </p>
-                                )}
-
-                                {/* Quantity Controls */}
-                                <div className="flex items-center gap-2">
-                                  {isSelected ? (
-                                    <>
-                                      <button
-                                        onClick={() => removeBundleQuantity(bundle._id as string)}
-                                        className="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
-                                      >
-                                        <Minus className="w-4 h-4" />
-                                      </button>
-                                      <span className="min-w-[2rem] text-center font-bold text-white">
-                                        {quantity}
-                                      </span>
-                                      <button
-                                        onClick={() => addBundleQuantity(bundle)}
-                                        className="w-8 h-8 rounded-lg bg-[#0152be] hover:bg-[#0152be]/80 flex items-center justify-center transition-colors"
-                                      >
-                                        <Plus className="w-4 h-4" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => addBundleQuantity(bundle)}
-                                      className="h-8 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white text-xs rounded-lg"
-                                    >
-                                      <Plus className="w-3 h-3 mr-1" />
-                                      Add
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
+                          <div key={category._id} className="space-y-4">
+                            <div className="flex items-center gap-2 pb-2 border-b border-gray-800/50">
+                              <Award className="w-4 h-4 text-[#0152be]" />
+                              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">
+                                {category.name}
+                              </h3>
                             </div>
-                          </motion.div>
+
+                            <div className="space-y-3">
+                              {categoryBundles.map((bundle) => {
+                                const quantity = getBundleQuantity(bundle._id as string);
+                                const isSelected = quantity > 0;
+                                const bundlePrice = bundle.discount_percentage
+                                  ? bundle.price - (bundle.price * bundle.discount_percentage) / 100
+                                  : bundle.price;
+
+                                return (
+                                  <motion.div
+                                    key={`${category._id}-${bundle._id}`}
+                                    whileHover={{ scale: 1.01 }}
+                                    className={cn(
+                                      "p-4 rounded-xl border transition-all",
+                                      isSelected
+                                        ? "bg-[#0152be]/10 border-[#0152be]/50 shadow-lg shadow-[#0152be]/10"
+                                        : "bg-gray-800/30 border-gray-700 hover:border-gray-600"
+                                    )}
+                                  >
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                                          <h4 className="font-semibold text-white">{bundle.name}</h4>
+                                          {bundle.is_featured && (
+                                            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] px-1.5 py-0">
+                                              <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                                              Featured
+                                            </Badge>
+                                          )}
+                                          {bundle.is_popular && (
+                                            <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">
+                                              <Flame className="w-2.5 h-2.5 mr-0.5" />
+                                              Popular
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {bundle.description && (
+                                          <p className="text-xs text-gray-400 line-clamp-1">{bundle.description}</p>
+                                        )}
+                                        <div className="flex items-center gap-3 mt-2">
+                                          <span className="text-sm text-gray-400">
+                                            <span className="text-white font-bold">{bundle.vote_count}</span> votes
+                                          </span>
+                                          {bundle.discount_percentage && bundle.discount_percentage > 0 && (
+                                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
+                                              <Percent className="w-2.5 h-2.5 mr-0.5" />
+                                              {bundle.discount_percentage}% off
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="text-right flex flex-col items-end gap-2">
+                                        {bundle.discount_percentage && bundle.discount_percentage > 0 ? (
+                                          <>
+                                            <span className="text-gray-500 line-through text-xs">
+                                              {formatCurrency(bundle.price, bundle.currency)}
+                                            </span>
+                                            <p className="text-lg font-bold text-[#0152be]">
+                                              {formatCurrency(bundlePrice, bundle.currency)}
+                                            </p>
+                                          </>
+                                        ) : (
+                                          <p className="text-lg font-bold text-[#0152be]">
+                                            {formatCurrency(bundle.price, bundle.currency)}
+                                          </p>
+                                        )}
+
+                                        {/* Quantity Controls */}
+                                        <div className="flex items-center gap-2">
+                                          {isSelected ? (
+                                            <>
+                                              <button
+                                                onClick={() => removeBundleQuantity(bundle._id as string)}
+                                                className="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+                                              >
+                                                <Minus className="w-4 h-4" />
+                                              </button>
+                                              <span className="min-w-[2rem] text-center font-bold text-white">
+                                                {quantity}
+                                              </span>
+                                              <button
+                                                onClick={() => addBundleQuantity(bundle, category)}
+                                                className="w-8 h-8 rounded-lg bg-[#0152be] hover:bg-[#0152be]/80 flex items-center justify-center transition-colors"
+                                              >
+                                                <Plus className="w-4 h-4" />
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <Button
+                                              size="sm"
+                                              onClick={() => addBundleQuantity(bundle, category)}
+                                              className="h-8 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white text-xs rounded-lg"
+                                            >
+                                              <Plus className="w-3 h-3 mr-1" />
+                                              Add
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
+                  ) : (
+                    // Regular list view if no categories
+                    bundles.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Package className="w-8 h-8 text-gray-600" />
+                        </div>
+                        <p className="text-gray-400">No vote bundles available for this event</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {bundles.map((bundle) => {
+                          const quantity = getBundleQuantity(bundle._id as string);
+                          const isSelected = quantity > 0;
+                          const bundlePrice = bundle.discount_percentage
+                            ? bundle.price - (bundle.price * bundle.discount_percentage) / 100
+                            : bundle.price;
+
+                          return (
+                            <motion.div
+                              key={bundle._id as string}
+                              whileHover={{ scale: 1.01 }}
+                              className={cn(
+                                "p-4 rounded-xl border transition-all",
+                                isSelected
+                                  ? "bg-[#0152be]/10 border-[#0152be]/50 shadow-lg shadow-[#0152be]/10"
+                                  : "bg-gray-800/30 border-gray-700 hover:border-gray-600"
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <h4 className="font-semibold text-white">{bundle.name}</h4>
+                                    {bundle.is_featured && (
+                                      <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-[10px] px-1.5 py-0">
+                                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+                                        Featured
+                                      </Badge>
+                                    )}
+                                    {bundle.is_popular && (
+                                      <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">
+                                        <Flame className="w-2.5 h-2.5 mr-0.5" />
+                                        Popular
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {bundle.description && (
+                                    <p className="text-xs text-gray-400 line-clamp-1">{bundle.description}</p>
+                                  )}
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <span className="text-sm text-gray-400">
+                                      <span className="text-white font-bold">{bundle.vote_count}</span> votes
+                                    </span>
+                                    {bundle.discount_percentage && bundle.discount_percentage > 0 && (
+                                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">
+                                        <Percent className="w-2.5 h-2.5 mr-0.5" />
+                                        {bundle.discount_percentage}% off
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="text-right flex flex-col items-end gap-2">
+                                  {bundle.discount_percentage && bundle.discount_percentage > 0 ? (
+                                    <>
+                                      <span className="text-gray-500 line-through text-xs">
+                                        {formatCurrency(bundle.price, bundle.currency)}
+                                      </span>
+                                      <p className="text-lg font-bold text-[#0152be]">
+                                        {formatCurrency(bundlePrice, bundle.currency)}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-lg font-bold text-[#0152be]">
+                                      {formatCurrency(bundle.price, bundle.currency)}
+                                    </p>
+                                  )}
+
+                                  {/* Quantity Controls */}
+                                  <div className="flex items-center gap-2">
+                                    {isSelected ? (
+                                      <>
+                                        <button
+                                          onClick={() => removeBundleQuantity(bundle._id as string)}
+                                          className="w-8 h-8 rounded-lg bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+                                        >
+                                          <Minus className="w-4 h-4" />
+                                        </button>
+                                        <span className="min-w-[2rem] text-center font-bold text-white">
+                                          {quantity}
+                                        </span>
+                                        <button
+                                          onClick={() => addBundleQuantity(bundle)}
+                                          className="w-8 h-8 rounded-lg bg-[#0152be] hover:bg-[#0152be]/80 flex items-center justify-center transition-colors"
+                                        >
+                                          <Plus className="w-4 h-4" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => addBundleQuantity(bundle)}
+                                        className="h-8 bg-gradient-to-r from-[#0152be] to-sky-500 hover:from-[#014099] hover:to-sky-600 text-white text-xs rounded-lg"
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Add
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    )
                   )}
 
                   {/* Cart Summary */}
@@ -783,54 +987,67 @@ export default function PurchaseVotesDialog({
                       Have a coupon code?
                     </Label>
 
-                    {appliedCoupon ? (
-                      <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-xl border border-green-500/20">
-                        <div className="flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-400" />
-                          <span className="text-green-400 font-mono font-medium">{couponCode}</span>
-                          <span className="text-gray-400 text-sm">
-                            (-{formatCurrency(cartTotals.couponDiscount, cartTotals.currency)})
-                          </span>
-                        </div>
-                        <button onClick={removeCoupon} className="text-gray-400 hover:text-white">
-                          <X className="w-4 h-4" />
-                        </button>
+                    <div className="flex space-x-2 mb-3">
+                      <div className="flex-1 relative">
+                        <Input
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          placeholder="Enter discount code"
+                          className={cn(
+                            "pl-4 pr-10 h-10 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:ring-[#0152be]/20 rounded-xl transition-all",
+                            couponValidation.isValid === true ? "border-green-500 focus:border-green-500" :
+                              couponValidation.isValid === false ? "border-red-500 focus:border-red-500" : "focus:border-[#0152be]"
+                          )}
+                          disabled={couponValidation.isValidating || !!appliedCoupon}
+                        />
+                        {couponValidation.isValidating && (
+                          <Loader2 className="w-4 h-4 animate-spin absolute right-3 top-3 text-gray-400" />
+                        )}
+                        {couponValidation.isValid === true && (
+                          <CheckCircle className="w-4 h-4 absolute right-3 top-3 text-green-500" />
+                        )}
+                        {couponValidation.isValid === false && (
+                          <XCircle className="w-4 h-4 absolute right-3 top-3 text-red-500" />
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                          <Input
-                            type="text"
-                            placeholder="Enter coupon code"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                            className="pl-10 h-11 bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-[#0152be] focus:ring-[#0152be]/20 rounded-xl font-mono"
-                          />
-                        </div>
+                      {appliedCoupon ? (
+                        <Button onClick={removeCoupon} variant="outline" className="h-10 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      ) : (
                         <Button
                           onClick={handleApplyCoupon}
-                          disabled={isValidatingCoupon || !couponCode.trim()}
-                          variant="outline"
-                          className="h-11 border-gray-700 text-gray-300 hover:bg-gray-800 rounded-xl"
+                          disabled={!couponCode.trim() || couponValidation.isValidating}
+                          className="h-10 bg-[#0152be] hover:bg-[#014099]"
                         >
-                          {isValidatingCoupon ? (
-                            <div className="relative w-4 h-4">
-                              <div className="absolute inset-0 rounded-full border-t-2 border-white animate-spin"></div>
-                            </div>
-                          ) : (
-                            'Apply'
-                          )}
+                          Apply
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
-                    {couponError && (
-                      <p className="text-red-400 text-sm mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {couponError}
-                      </p>
-                    )}
+                    {/* Validation Message */}
+                    <AnimatePresence>
+                      {couponValidation.message && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className={cn(
+                            "text-xs p-3 rounded-lg border flex items-start gap-2",
+                            couponValidation.isValid === true ? "bg-green-500/10 border-green-500/20 text-green-400" :
+                              couponValidation.isValid === false ? "bg-red-500/10 border-red-500/20 text-red-400" :
+                                "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                          )}
+                        >
+                          <div className="mt-0.5">
+                            {couponValidation.isValid === true ? <CheckCircle className="w-3 h-3" /> :
+                              couponValidation.isValid === false ? <XCircle className="w-3 h-3" /> :
+                                <Loader2 className="w-3 h-3 animate-spin" />}
+                          </div>
+                          <span>{couponValidation.message}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   {/* Navigation */}
@@ -881,8 +1098,13 @@ export default function PurchaseVotesDialog({
                             {formatCurrency(bundle.price * quantity, bundle.currency)}
                           </span>
                         </div>
+
                       ))}
 
+                      <div className="flex justify-between py-2 border-b border-gray-700/50">
+                        <span className="text-gray-400">Category</span>
+                        <span className="text-white">{[...new Set(selectedBundles.map((sb) => sb.category?.name))].filter(Boolean).join(', ')}</span>
+                      </div>
                       <div className="flex justify-between py-2 border-b border-gray-700/50">
                         <span className="text-gray-400">Email</span>
                         <span className="text-white">{voterEmail}</span>

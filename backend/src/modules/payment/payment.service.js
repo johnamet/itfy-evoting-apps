@@ -19,12 +19,18 @@ import { STATUS as PAYMENT_STATUS } from "../../utils/constants/payment.constant
 import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constants.js";
 import crypto from "crypto";
 import axios from "axios";
+import { configDotenv } from "dotenv";
+import voteService from "../vote/vote/vote.service.js";
 
 // Set up validation module for this service
 BaseService.setValidation(PaymentValidation);
 
+configDotenv();
+
 class PaymentService extends BaseService {
-  constructor(dependencies = {}) {
+  constructor(dependencies = {
+    votingService: voteService
+  }) {
     super();
     this.repository = dependencies.repository || PaymentRepository;
     this.bundleRepository = dependencies.bundleRepository || BundleRepository;
@@ -33,6 +39,7 @@ class PaymentService extends BaseService {
     this.bundleService = dependencies.bundleService || BundleService;
     this.couponService = dependencies.couponService || CouponService;
     this.activityService = dependencies.activityService || ActivityService;
+    this.voteService = dependencies.votingService || voteService;
     this.notificationService = dependencies.notificationService || NotificationService;
     this.emailService = dependencies.emailService || EmailService;
     this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
@@ -75,11 +82,322 @@ class PaymentService extends BaseService {
   }
 
   /**
+   * Payment Service - Initialize Payment Method (Updated for Multiple Bundles)
+   * This is part 1 - the initializePayment method
+   */
+
+  /**
+   * Initialize payment with Paystack - Updated for multiple bundles
+   * @param {Object} paymentData - Payment data
+   * @param {Array} paymentData.bundles - Array of {bundle_id, quantity}
+   * @returns {Promise<Object>} - Payment initialization response
+   */
+  async initializePayment(paymentData) {
+    try {
+      // Validate input data using BaseService validation
+      const validatedData = this.validate(paymentData, PaymentValidation.initializePaymentSchema);
+
+      const {
+        bundles: bundleItems,
+        event_id: eventId,
+        voter_email: voterEmail,
+        voter_phone: voterPhone,
+        voter_name: voterName,
+        coupon_code: couponCode = null,
+        callback_url: callbackUrl,
+        candidate_id: candidateId,
+        metadata = {},
+      } = validatedData;
+
+
+
+      // Validate event
+      const event = await this.eventRepository.findById(eventId);
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      // Fetch and validate all bundles
+      const bundleValidations = [];
+      const bundlesData = [];
+      let totalVotes = 0;
+      let subtotal = 0;
+      let currency = null;
+
+      for (const item of bundleItems) {
+        const bundleValidation = await this.bundleService.validateBundleAvailability(item.bundle_id);
+        if (!bundleValidation.isAvailable) {
+          throw new Error(`Bundle ${item.bundle_id}: ${bundleValidation.reason}`);
+        }
+
+        const bundle = bundleValidation.bundle;
+
+        // Ensure all bundles are from the same event
+        const bundleEventId = typeof bundle.event === 'object' ? bundle.event._id : bundle.event;
+        if (bundleEventId.toString() !== eventId.toString()) {
+          throw new Error(`Bundle ${bundle.name} does not belong to this event`);
+        }
+
+        // Ensure currency consistency
+        if (currency === null) {
+          currency = bundle.currency;
+        } else if (currency !== bundle.currency) {
+          throw new Error("All bundles must have the same currency");
+        }
+
+        const quantity = item.quantity || 1;
+        const bundlePrice = bundle.price * quantity;
+        const votesAllocated = bundle.vote_count * quantity;
+
+        bundlesData.push({
+          bundle: bundle._id,
+          bundleDetails: bundle,
+          quantity,
+          votes_allocated: votesAllocated,
+          votes_used: 0,
+          price_per_unit: bundle.price,
+          total_price: bundlePrice,
+          applicable_categories: bundle.categories || [],
+        });
+
+        totalVotes += votesAllocated;
+        subtotal += bundlePrice;
+        bundleValidations.push(bundleValidation);
+      }
+
+      // Validate and apply coupon if provided
+      let coupon = null;
+      let discountAmount = 0;
+      if (couponCode) {
+        // Use the first bundle for coupon validation
+        const primaryBundle = bundlesData[0].bundleDetails;
+        const couponValidation = await this.couponService.validateCouponForBundle(
+          couponCode,
+          primaryBundle._id,
+          voterEmail
+        );
+
+        if (!couponValidation.isValid) {
+          throw new Error(couponValidation.reason);
+        }
+        coupon = couponValidation.coupon;
+
+        // Calculate discount based on coupon type
+        if (coupon.discount_type === "PERCENTAGE") {
+          discountAmount = (subtotal * coupon.discount_value) / 100;
+          if (coupon.max_discount_amount && discountAmount > coupon.max_discount_amount) {
+            discountAmount = coupon.max_discount_amount;
+          }
+        } else if (coupon.discount_type === "FIXED") {
+          discountAmount = Math.min(coupon.discount_value, subtotal);
+        } else if (coupon.discount_type === "BONUS_VOTES") {
+          // Bonus votes will be added to the first bundle
+          bundlesData[0].votes_allocated += coupon.discount_value;
+          totalVotes += coupon.discount_value;
+        }
+      }
+
+      const finalAmount = Math.max(subtotal - discountAmount, 0);
+
+      // Build votes_by_category structure
+      const categoryVotesMap = new Map();
+
+      bundlesData.forEach((bundleData) => {
+        const categories = bundleData.applicable_categories;
+
+        // If bundle has no specific categories, it applies to all event categories
+        if (!categories || categories.length === 0) {
+          // This bundle can be used for any category - we'll handle this dynamically
+          // For now, we'll create a general pool
+          const generalKey = 'unrestricted';
+          if (!categoryVotesMap.has(generalKey)) {
+            categoryVotesMap.set(generalKey, {
+              category: null, // Unrestricted
+              votes_available: 0,
+              votes_used: 0,
+              bundle_sources: [],
+            });
+          }
+          const entry = categoryVotesMap.get(generalKey);
+          entry.votes_available += bundleData.votes_allocated;
+          entry.bundle_sources.push({
+            bundle: bundleData.bundle,
+            votes_allocated: bundleData.votes_allocated,
+            votes_used: 0,
+          });
+        } else {
+          // Bundle is restricted to specific categories
+          categories.forEach((categoryId) => {
+            const catId = categoryId.toString();
+            if (!categoryVotesMap.has(catId)) {
+              categoryVotesMap.set(catId, {
+                category: categoryId,
+                votes_available: 0,
+                votes_used: 0,
+                bundle_sources: [],
+              });
+            }
+            const entry = categoryVotesMap.get(catId);
+            entry.votes_available += bundleData.votes_allocated;
+            entry.bundle_sources.push({
+              bundle: bundleData.bundle,
+              votes_allocated: bundleData.votes_allocated,
+              votes_used: 0,
+            });
+          });
+        }
+      });
+
+      const bundleCategoryMap = bundleItems.map(item => ({
+        bundle_id: item.bundle_id.toString(),
+        category_id: item.category?.toString() || null,
+        quantity: item.quantity || 1
+      }));
+
+
+      const votesByCategory = Array.from(categoryVotesMap.values()).filter(
+        (item) => item.category !== null
+      );
+
+      // Generate transaction reference and vote code
+      const transactionReference = this.generateTransactionReference();
+      const voteCode = await this.generateVoteCode();
+
+      // Create payment record with PENDING status
+      const payment = await this.repository.create({
+        transaction_reference: transactionReference,
+        bundles: bundlesData.map((bd) => ({
+          bundle: bd.bundle,
+          quantity: bd.quantity,
+          votes_allocated: bd.votes_allocated,
+          votes_used: bd.votes_used,
+          price_per_unit: bd.price_per_unit,
+          total_price: bd.total_price,
+          applicable_categories: bd.applicable_categories,
+
+        })),
+        event: eventId,
+        coupon: coupon ? coupon._id : null,
+        vote_code: voteCode,
+        votes_purchased: totalVotes,
+        votes_cast: 0,
+        votes_remaining: totalVotes,
+        votes_by_category: votesByCategory,
+        amount_paid: finalAmount,
+        original_amount: subtotal,
+        discount_amount: discountAmount,
+        currency: currency || 'GHS',
+        voter_email: voterEmail,
+        voter_phone: voterPhone,
+        voter_name: voterName,
+        payment_status: PAYMENT_STATUS.PENDING,
+        metadata: {
+          ...metadata,
+          bundleCount: bundlesData.length,
+          eventName: event.name,
+        },
+      });
+
+      // Initialize Paystack transaction
+      const paystackPayload = {
+        email: voterEmail,
+        amount: Math.round(finalAmount * 100), // Convert to kobo/pesewas
+        metadata: {
+          payment_id: payment._id.toString(),
+          event_id: eventId,
+          vote_code: voteCode,
+          voter_name: voterName,
+          voter_phone: voterPhone,
+          bundle_count: bundlesData.length,
+          candidate_id: candidateId,
+          bundleCategoryMap,
+          custom_fields: [
+            {
+              display_name: "Event",
+              variable_name: "event_name",
+              value: event.name,
+            },
+            {
+              display_name: "Vote Code",
+              variable_name: "vote_code",
+              value: voteCode,
+            },
+            {
+              display_name: "Total Votes",
+              variable_name: "total_votes",
+              value: totalVotes.toString(),
+            },
+          ],
+        },
+      };
+
+      // Log payload for debugging
+      console.log("Paystack Payload:", JSON.stringify(paystackPayload, null, 2));
+
+      console.log(this.paystackSecretKey)
+      const paystackResponse = await axios.post(
+        `${this.paystackBaseUrl}/transaction/initialize`,
+        paystackPayload,
+        {
+          headers: {
+            Authorization: `Bearer ${this.paystackSecretKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!paystackResponse.data.status) {
+        throw new Error(paystackResponse.data.message || "Paystack initialization failed");
+      }
+
+      // Update payment with Paystack details
+      await this.repository.updatePaymentById(payment._id, {
+        paystack_reference: paystackResponse.data.data.reference,
+        paystack_access_code: paystackResponse.data.data.access_code,
+      });
+
+      // Log activity (fire-and-forget)
+      this.activityService.log({
+        action: ACTION_TYPE.PAYMENT_INITIATED,
+        entityType: ENTITY_TYPE.PAYMENT,
+        entityId: payment._id,
+        eventId,
+        description: `Initialized payment for ${bundlesData.length} bundle(s)`,
+        metadata: {
+          voterEmail,
+          amount: finalAmount,
+          voteCode,
+          bundleCount: bundlesData.length,
+          totalVotes,
+        },
+      }).catch(err => console.error("Activity log failed:", err));
+
+      return {
+        payment_id: payment._id,
+        transaction_reference: transactionReference,
+        vote_code: voteCode,
+        authorization_url: paystackResponse.data.data.authorization_url,
+        access_code: paystackResponse.data.data.access_code,
+        amount: finalAmount,
+        total_votes: totalVotes,
+        bundle_count: bundlesData.length,
+      };
+    } catch (error) {
+      if (error.response && error.response.data) {
+        console.error("Paystack Error Detail:", JSON.stringify(error.response.data, null, 2));
+        const message = error.response.data.message || error.message;
+        throw new Error(`Failed to initialize payment: ${message}`);
+      }
+      throw new Error(`Failed to initialize payment: ${error.message}`);
+    }
+  }
+
+  /**
    * Initialize payment with Paystack
    * @param {Object} paymentData - Payment data
    * @returns {Promise<Object>} - Payment initialization response
    */
-  async initializePayment(paymentData) {
+  async initializePayment_deprecated(paymentData) {
     try {
       // Validate input data using BaseService validation
       const validatedData = this.validate(paymentData, PaymentValidation.initializePaymentSchema);
@@ -108,6 +426,8 @@ class PaymentService extends BaseService {
       if (!event) {
         throw new Error("Event not found");
       }
+
+
 
       // Validate and apply coupon if provided
       let coupon = null;
@@ -159,7 +479,6 @@ class PaymentService extends BaseService {
         amount: Math.round(priceBreakdown.finalPrice * 100), // Convert to kobo/pesewas
         reference: transactionReference,
         currency: bundle.currency,
-        callback_url: callbackUrl,
         metadata: {
           payment_id: payment._id.toString(),
           event_id: eventId,
@@ -167,6 +486,7 @@ class PaymentService extends BaseService {
           vote_code: voteCode,
           voter_name: voterName,
           voter_phone: voterPhone,
+          bundleCategoryMap,
           custom_fields: [
             {
               display_name: "Event",
@@ -239,6 +559,8 @@ class PaymentService extends BaseService {
     }
   }
 
+
+
   /**
    * Verify payment with Paystack
    * @param {string} reference - Transaction reference
@@ -246,14 +568,33 @@ class PaymentService extends BaseService {
    */
   async verifyPayment(reference) {
     try {
+      console.log(`Starting verification for reference: ${reference}`);
+
       // Find payment by reference
-      const payment = await this.repository.findByTransactionReference(reference);
+      let payment = null;
+      payment = await this.repository.findByTransactionReference(reference);
+
+      if (!payment) {
+        console.log("Not found by txn ref, trying paystack ref");
+        payment = await this.repository.findByPaystackReference(reference, {
+          lean: true,
+          populate: {
+            path: "votes_by_category.category",
+            select: "name"
+          }
+        });
+      }
+
       if (!payment) {
         throw new Error("Payment not found");
       }
 
+
+      console.log(`Payment found: ${payment._id}, Status: ${payment.payment_status}, Bundles count: ${payment.bundles?.length}`);
+
       // Skip if already completed
-      if (payment.status === PAYMENT_STATUS.COMPLETED) {
+      if (payment.payment_status === PAYMENT_STATUS.COMPLETED) {
+        console.log("Payment already verified", payment);
         return {
           success: true,
           payment,
@@ -262,6 +603,7 @@ class PaymentService extends BaseService {
       }
 
       // Verify with Paystack
+      console.log("Verifying with Paystack...");
       const paystackResponse = await axios.get(
         `${this.paystackBaseUrl}/transaction/verify/${reference}`,
         {
@@ -276,12 +618,13 @@ class PaymentService extends BaseService {
       }
 
       const paystackData = paystackResponse.data.data;
+      console.log(`Paystack status: ${paystackData.status}`);
 
       // Check if payment was successful
       if (paystackData.status !== "success") {
         // Mark as failed
         await this.repository.updateById(payment._id, {
-          status: PAYMENT_STATUS.FAILED,
+          payment_status: PAYMENT_STATUS.FAILED,
           failure_reason: paystackData.gateway_response || "Payment not successful",
           paid_at: new Date(paystackData.paid_at || Date.now()),
         });
@@ -291,9 +634,11 @@ class PaymentService extends BaseService {
 
       // Verify amount matches
       const amountPaid = paystackData.amount / 100; // Convert from kobo/pesewas
+      console.log(`Amount paid: ${amountPaid}, Expected: ${payment.amount_paid}`);
+
       if (Math.abs(amountPaid - payment.amount_paid) > 0.01) {
         await this.repository.updateById(payment._id, {
-          status: PAYMENT_STATUS.FAILED,
+          payment_status: PAYMENT_STATUS.FAILED,
           failure_reason: "Amount mismatch",
         });
 
@@ -301,55 +646,75 @@ class PaymentService extends BaseService {
       }
 
       // Mark payment as completed
-      await this.repository.markAsCompleted(payment._id, {
-        reference: paystackData.reference,
+      await this.repository.updatePaymentById(payment._id, {
+        paystack_reference: paystackData.reference,
+        paystack_access_code: paystackData.access_code,
         authorization: paystackData.authorization,
         customer: paystackData.customer,
-        metadata: paystackData.metadata,
+        paystack_metadata: paystackData.metadata,
+        payment_status: PAYMENT_STATUS.COMPLETED,
+        paid_at: new Date(paystackData.paid_at || Date.now()),
       });
 
       // Redeem coupon if used
       if (payment.coupon) {
+        console.log("Redeeming coupon...");
         await CouponService.redeemCoupon(payment.coupon.toString(), payment.voter_email);
       }
 
-      // Record bundle purchase
-      await BundleService.recordPurchase(payment.bundle.toString(), payment.amount_paid);
+      // Record bundle purchase(s)
+      console.log("Recording bundle purchases...");
+      if (payment.bundles && payment.bundles.length > 0) {
+        for (const item of payment.bundles) {
+          if (!item.bundle) {
+            console.warn("Found bundle item without bundle ID, skipping:", item);
+            continue;
+          }
+          console.log(`Recording purchase for bundle ${item.bundle} amount ${item.total_price}`);
+          await BundleService.recordPurchase(item.bundle.toString(), item.total_price);
+        }
+      } else if (payment.bundle) {
+        // Legacy fallback
+        console.log(`Legacy bundle record: ${payment.bundle}`);
+        await BundleService.recordPurchase(payment.bundle.toString(), payment.amount_paid);
+      }
 
       // Get updated payment
       const updatedPayment = await this.repository.findById(payment._id, {
-        populate: ["bundle", "event", "coupon"],
+        populate: [
+          "bundles.bundle",
+          "event",
+          "coupon",
+          {
+            path: "votes_by_category.category",
+            select: "name"
+          }
+        ],
       });
+
+      const bundleNames = updatedPayment.bundles
+        ? updatedPayment.bundles.map(b => b.bundle?.name || "Unknown").join(", ")
+        : (updatedPayment.bundle?.name || "Unknown Bundle");
+
+      console.log("Queueing email...");
 
       // Queue confirmation email via Agenda (non-blocking)
       await agendaManager.now("send-payment-success-email", {
         voterEmail: payment.voter_email,
         voterName: payment.voter_name || payment.voter_email,
         eventName: updatedPayment.event.name,
-        bundleName: updatedPayment.bundle.name,
+        bundleName: bundleNames,
         voteCode: payment.vote_code,
         votesCount: payment.votes_purchased,
         amountPaid: payment.amount_paid,
-        currency: payment.currency,
+        currency: payment.currency === "GH₵" ? "GHS" : currency,
         transactionReference: payment.transaction_reference,
         paidAt: updatedPayment.paid_at,
       });
 
-      // Send notification
-      await NotificationService.sendNotification({
-        recipientEmail: payment.voter_email,
-        type: "PAYMENT_SUCCESS",
-        title: "Payment Successful",
-        message: `Your payment of ${payment.currency} ${payment.amount_paid} was successful. Your vote code is ${payment.vote_code}`,
-        metadata: {
-          paymentId: payment._id,
-          voteCode: payment.vote_code,
-        },
-      });
-
       // Log activity (fire-and-forget)
       this.activityService.log({
-        action: ACTION_TYPE.UPDATE,
+        action: ACTION_TYPE.UPDATE, // Check regular constant name
         entityType: ENTITY_TYPE.PAYMENT,
         entityId: payment._id,
         eventId: payment.event,
@@ -362,23 +727,22 @@ class PaymentService extends BaseService {
         },
       }).catch(err => console.error("Activity log failed:", err));
 
+      console.log("Payment verified successfully", updatedPayment);
+
       return {
         success: true,
         payment: updatedPayment,
         message: "Payment verified successfully",
       };
     } catch (error) {
+      console.error("Critical Verification Error:", error);
+      console.error("Stack:", error.stack);
       throw new Error(`Failed to verify payment: ${error.message}`);
     }
   }
 
-  /**
-   * Handle Paystack webhook
-   * @param {Object} payload - Webhook payload
-   * @param {string} signature - Paystack signature
-   * @returns {Promise<Object>} - Processing result
-   */
   async handleWebhook(payload, signature) {
+    console.log("Received webhook payload:", payload);
     try {
       // Verify webhook signature
       const hash = crypto
@@ -415,32 +779,204 @@ class PaymentService extends BaseService {
   }
 
   /**
-   * Handle successful charge
-   * @param {Object} data - Charge data
-   * @returns {Promise<Object>} - Processing result
-   */
+  * Handle successful charge - UPDATED FOR AGGREGATED VOTING
+  * @param {Object} data - Charge data
+  * @returns {Promise<Object>} - Processing result
+  */
   async handleChargeSuccess(data) {
     try {
       const reference = data.reference;
-      const payment = await this.repository.findByTransactionReference(reference);
+      let payment = await this.repository.findByTransactionReference(reference);
+      if (!payment) {
+        payment = await this.repository.findByPaystackReference(reference, {
+          populate: [
+            {
+              path: "votes_by_category.category",
+              select: "name"
+            },
+            {
+              path: "bundles.bundle",
+              select: "name vote_count"
+            }
+          ]
+        });
+      }
 
       if (!payment) {
         return { success: false, message: "Payment not found" };
       }
 
-      if (payment.status === PAYMENT_STATUS.COMPLETED) {
+      if (payment.payment_status === PAYMENT_STATUS.COMPLETED) {
         return { success: true, message: "Payment already processed" };
       }
 
       // Verify and complete payment
-      await this.verifyPayment(reference);
+      const result = await this.verifyPayment(reference);
 
-      return { success: true, message: "Charge processed successfully" };
+      if (!result.success) {
+        throw new Error("Payment verification failed");
+      }
+
+      // Get fresh payment data after verification with populated bundles
+      payment = await this.repository.findById(payment._id, {
+        populate: [
+          {
+            path: "bundles.bundle",
+            select: "name vote_count"
+          },
+          {
+            path: "event",
+            select: "name"
+          }
+        ]
+      });
+
+      console.log("Payment data after verification:", payment.paystack_metadata);
+
+      // Check if auto-voting should be performed
+      const candidateId = payment.paystack_metadata?.get("candidate_id");
+      const bundleCategoryMap = payment.paystack_metadata?.get("bundleCategoryMap");
+
+      console.log("Auto-vote data:", {
+        candidateId,
+        bundleCategoryMap,
+      });
+
+      if (!candidateId || !bundleCategoryMap || bundleCategoryMap.length === 0) {
+        console.log("No auto-vote data found in payment metadata");
+        return { success: true, message: "Charge processed successfully - no auto-vote" };
+      }
+
+      // Check if auto-vote was already cast
+      if (payment.auto_vote_cast) {
+        console.log("Auto-vote already cast for this payment");
+        return { success: true, message: "Charge processed successfully - auto-vote already cast" };
+      }
+
+      console.log(`Starting aggregated vote casting for ${bundleCategoryMap.length} bundle-category mappings...`);
+
+      // Use the NEW aggregated voting method
+      const votingSvc = this.voteService || voteService;
+      if (!votingSvc) {
+        throw new Error("Vote service is not available for auto-voting");
+      }
+
+
+      try {
+        const voteResult = await votingSvc.castAggregatedVotes({
+          paymentId: payment._id,
+          candidateId: candidateId,
+          bundleCategoryMap: bundleCategoryMap,
+          ipAddress: data.ip_address || '0.0.0.0',
+          userAgent: 'Paystack-Webhook'
+        });
+
+        console.log(`✅ Aggregated voting successful:`, voteResult);
+
+        payment = payment.toObject();
+
+        // Mark auto-vote as cast
+        await this.repository.updatePaymentById(payment._id, {
+          auto_vote_cast: true,
+          metadata: {
+            ...payment.metadata,
+            auto_vote_results: {
+              successful: true,
+              vote_documents_created: voteResult.total_vote_documents,
+              total_votes_cast: voteResult.total_votes_cast,
+              categories_affected: voteResult.categories_affected,
+              cast_at: new Date()
+            }
+          }
+        });
+
+        // Get candidate name for activity log
+        const candidateName = voteResult.candidate;
+
+        // Log activity
+        await this.activityService.log({
+          action: ACTION_TYPE.PAYMENT_AUTO_VOTE_CAST,
+          entityType: ENTITY_TYPE.PAYMENT,
+          entityId: payment._id,
+          eventId: payment.event._id,
+          description: `Auto-cast ${voteResult.total_votes_cast} aggregated votes for ${candidateName}`,
+          metadata: {
+            candidateId,
+            totalVotesCast: voteResult.total_votes_cast,
+            voteDocumentsCreated: voteResult.total_vote_documents,
+            categoriesAffected: voteResult.categories_affected.length,
+            bundleCount: bundleCategoryMap.length
+          }
+        }).catch(err => console.error("Activity log error:", err));
+
+        // Queue bulk vote confirmation email (single email for all votes)
+        await agendaManager.now("send-bulk-vote-confirmation-email", {
+          voterEmail: payment.voter_email,
+          voterName: payment.voter_name || payment.voter_email,
+          eventName: payment.event.name,
+          candidateName: candidateName,
+          totalVotesCast: voteResult.total_votes_cast,
+          voteCode: payment.vote_code,
+          categoriesAffected: voteResult.categories_affected,
+          castedAt: new Date()
+        }).catch(err => console.error("Email queue error:", err));
+
+        return {
+          success: true,
+          message: "Charge processed successfully with aggregated auto-vote",
+          auto_vote_summary: {
+            total_votes_cast: voteResult.total_votes_cast,
+            vote_documents_created: voteResult.total_vote_documents,
+            categories_affected: voteResult.categories_affected.length,
+            candidate: candidateName
+          }
+        };
+
+      } catch (voteError) {
+        console.error("❌ Aggregated voting failed:", voteError.message);
+        console.error("Stack:", voteError.stack);
+
+        // Mark auto-vote as attempted but failed
+        await this.repository.updatePaymentById(payment._id, {
+          auto_vote_cast: false, // Mark as not cast so it can be retried
+          metadata: {
+            ...payment.metadata,
+            auto_vote_error: {
+              failed: true,
+              error_message: voteError.message,
+              attempted_at: new Date()
+            }
+          }
+        });
+
+        // Log the error but don't fail the webhook
+        await this.activityService.log({
+          action: ACTION_TYPE.ERROR,
+          entityType: ENTITY_TYPE.PAYMENT,
+          entityId: payment._id,
+          eventId: payment.event._id,
+          description: `Auto-vote failed: ${voteError.message}`,
+          metadata: {
+            candidateId,
+            error: voteError.message,
+            bundleCategoryMap
+          }
+        }).catch(err => console.error("Activity log error:", err));
+
+        // Return success for webhook processing but indicate vote failure
+        return {
+          success: true,
+          message: "Charge processed but auto-vote failed",
+          auto_vote_error: voteError.message
+        };
+      }
+
     } catch (error) {
+      console.error("Critical error in handleChargeSuccess:", error);
+      console.error("Stack:", error.stack);
       throw new Error(`Failed to handle charge success: ${error.message}`);
     }
   }
-
   /**
    * Handle failed charge
    * @param {Object} data - Charge data

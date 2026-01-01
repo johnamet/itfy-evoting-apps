@@ -1,5 +1,6 @@
 /**
  * Payment module validation schemas using Joi
+ * Updated to support multiple bundles
  */
 
 import Joi from "joi";
@@ -8,86 +9,30 @@ import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.
 
 const ObjectId = JoiObjectId(Joi);
 
-// Create payment validation
-export const createPaymentSchema = Joi.object({
-  transaction_reference: Joi.string().trim().required(),
-  paystack_reference: Joi.string().trim().optional(),
-  paystack_access_code: Joi.string().trim().optional(),
-  bundle: ObjectId().required(),
-  event: ObjectId().required(),
-  coupon: ObjectId().optional(),
-  vote_code: Joi.string().trim().required(),
-  votes_purchased: Joi.number().integer().min(1).required(),
-  votes_cast: Joi.number().integer().min(0).default(0),
-  votes_remaining: Joi.number().integer().min(0).default(0),
-  amount_paid: Joi.number().min(0).required(),
-  original_amount: Joi.number().min(0).required(),
-  discount_amount: Joi.number().min(0).default(0),
-  currency: Joi.string().uppercase().default("GHS"),
-  voter_email: Joi.string().trim().lowercase().email().required(),
-  voter_phone: Joi.string().trim().optional(),
-  voter_name: Joi.string().trim().optional(),
-  payment_method: Joi.string().valid(...Object.values(PAYMENT_METHOD)).default(PAYMENT_METHOD.CARD),
-  payment_status: Joi.string().valid(...Object.values(STATUS)).default(STATUS.PENDING),
-  webhook_received: Joi.boolean().default(false),
-  auto_vote_cast: Joi.boolean().default(false),
-  ip_address: Joi.string().trim().optional(),
-  ip_hash: Joi.string().trim().optional(),
-  user_agent: Joi.string().trim().optional(),
-  paystack_metadata: Joi.object().unknown(true).default({}),
-  metadata: Joi.object().unknown(true).default({}),
-});
-
-// Update payment validation
-export const updatePaymentSchema = Joi.object({
-  paystack_reference: Joi.string().trim(),
-  paystack_access_code: Joi.string().trim(),
-  votes_cast: Joi.number().integer().min(0),
-  votes_remaining: Joi.number().integer().min(0),
-  payment_status: Joi.string().valid(...Object.values(STATUS)),
-  webhook_received: Joi.boolean(),
-  auto_vote_cast: Joi.boolean(),
-  paystack_metadata: Joi.object().unknown(true),
-  metadata: Joi.object().unknown(true),
-  paid_at: Joi.date(),
-  failed_at: Joi.date(),
-  refunded_at: Joi.date(),
-  refund_reason: Joi.string().trim().max(500),
-}).min(1);
-
-// Payment ID parameter validation
-export const paymentIdSchema = Joi.object({
-  id: ObjectId().required(),
-});
-
-// Query parameters validation
-export const paymentQuerySchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  limit: Joi.number().integer().min(1).max(100).default(10),
-  event: ObjectId(),
-  bundle: ObjectId(),
-  payment_status: Joi.string().valid(...Object.values(STATUS)),
-  payment_method: Joi.string().valid(...Object.values(PAYMENT_METHOD)),
-  voter_email: Joi.string().trim().lowercase().email(),
-  vote_code: Joi.string().trim(),
-  transaction_reference: Joi.string().trim(),
-  webhook_received: Joi.boolean(),
-  created_at_from: Joi.date(),
-  created_at_to: Joi.date(),
-  sort: Joi.string().valid(
-    "created_at", "amount_paid", "paid_at", "-created_at", "-amount_paid", "-paid_at"
-  ).default("-created_at"),
-});
-
-// Initialize payment validation
-export const initializePaymentSchema = Joi.object({
+// Bundle item schema for multiple bundles
+const bundleItemSchema = Joi.object({
   bundle_id: ObjectId().required(),
+  quantity: Joi.number().integer().min(1).default(1),
+  category: ObjectId()
+});
+
+// Initialize payment validation - Updated for multiple bundles
+export const initializePaymentSchema = Joi.object({
+  bundles: Joi.array()
+    .items(bundleItemSchema)
+    .min(1)
+    .required()
+    .messages({
+      'array.min': 'At least one bundle is required',
+      'any.required': 'Bundles array is required',
+    }),
   event_id: ObjectId().required(),
   voter_email: Joi.string().trim().lowercase().email().required(),
   voter_phone: Joi.string().trim().optional(),
   voter_name: Joi.string().trim().optional(),
   coupon_code: Joi.string().trim().uppercase().optional(),
   callback_url: Joi.string().uri().optional(),
+  candidate_id: ObjectId().optional(), // For auto-casting votes
   metadata: Joi.object().unknown(true).optional(),
 });
 
@@ -116,7 +61,7 @@ export const refundPaymentSchema = Joi.object({
   refund_reason: Joi.string().trim().min(10).max(500).required(),
 });
 
-// Cast vote from payment validation
+// Cast vote from payment validation - Updated for category tracking
 export const castVoteSchema = Joi.object({
   candidate_id: ObjectId().required(),
   category_id: ObjectId().required(),
@@ -129,15 +74,18 @@ export const webhookSchema = Joi.object({
   data: Joi.object().required(),
 });
 
+// Validate vote code for category
+export const validateVoteCodeForCategorySchema = Joi.object({
+  vote_code: Joi.string().trim().required(),
+  category_id: ObjectId().required(),
+});
+
 export default {
-  createPaymentSchema,
-  updatePaymentSchema,
-  paymentIdSchema,
-  paymentQuerySchema,
   initializePaymentSchema,
   verifyPaymentSchema,
   updatePaymentStatusSchema,
   refundPaymentSchema,
   castVoteSchema,
   webhookSchema,
+  validateVoteCodeForCategorySchema,
 };

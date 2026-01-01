@@ -93,7 +93,7 @@ class CandidateService extends BaseService {
       } else {
         // Default population
         query.populate("event", "name slug")
-             .populate("categories", "name slug");
+             .populate("categories", "name slug is_voting_open");
       }
 
       const candidates = await query.lean().exec();

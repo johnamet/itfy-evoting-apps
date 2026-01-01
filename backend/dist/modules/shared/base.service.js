@@ -1,0 +1,324 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports["default"] = void 0;
+var _async_hooks = require("async_hooks");
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function _readOnlyError(r) { throw new TypeError('"' + r + '" is read-only'); }
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _classCallCheck(a, n) { if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function"); }
+function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
+function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); } /**
+ * Base Service Class
+ *
+ * Provides:
+ * - Repository injection (no global imports)
+ * - Centralized validation (Joi)
+ * - Transaction wrapper
+ * - Error normalization
+ * - Logging hooks
+ * - Async local context (for request tracing)
+ * - Success/error response standardization
+ *
+ * Usage:
+ * ```javascript
+ * import BaseService from '../shared/base.service';
+ * import UserRepository from './user.repository';
+ *
+ * class UserService extends BaseService {
+ *   constructor() {
+ *     super({ userRepo: UserRepository });
+ *   }
+ *
+ *   async createUser(data) {
+ *     const validated = this.validate(data, createUserSchema);
+ *     return await this.repo('userRepo').create(validated);
+ *   }
+ * }
+ *
+ * export default new UserService();
+ * ```
+ */
+var asyncLocalStorage = new _async_hooks.AsyncLocalStorage();
+
+/**
+ * @abstract
+ * @class BaseService
+ */
+var BaseService = /*#__PURE__*/function () {
+  /**
+   * @param {Object} repositories - Injected repositories (e.g., { userRepo, eventRepo })
+   * @param {Object} [options] - Optional configuration
+   * @param {boolean} [options.enableLogging=true] - Enable console logging
+   */
+  function BaseService() {
+    var repositories = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    _classCallCheck(this, BaseService);
+    if ((this instanceof BaseService ? this.constructor : void 0) === BaseService) {
+      throw new Error("BaseService is abstract and cannot be instantiated directly");
+    }
+    this.repos = _objectSpread({}, repositories);
+    this.options = _objectSpread({
+      enableLogging: true
+    }, options);
+
+    // Bind context methods to preserve 'this'
+    this.runInContext = this.runInContext.bind(this);
+    this.getContext = this.getContext.bind(this);
+  }
+
+  // ========================================
+  // 1. CONTEXT & TRACING
+  // ========================================
+
+  /**
+   * Run a callback within async local context (for request ID, user, etc.)
+   * Useful for correlation in logs/traces
+   *
+   * @param {Object} context - { requestId, userId, ipAddress, etc. }
+   * @param {Function} callback - Async function to execute
+   * @returns {Promise<any>}
+   *
+   * @example
+   * await service.runInContext({ requestId: '123', userId: 'xyz' }, async () => {
+   *   await service.someMethod(); // Context accessible via this.getContext()
+   * });
+   */
+  return _createClass(BaseService, [{
+    key: "runInContext",
+    value: function runInContext(context, callback) {
+      return asyncLocalStorage.run(context, callback);
+    }
+
+    /**
+     * Get current async local storage context
+     * @returns {Object|null} - Context object or null
+     */
+  }, {
+    key: "getContext",
+    value: function getContext() {
+      return asyncLocalStorage.getStore() || null;
+    }
+
+    // ========================================
+    // 2. VALIDATION
+    // ========================================
+
+    /**
+     * Validate input using Joi schema
+     * Must call BaseService.setValidation(Joi) once at app startup
+     *
+     * @param {Object} data - Data to validate
+     * @param {import('joi').Schema} schema - Joi schema
+     * @returns {Object} - Clean, validated data
+     * @throws {Error} - Validation error with detailed message
+     *
+     * @example
+     * const schema = Joi.object({ name: Joi.string().required() });
+     * const validated = this.validate({ name: 'John' }, schema);
+     */
+  }, {
+    key: "validate",
+    value: function validate(data, schema) {
+      if (!this.constructor.validation) {
+        throw new Error("Validation library not attached. Call BaseService.setValidation(Joi) at app startup.");
+      }
+      var _schema$validate = schema.validate(data, {
+          abortEarly: false,
+          stripUnknown: true
+        }),
+        error = _schema$validate.error,
+        value = _schema$validate.value;
+      if (error) {
+        var details = error.details.map(function (d) {
+          return d.message;
+        }).join(", ");
+        throw new Error("Validation failed: ".concat(details));
+      }
+      return value;
+    }
+
+    /**
+     * Attach validation library (Joi) - call once per app
+     * @param {any} validationLibrary - Joi instance
+     *
+     * @example
+     * import Joi from 'joi';
+     * BaseService.setValidation(Joi);
+     */
+  }, {
+    key: "transaction",
+    value: // ========================================
+    // 3. TRANSACTION HELPER
+    // ========================================
+    /**
+     * Execute callback in MongoDB transaction
+     * Uses first available repository with .transaction() method
+     *
+     * @param {Function} callback - Async function receiving session
+     * @returns {Promise<any>} - Result from callback
+     * @throws {Error} If no repository supports transactions
+     *
+     * @example
+     * await this.transaction(async (session) => {
+     *   await this.repo('userRepo').create(data, { session });
+     *   await this.repo('eventRepo').update(id, update, { session });
+     * });
+     */
+    function () {
+      var _transaction = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(callback) {
+        var repoWithTx;
+        return _regenerator().w(function (_context) {
+          while (1) switch (_context.n) {
+            case 0:
+              repoWithTx = Object.values(this.repos).find(function (repo) {
+                return repo && typeof repo.transaction === "function";
+              });
+              if (repoWithTx) {
+                _context.n = 1;
+                break;
+              }
+              throw new Error("No repository with transaction support injected. Ensure at least one repository extends BaseRepository.");
+            case 1:
+              _context.n = 2;
+              return repoWithTx.transaction(callback);
+            case 2:
+              return _context.a(2, _context.v);
+          }
+        }, _callee, this);
+      }));
+      function transaction(_x) {
+        return _transaction.apply(this, arguments);
+      }
+      return transaction;
+    }() // ========================================
+    // 4. LOGGING & ERROR HANDLING
+    // ========================================
+    /**
+     * Log action with context (replace with Winston/Pino in production)
+     * Automatically includes async context (requestId, userId, etc.)
+     *
+     * @param {string} action - Action name (e.g., 'createUser', 'deleteEvent')
+     * @param {Object} [meta={}] - Additional metadata
+     *
+     * @example
+     * this.log('createUser', { userId: '123', email: 'user@example.com' });
+     */
+  }, {
+    key: "log",
+    value: function log(action) {
+      var meta = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      if (!this.options.enableLogging) return;
+      var context = this.getContext() || {};
+      var logEntry = _objectSpread(_objectSpread({
+        timestamp: new Date().toISOString(),
+        service: this.constructor.name,
+        action: action
+      }, context), meta);
+
+      // Replace with structured logger (Winston/Pino) in production
+      console.log(JSON.stringify(logEntry));
+    }
+
+    /**
+     * Normalize error response (hides internals in production)
+     *
+     * @param {Error} error - Caught error
+     * @param {string} [fallbackMessage='Operation failed'] - User-facing message
+     * @returns {Object} - { success: false, error: string, stack?: string }
+     *
+     * @example
+     * try {
+     *   await this.repo('userRepo').create(data);
+     * } catch (error) {
+     *   return this.error(error, 'Failed to create user');
+     * }
+     */
+  }, {
+    key: "error",
+    value: function error(_error) {
+      var fallbackMessage = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "Operation failed";
+      var isDev = process.env.NODE_ENV !== "production";
+      this.log("error", {
+        message: _error.message,
+        stack: isDev ? _error.stack : undefined
+      });
+
+      // Show validation errors but hide internal DB errors in production
+      var isValidationError = _error.message.includes("Validation failed") || _error.message.includes("required") || _error.message.includes("invalid");
+      var message = isValidationError ? _error.message : fallbackMessage;
+      return _objectSpread({
+        success: false,
+        error: isDev ? _error.message : message
+      }, isDev && {
+        stack: _error.stack
+      });
+    }
+
+    /**
+     * Normalize success response
+     *
+     * @param {any} data - The data to return
+     * @param {Object} [meta={}] - Optional metadata (pagination, counts, etc.)
+     * @returns {Object} - { success: true, data: any, ...meta }
+     *
+     * @example
+     * return this.success(user, { created: true });
+     * return this.success(users, { page: 1, total: 100 });
+     */
+  }, {
+    key: "success",
+    value: function success(data) {
+      var meta = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+      return _objectSpread({
+        success: true,
+        data: data
+      }, meta);
+    }
+
+    // ========================================
+    // 5. UTILITY: REPOSITORY ACCESS
+    // ========================================
+
+    /**
+     * Get repository by name (type-safe access)
+     *
+     * @param {string} name - Repository key from constructor
+     * @returns {any} - Repository instance
+     * @throws {Error} If repository not injected
+     *
+     * @example
+     * const userRepo = this.repo('userRepo');
+     * const user = await userRepo.findById(id);
+     */
+  }, {
+    key: "repo",
+    value: function repo(name) {
+      var repo = this.repos[name];
+      if (!repo) {
+        throw new Error("Repository '".concat(name, "' not injected into ").concat(this.constructor.name, ". Available: ").concat(Object.keys(this.repos).join(", ")));
+      }
+      return repo;
+    }
+  }], [{
+    key: "setValidation",
+    value: function setValidation(validationLibrary) {
+      if (this.validation) {
+        console.warn("Validation library already attached to BaseService. Overwriting...");
+      }
+      this.validation = validationLibrary;
+    }
+  }]);
+}();
+var _default = exports["default"] = BaseService;

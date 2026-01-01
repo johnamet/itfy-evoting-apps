@@ -739,12 +739,15 @@ export interface Payment {
 }
 
 export interface InitializePaymentRequest {
-  bundle: ObjectId;
-  quantity?: number;
+  bundles: Array<{
+    bundle_id: ObjectId;
+    quantity: number;
+  }>;
   voter_email: string;
+  event_id: ObjectId;
   voter_name?: string;
   voter_phone?: string;
-  candidate?: ObjectId;
+  candidate_id?: ObjectId;
   coupon_code?: string;
   callback_url?: string;
 }

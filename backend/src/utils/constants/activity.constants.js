@@ -62,6 +62,8 @@ const ACTION_TYPE = {
   PAYMENT_COMPLETED: "payment_completed",
   PAYMENT_FAILED: "payment_failed",
   PAYMENT_REFUNDED: "payment_refunded",
+  PAYMENT_AUTO_VOTE_CAST: "payment_auto_vote_cast",
+  PAYMENT_UPDATED: "payment_updated",
   
   // Form actions
   FORM_CREATE: "form_create",

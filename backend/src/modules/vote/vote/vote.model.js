@@ -1,5 +1,6 @@
 /**
  * The vote model definition for the vote module
+ * Updated to support aggregated vote records
  */
 
 import mongoose from "mongoose";
@@ -39,6 +40,20 @@ class Vote extends BaseModel {
         index: true,
         trim: true,
       },
+      // NEW: Number of votes this document represents
+      vote_count: {
+        type: Number,
+        default: 1,
+        min: 1,
+        required: true,
+        index: true,
+      },
+      // NEW: Flag to indicate if this is an aggregated bulk vote
+      is_bulk: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
       status: {
         type: String,
         enum: Object.values(STATUS),
@@ -55,8 +70,7 @@ class Vote extends BaseModel {
         required: false,
       },
       metadata: {
-        type: Map,
-        of: String,
+        type: mongoose.Schema.Types.Mixed,
         default: {},
       },
       cast_at: {
@@ -88,6 +102,10 @@ class Vote extends BaseModel {
     this.schema.index({ payment: 1, status: 1 });
     this.schema.index({ vote_code: 1, candidate: 1 });
     this.schema.index({ cast_at: -1 });
+    // NEW: Index for bulk vote queries
+    this.schema.index({ is_bulk: 1, status: 1 });
+    // NEW: Compound index for unique vote aggregation
+    this.schema.index({ payment: 1, candidate: 1, category: 1, is_bulk: 1 });
 
     // Pre-save hook
     this.schema.pre("save", async function (next) {
@@ -137,13 +155,15 @@ class Vote extends BaseModel {
       try {
         if (doc.status === STATUS.ACTIVE) {
           const Candidate = mongoose.model("Candidate");
+          // NEW: Increment by vote_count instead of 1
           await Candidate.findByIdAndUpdate(doc.candidate, {
-            $inc: { vote_count: 1 },
+            $inc: { vote_count: doc.vote_count },
           });
 
           const Category = mongoose.model("Category");
+          // NEW: Increment by vote_count instead of 1
           await Category.findByIdAndUpdate(doc.category, {
-            $inc: { total_votes: 1 },
+            $inc: { total_votes: doc.vote_count },
           });
         }
       } catch (error) {
@@ -159,6 +179,11 @@ class Vote extends BaseModel {
     // Virtual: Is refunded
     this.schema.virtual("isRefunded").get(function () {
       return this.status === STATUS.REFUNDED;
+    });
+
+    // Virtual: Is bulk/aggregated vote
+    this.schema.virtual("isBulkVote").get(function () {
+      return this.is_bulk === true;
     });
 
     // Virtual: Days since cast
@@ -208,8 +233,13 @@ class Vote extends BaseModel {
     };
 
     // Static method: Count votes for candidate
+    // NEW: Sum vote_count instead of counting documents
     this.schema.statics.countForCandidate = async function (candidateId) {
-      return await this.countDocuments({ candidate: candidateId, status: STATUS.ACTIVE }).exec();
+      const result = await this.aggregate([
+        { $match: { candidate: candidateId, status: STATUS.ACTIVE } },
+        { $group: { _id: null, total: { $sum: "$vote_count" } } },
+      ]);
+      return result[0]?.total || 0;
     };
 
     // Static method: Get vote statistics for event
@@ -218,16 +248,33 @@ class Vote extends BaseModel {
         { $match: { event: eventId } },
         {
           $facet: {
-            total: [{ $count: "count" }],
-            active: [{ $match: { status: STATUS.ACTIVE } }, { $count: "count" }],
-            refunded: [{ $match: { status: STATUS.REFUNDED } }, { $count: "count" }],
+            total: [
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            active: [
+              { $match: { status: STATUS.ACTIVE } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            refunded: [
+              { $match: { status: STATUS.REFUNDED } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            // NEW: Separate stats for bulk vs individual votes
+            bulkVotes: [
+              { $match: { status: STATUS.ACTIVE, is_bulk: true } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            individualVotes: [
+              { $match: { status: STATUS.ACTIVE, is_bulk: false } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
             byDate: [
               {
                 $group: {
                   _id: {
                     $dateToString: { format: "%Y-%m-%d", date: "$cast_at" },
                   },
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { _id: 1 } },
@@ -240,6 +287,8 @@ class Vote extends BaseModel {
         total: stats?.total[0]?.count || 0,
         active: stats?.active[0]?.count || 0,
         refunded: stats?.refunded[0]?.count || 0,
+        bulkVotes: stats?.bulkVotes[0]?.count || 0,
+        individualVotes: stats?.individualVotes[0]?.count || 0,
         byDate: stats?.byDate || [],
       };
     };
@@ -253,13 +302,13 @@ class Vote extends BaseModel {
       // Decrement candidate vote count
       const Candidate = mongoose.model("Candidate");
       await Candidate.findByIdAndUpdate(this.candidate, {
-        $inc: { vote_count: -1 },
+        $inc: { vote_count: -this.vote_count }, // NEW: Decrement by vote_count
       });
 
       // Decrement category vote count
       const Category = mongoose.model("Category");
       await Category.findByIdAndUpdate(this.category, {
-        $inc: { total_votes: -1 },
+        $inc: { total_votes: -this.vote_count }, // NEW: Decrement by vote_count
       });
 
       this.status = STATUS.REFUNDED;

@@ -2,6 +2,7 @@
  * Vote Repository
  * This file defines the VoteRepository class which extends the BaseRepository
  * It contains vote-specific data access methods
+ * Updated to support aggregated vote records
  */
 
 import { BaseRepository } from "../../shared/base.repository.js";
@@ -106,14 +107,17 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Count votes for a candidate
+   * NEW: Sums vote_count instead of counting documents
    * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
    * @returns {Promise<number>} - Vote count
    */
   async countForCandidate(candidateId) {
     try {
-      return await this.model
-        .countDocuments({ candidate: candidateId, status: STATUS.ACTIVE })
-        .exec();
+      const result = await this.model.aggregate([
+        { $match: { candidate: candidateId, status: STATUS.ACTIVE } },
+        { $group: { _id: null, total: { $sum: "$vote_count" } } },
+      ]);
+      return result[0]?.total || 0;
     } catch (error) {
       throw new Error(`Count votes for candidate failed: ${error.message}`);
     }
@@ -121,14 +125,17 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Count votes for a category
+   * NEW: Sums vote_count instead of counting documents
    * @param {string|mongoose.Types.ObjectId} categoryId - Category ID
    * @returns {Promise<number>} - Vote count
    */
   async countForCategory(categoryId) {
     try {
-      return await this.model
-        .countDocuments({ category: categoryId, status: STATUS.ACTIVE })
-        .exec();
+      const result = await this.model.aggregate([
+        { $match: { category: categoryId, status: STATUS.ACTIVE } },
+        { $group: { _id: null, total: { $sum: "$vote_count" } } },
+      ]);
+      return result[0]?.total || 0;
     } catch (error) {
       throw new Error(`Count votes for category failed: ${error.message}`);
     }
@@ -136,12 +143,17 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Count votes for an event
+   * NEW: Sums vote_count instead of counting documents
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @returns {Promise<number>} - Vote count
    */
   async countForEvent(eventId) {
     try {
-      return await this.model.countDocuments({ event: eventId, status: STATUS.ACTIVE }).exec();
+      const result = await this.model.aggregate([
+        { $match: { event: eventId, status: STATUS.ACTIVE } },
+        { $group: { _id: null, total: { $sum: "$vote_count" } } },
+      ]);
+      return result[0]?.total || 0;
     } catch (error) {
       throw new Error(`Count votes for event failed: ${error.message}`);
     }
@@ -232,6 +244,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get vote statistics for an event
+   * NEW: Uses vote_count for accurate totals
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @returns {Promise<Object>} - Vote statistics
    */
@@ -241,15 +254,31 @@ class VoteRepository extends BaseRepository {
         { $match: { event: eventId } },
         {
           $facet: {
-            total: [{ $count: "count" }],
-            active: [{ $match: { status: STATUS.ACTIVE } }, { $count: "count" }],
-            refunded: [{ $match: { status: STATUS.REFUNDED } }, { $count: "count" }],
+            total: [
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            active: [
+              { $match: { status: STATUS.ACTIVE } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            refunded: [
+              { $match: { status: STATUS.REFUNDED } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            bulkVotes: [
+              { $match: { status: STATUS.ACTIVE, is_bulk: true } },
+              { $group: { _id: null, count: { $sum: "$vote_count" }, documents: { $sum: 1 } } }
+            ],
+            individualVotes: [
+              { $match: { status: STATUS.ACTIVE, is_bulk: false } },
+              { $group: { _id: null, count: { $sum: "$vote_count" }, documents: { $sum: 1 } } }
+            ],
             byCandidate: [
               { $match: { status: STATUS.ACTIVE } },
               {
                 $group: {
                   _id: "$candidate",
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { count: -1 } },
@@ -260,7 +289,7 @@ class VoteRepository extends BaseRepository {
               {
                 $group: {
                   _id: "$category",
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { count: -1 } },
@@ -272,7 +301,7 @@ class VoteRepository extends BaseRepository {
                   _id: {
                     $dateToString: { format: "%Y-%m-%d", date: "$cast_at" },
                   },
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { _id: 1 } },
@@ -284,7 +313,7 @@ class VoteRepository extends BaseRepository {
                   _id: {
                     $dateToString: { format: "%Y-%m-%d %H:00", date: "$cast_at" },
                   },
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { _id: 1 } },
@@ -297,6 +326,14 @@ class VoteRepository extends BaseRepository {
         total: stats?.total[0]?.count || 0,
         active: stats?.active[0]?.count || 0,
         refunded: stats?.refunded[0]?.count || 0,
+        bulkVotes: {
+          count: stats?.bulkVotes[0]?.count || 0,
+          documents: stats?.bulkVotes[0]?.documents || 0,
+        },
+        individualVotes: {
+          count: stats?.individualVotes[0]?.count || 0,
+          documents: stats?.individualVotes[0]?.documents || 0,
+        },
         byCandidate: stats?.byCandidate || [],
         byCategory: stats?.byCategory || [],
         byDate: stats?.byDate || [],
@@ -309,6 +346,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get vote statistics for a candidate
+   * NEW: Uses vote_count for accurate totals
    * @param {string|mongoose.Types.ObjectId} candidateId - Candidate ID
    * @returns {Promise<Object>} - Candidate vote statistics
    */
@@ -318,9 +356,17 @@ class VoteRepository extends BaseRepository {
         { $match: { candidate: candidateId } },
         {
           $facet: {
-            total: [{ $count: "count" }],
-            active: [{ $match: { status: STATUS.ACTIVE } }, { $count: "count" }],
-            refunded: [{ $match: { status: STATUS.REFUNDED } }, { $count: "count" }],
+            total: [
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            active: [
+              { $match: { status: STATUS.ACTIVE } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            refunded: [
+              { $match: { status: STATUS.REFUNDED } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
             byDate: [
               { $match: { status: STATUS.ACTIVE } },
               {
@@ -328,7 +374,7 @@ class VoteRepository extends BaseRepository {
                   _id: {
                     $dateToString: { format: "%Y-%m-%d", date: "$cast_at" },
                   },
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { _id: 1 } },
@@ -356,6 +402,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get vote statistics for a category
+   * NEW: Uses vote_count for accurate totals
    * @param {string|mongoose.Types.ObjectId} categoryId - Category ID
    * @returns {Promise<Object>} - Category vote statistics
    */
@@ -365,15 +412,23 @@ class VoteRepository extends BaseRepository {
         { $match: { category: categoryId } },
         {
           $facet: {
-            total: [{ $count: "count" }],
-            active: [{ $match: { status: STATUS.ACTIVE } }, { $count: "count" }],
-            refunded: [{ $match: { status: STATUS.REFUNDED } }, { $count: "count" }],
+            total: [
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            active: [
+              { $match: { status: STATUS.ACTIVE } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
+            refunded: [
+              { $match: { status: STATUS.REFUNDED } },
+              { $group: { _id: null, count: { $sum: "$vote_count" } } }
+            ],
             byCandidate: [
               { $match: { status: STATUS.ACTIVE } },
               {
                 $group: {
                   _id: "$candidate",
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { count: -1 } },
@@ -385,7 +440,7 @@ class VoteRepository extends BaseRepository {
                   _id: {
                     $dateToString: { format: "%Y-%m-%d", date: "$cast_at" },
                   },
-                  count: { $sum: 1 },
+                  count: { $sum: "$vote_count" },
                 },
               },
               { $sort: { _id: 1 } },
@@ -450,6 +505,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get voting trends (votes per day/hour)
+   * NEW: Uses vote_count for accurate trends
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @param {string} [period='day'] - 'day' or 'hour'
    * @returns {Promise<Array>} - Voting trends
@@ -465,7 +521,7 @@ class VoteRepository extends BaseRepository {
             _id: {
               $dateToString: { format: dateFormat, date: "$cast_at" },
             },
-            count: { $sum: 1 },
+            count: { $sum: "$vote_count" },
           },
         },
         { $sort: { _id: 1 } },
@@ -479,6 +535,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get top candidates by votes in event
+   * NEW: Uses vote_count for accurate rankings
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @param {number} [limit=10] - Maximum number to return
    * @returns {Promise<Array>} - Top candidates
@@ -490,7 +547,7 @@ class VoteRepository extends BaseRepository {
         {
           $group: {
             _id: "$candidate",
-            voteCount: { $sum: 1 },
+            voteCount: { $sum: "$vote_count" },
           },
         },
         { $sort: { voteCount: -1 } },
@@ -514,6 +571,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get top categories by votes in event
+   * NEW: Uses vote_count for accurate rankings
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @param {number} [limit=10] - Maximum number to return
    * @returns {Promise<Array>} - Top categories
@@ -525,7 +583,7 @@ class VoteRepository extends BaseRepository {
         {
           $group: {
             _id: "$category",
-            voteCount: { $sum: 1 },
+            voteCount: { $sum: "$vote_count" },
           },
         },
         { $sort: { voteCount: -1 } },
@@ -560,7 +618,7 @@ class VoteRepository extends BaseRepository {
         {
           $group: {
             _id: "$ip_hash",
-            voteCount: { $sum: 1 },
+            voteCount: { $sum: "$vote_count" },
             candidates: { $addToSet: "$candidate" },
             votes: { $push: "$$ROOT" },
           },
@@ -577,6 +635,7 @@ class VoteRepository extends BaseRepository {
 
   /**
    * Get vote velocity (votes per minute) for event
+   * NEW: Uses vote_count for accurate velocity
    * @param {string|mongoose.Types.ObjectId} eventId - Event ID
    * @param {number} [minutes=60] - Time window in minutes
    * @returns {Promise<number>} - Votes per minute
@@ -585,14 +644,23 @@ class VoteRepository extends BaseRepository {
     try {
       const since = new Date(Date.now() - minutes * 60 * 1000);
 
-      const count = await this.model
-        .countDocuments({
-          event: eventId,
-          status: STATUS.ACTIVE,
-          cast_at: { $gte: since },
-        })
-        .exec();
+      const result = await this.aggregate([
+        {
+          $match: {
+            event: eventId,
+            status: STATUS.ACTIVE,
+            cast_at: { $gte: since },
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$vote_count" }
+          }
+        }
+      ]);
 
+      const count = result[0]?.total || 0;
       return Math.round((count / minutes) * 10) / 10;
     } catch (error) {
       throw new Error(`Get vote velocity failed: ${error.message}`);
@@ -600,137 +668,108 @@ class VoteRepository extends BaseRepository {
   }
 
   /**
-   * Cast a single vote
+   * Cast a single vote (for manual voting after payment)
    * @param {Object} voteData - Vote data
-   * @param {string|mongoose.Types.ObjectId} voteData.candidate - Candidate ID
-   * @param {string|mongoose.Types.ObjectId} voteData.category - Category ID
-   * @param {string|mongoose.Types.ObjectId} voteData.event - Event ID
-   * @param {string|mongoose.Types.ObjectId} voteData.payment - Payment ID
-   * @param {string} voteData.vote_code - Vote code
-   * @param {string} [voteData.ip_address] - IP address
-   * @param {string} [voteData.user_agent] - User agent
    * @returns {Promise<Object>} - Created vote
    */
   async castVote(voteData) {
     try {
-      return await this.create(voteData);
+      return await this.create({
+        ...voteData,
+        vote_count: 1,
+        is_bulk: false,
+      });
     } catch (error) {
       throw new Error(`Cast vote failed: ${error.message}`);
     }
   }
 
   /**
-   * Cast multiple votes in bulk (for bundle purchases)
-   * @param {Object} params - Bulk vote parameters
-   * @param {string|mongoose.Types.ObjectId} params.candidate - Candidate ID
-   * @param {string|mongoose.Types.ObjectId} params.category - Category ID
-   * @param {string|mongoose.Types.ObjectId} params.event - Event ID
-   * @param {string|mongoose.Types.ObjectId} params.payment - Payment ID
-   * @param {string} params.vote_code - Vote code
-   * @param {number} params.count - Number of votes to cast
-   * @param {string} [params.ip_address] - IP address
-   * @param {string} [params.user_agent] - User agent
-   * @param {Object} [params.metadata] - Additional metadata
-   * @returns {Promise<Array>} - Array of created votes
+   * NEW: Create aggregated vote (for bulk auto-cast)
+   * Creates a single vote document representing multiple votes
+   * @param {Object} voteData - Vote data
+   * @param {string|mongoose.Types.ObjectId} voteData.candidate - Candidate ID
+   * @param {string|mongoose.Types.ObjectId} voteData.category - Category ID
+   * @param {string|mongoose.Types.ObjectId} voteData.event - Event ID
+   * @param {string|mongoose.Types.ObjectId} voteData.payment - Payment ID
+   * @param {string} voteData.vote_code - Vote code
+   * @param {number} voteData.vote_count - Number of votes this document represents
+   * @param {string} [voteData.ip_hash] - IP hash
+   * @param {string} [voteData.user_agent] - User agent
+   * @param {Object} [voteData.metadata] - Additional metadata
+   * @returns {Promise<Object>} - Created aggregated vote
    */
-  async castVotes(params) {
+  async createAggregatedVote(voteData) {
     try {
-      const { candidate, category, event, payment, vote_code, count, ip_address, user_agent, metadata } = params;
+      const {
+        candidate,
+        category,
+        event,
+        payment,
+        vote_code,
+        vote_count,
+        ip_hash,
+        user_agent,
+        metadata = {}
+      } = voteData;
 
-      if (!count || count < 1) {
-        throw new Error("Vote count must be at least 1");
+      if (!vote_count || vote_count < 1) {
+        throw new Error("vote_count must be at least 1");
       }
 
-      // Prepare bulk vote data
-      const votesData = [];
-      const now = new Date();
-      
-      // Hash IP address if provided
-      let ip_hash = null;
-      if (ip_address) {
-        const crypto = require("crypto");
-        ip_hash = crypto.createHash("sha256").update(ip_address).digest("hex");
-      }
-
-      for (let i = 0; i < count; i++) {
-        votesData.push({
-          candidate,
-          category,
-          event,
-          payment,
-          vote_code,
-          status: STATUS.ACTIVE,
-          ip_hash,
-          user_agent,
-          metadata: metadata || {},
-          cast_at: now,
-        });
-      }
-
-      // Bulk insert votes
-      const createdVotes = await this.model.insertMany(votesData);
-
-      // Update candidate vote count
-      const Candidate = require("mongoose").model("Candidate");
-      await Candidate.findByIdAndUpdate(candidate, {
-        $inc: { vote_count: count },
+      // Create aggregated vote document
+      const aggregatedVote = await this.create({
+        candidate,
+        category,
+        event,
+        payment,
+        vote_code: vote_code.toUpperCase(),
+        vote_count,
+        is_bulk: true,
+        status: STATUS.ACTIVE,
+        ip_hash,
+        user_agent,
+        metadata: {
+          ...metadata,
+          aggregated: true,
+          created_via: 'auto_cast'
+        },
+        cast_at: new Date(),
       });
 
-      // Update category vote count
-      const Category = require("mongoose").model("Category");
-      await Category.findByIdAndUpdate(category, {
-        $inc: { total_votes: count },
-      });
-
-      return createdVotes;
+      return aggregatedVote;
     } catch (error) {
-      throw new Error(`Cast votes in bulk failed: ${error.message}`);
+      throw new Error(`Create aggregated vote failed: ${error.message}`);
     }
   }
 
   /**
-   * Cast votes for multiple candidates (distributed voting)
-   * @param {Object} params - Parameters
-   * @param {string|mongoose.Types.ObjectId} params.event - Event ID
-   * @param {string|mongoose.Types.ObjectId} params.payment - Payment ID
-   * @param {string} params.vote_code - Vote code
-   * @param {Array} params.votes - Array of vote distributions
-   * @param {string|mongoose.Types.ObjectId} params.votes[].candidate - Candidate ID
-   * @param {string|mongoose.Types.ObjectId} params.votes[].category - Category ID
-   * @param {number} params.votes[].count - Number of votes for this candidate
-   * @param {string} [params.ip_address] - IP address
-   * @param {string} [params.user_agent] - User agent
-   * @returns {Promise<Array>} - Array of all created votes
+   * NEW: Bulk create aggregated votes for multiple categories
+   * @param {Array} votesData - Array of vote data objects
+   * @returns {Promise<Array>} - Array of created aggregated votes
    */
-  async castDistributedVotes(params) {
+  async bulkCreateAggregatedVotes(votesData) {
     try {
-      const { event, payment, vote_code, votes, ip_address, user_agent } = params;
-
-      const allCreatedVotes = [];
-
-      for (const voteDistribution of votes) {
-        const createdVotes = await this.castVotes({
-          candidate: voteDistribution.candidate,
-          category: voteDistribution.category,
-          event,
-          payment,
-          vote_code,
-          count: voteDistribution.count,
-          ip_address,
-          user_agent,
-        });
-
-        allCreatedVotes.push(...createdVotes);
+      if (!votesData || votesData.length === 0) {
+        throw new Error("votesData array cannot be empty");
       }
 
-      return allCreatedVotes;
+      const createdVotes = [];
+      
+      for (const voteData of votesData) {
+        const vote = await this.createAggregatedVote(voteData);
+        createdVotes.push(vote);
+      }
+
+      return createdVotes;
     } catch (error) {
-      throw new Error(`Cast distributed votes failed: ${error.message}`);
+      throw new Error(`Bulk create aggregated votes failed: ${error.message}`);
     }
   }
 
   /**
    * Verify votes by vote code
+   * NEW: Returns total vote count including aggregated votes
    * @param {string} voteCode - Vote code
    * @returns {Promise<Object>} - Verification details
    */
@@ -747,14 +786,22 @@ class VoteRepository extends BaseRepository {
         };
       }
 
+      // Calculate totals
       const activeVotes = votes.filter((v) => v.status === STATUS.ACTIVE);
       const refundedVotes = votes.filter((v) => v.status === STATUS.REFUNDED);
+      
+      const totalVoteCount = votes.reduce((sum, v) => sum + (v.vote_count || 1), 0);
+      const activeVoteCount = activeVotes.reduce((sum, v) => sum + (v.vote_count || 1), 0);
+      const refundedVoteCount = refundedVotes.reduce((sum, v) => sum + (v.vote_count || 1), 0);
 
       return {
         verified: true,
-        total_votes: votes.length,
-        active_votes: activeVotes.length,
-        refunded_votes: refundedVotes.length,
+        total_vote_documents: votes.length,
+        total_votes: totalVoteCount,
+        active_vote_documents: activeVotes.length,
+        active_votes: activeVoteCount,
+        refunded_vote_documents: refundedVotes.length,
+        refunded_votes: refundedVoteCount,
         votes: votes,
         cast_at: votes[0].cast_at,
       };

@@ -3,13 +3,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  Search, 
-  LayoutGrid, 
-  List, 
-  Users, 
-  Vote, 
-  Eye, 
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Users,
+  Vote,
+  Eye,
   Star,
   Award,
   ChevronRight,
@@ -58,9 +58,9 @@ function StatusBadge({ status }: { status: Candidate['status'] }) {
     profile_update_pending: { label: 'Update Pending', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
     pending_profile_completion: { label: 'Profile Incomplete', className: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
   };
-  
+
   const config = statusConfig[status] || statusConfig.pending;
-  
+
   return (
     <span className={`px-2 py-1 text-xs font-medium rounded-full border ${config.className}`}>
       {config.label}
@@ -74,7 +74,7 @@ function NomineeCardSkeleton() {
     <GlassCard className="overflow-hidden h-full flex flex-col">
       {/* Cover skeleton */}
       <Skeleton className="h-32 w-full rounded-none" />
-      
+
       {/* Content skeleton */}
       <div className="pt-12 px-4 pb-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -84,15 +84,15 @@ function NomineeCardSkeleton() {
           </div>
           <Skeleton className="h-6 w-16 rounded-full" />
         </div>
-        
+
         <Skeleton className="h-4 w-24 mb-2" />
         <Skeleton className="h-10 w-full mb-3" />
-        
+
         <div className="flex gap-1 mb-3">
           <Skeleton className="h-5 w-16 rounded-full" />
           <Skeleton className="h-5 w-16 rounded-full" />
         </div>
-        
+
         <div className="flex gap-4 pt-3 border-t border-gray-800">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-12" />
@@ -123,49 +123,49 @@ function NomineeRowSkeleton() {
 }
 
 // Pagination component
-function Pagination({ 
-  currentPage, 
-  totalPages, 
-  onPageChange 
-}: { 
-  currentPage: number; 
-  totalPages: number; 
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange
+}: {
+  currentPage: number;
+  totalPages: number;
   onPageChange: (page: number) => void;
 }) {
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const showEllipsis = totalPages > 7;
-    
+
     if (!showEllipsis) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
       pages.push(1);
-      
+
       if (currentPage > 3) {
         pages.push('...');
       }
-      
+
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
-      
+
       if (currentPage < totalPages - 2) {
         pages.push('...');
       }
-      
+
       pages.push(totalPages);
     }
-    
+
     return pages;
   };
-  
+
   if (totalPages <= 1) return null;
-  
+
   return (
     <div className="flex items-center justify-center gap-2 mt-8">
       <button
@@ -176,17 +176,16 @@ function Pagination({
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
-      
+
       {getPageNumbers().map((page, index) => (
         typeof page === 'number' ? (
           <button
             key={index}
             onClick={() => onPageChange(page)}
-            className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-all ${
-              currentPage === page
-                ? 'bg-[#0152be] text-white'
-                : 'bg-gray-800/50 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
-            }`}
+            className={`min-w-[40px] h-10 px-3 rounded-lg font-medium transition-all ${currentPage === page
+              ? 'bg-[#0152be] text-white'
+              : 'bg-gray-800/50 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+              }`}
           >
             {page}
           </button>
@@ -194,7 +193,7 @@ function Pagination({
           <span key={index} className="px-2 text-gray-500">...</span>
         )
       ))}
-      
+
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
@@ -211,7 +210,7 @@ function Pagination({
 function NomineeCard({ nominee, events, categories }: { nominee: Candidate; events: Event[]; categories: Category[] }) {
   const event = events.find(e => e._id === nominee.event);
   const nomineeCategories = categories.filter(c => nominee.categories.includes(c._id));
-  
+
   return (
     <Link href={`/nominees/${nominee.slug}`}>
       <GlassCard className="group overflow-hidden hover:ring-2 hover:ring-[#0152be]/50 transition-all duration-300 h-full flex flex-col">
@@ -227,7 +226,7 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-[#0152be]/30 via-[#0152be]/20 to-sky-500/30" />
           )}
-          
+
           {/* Featured Badge */}
           {nominee.is_featured && (
             <div className="absolute top-3 right-3">
@@ -237,7 +236,7 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
               </span>
             </div>
           )}
-          
+
           {/* Profile Image - Positioned at bottom of cover */}
           <div className="absolute -bottom-10 left-4">
             <div className="relative w-20 h-20 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800">
@@ -256,7 +255,7 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
             </div>
           </div>
         </div>
-        
+
         {/* Content */}
         <div className="pt-12 px-4 pb-4 flex-1 flex flex-col">
           {/* Name and Code */}
@@ -269,21 +268,21 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
             </div>
             <StatusBadge status={nominee.status} />
           </div>
-          
+
           {/* Event */}
           {event && (
             <p className="text-sm text-sky-400 mb-2">{event.name}</p>
           )}
-          
+
           {/* Bio */}
           <p className="text-sm text-gray-300 line-clamp-2 mb-3 flex-1">
             {nominee.bio || 'No bio available'}
           </p>
-          
+
           {/* Categories */}
           <div className="flex flex-wrap gap-1 mb-3">
             {nomineeCategories.slice(0, 2).map(cat => (
-              <span 
+              <span
                 key={cat._id}
                 className="px-2 py-0.5 text-xs bg-[#0152be]/20 text-[#0152be] rounded-full"
               >
@@ -296,12 +295,12 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
               </span>
             )}
           </div>
-          
+
           {/* Skills */}
           {nominee.skills && nominee.skills.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
               {nominee.skills.slice(0, 3).map((skill, index) => (
-                <span 
+                <span
                   key={index}
                   className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded-full"
                 >
@@ -315,7 +314,7 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
               )}
             </div>
           )}
-          
+
           {/* Stats */}
           <div className="flex items-center gap-4 pt-3 border-t border-gray-800 text-sm">
             <div className="flex items-center gap-1 text-gray-400">
@@ -340,7 +339,7 @@ function NomineeCard({ nominee, events, categories }: { nominee: Candidate; even
 function NomineeRow({ nominee, events, categories }: { nominee: Candidate; events: Event[]; categories: Category[] }) {
   const event = events.find(e => e._id === nominee.event);
   const nomineeCategories = categories.filter(c => nominee.categories.includes(c._id));
-  
+
   return (
     <Link href={`/nominees/${nominee.slug}`}>
       <GlassCard className="group hover:ring-2 hover:ring-[#0152be]/50 transition-all duration-300">
@@ -360,7 +359,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
               </div>
             )}
           </div>
-          
+
           {/* Main Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -372,7 +371,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
               )}
               <StatusBadge status={nominee.status} />
             </div>
-            
+
             <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
               <span className="text-gray-500">{nominee.candidate_code}</span>
               {event && (
@@ -382,15 +381,15 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
                 </>
               )}
             </div>
-            
+
             <p className="text-sm text-gray-300 line-clamp-1 mb-2">
               {nominee.bio || 'No bio available'}
             </p>
-            
+
             {/* Categories and Skills */}
             <div className="flex flex-wrap gap-1">
               {nomineeCategories.slice(0, 2).map(cat => (
-                <span 
+                <span
                   key={cat._id}
                   className="px-2 py-0.5 text-xs bg-[#0152be]/20 text-[#0152be] rounded-full"
                 >
@@ -398,7 +397,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
                 </span>
               ))}
               {nominee.skills?.slice(0, 2).map((skill, index) => (
-                <span 
+                <span
                   key={index}
                   className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded-full"
                 >
@@ -407,7 +406,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
               ))}
             </div>
           </div>
-          
+
           {/* Stats */}
           <div className="flex items-center gap-6 flex-shrink-0">
             <div className="text-center">
@@ -417,7 +416,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
               </div>
               <p className="text-xs text-gray-400">votes</p>
             </div>
-            
+
             {nominee.view_count && (
               <div className="text-center">
                 <div className="flex items-center gap-1 text-gray-400">
@@ -427,7 +426,7 @@ function NomineeRow({ nominee, events, categories }: { nominee: Candidate; event
                 <p className="text-xs text-gray-400">views</p>
               </div>
             )}
-            
+
             <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-[#0152be] transition-colors" />
           </div>
         </div>
@@ -446,26 +445,26 @@ export default function NomineesPage() {
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // State for data from backend
   const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [stats, setStats] = useState<Stats>({ totalNominees: 0, totalVotes: 0, featuredNominees: 0, totalViews: 0 });
-  
+
   // Fetch data on mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Fetch all data in parallel
         const [candidatesResponse, eventsResponse, categoriesResponse] = await Promise.all([
           candidatesApi.listPublic({ page: 1, limit: 1000 }), // Get all candidates
           eventsApi.getPublicEvents({ page: 1, limit: 100 }),
           categoriesApi.list({ page: 1, limit: 100 }),
         ]);
-        
+
         const candidates = candidatesResponse.data || [];
         setAllCandidates(candidates);
         setEvents(eventsResponse.data || []);
@@ -477,18 +476,30 @@ export default function NomineesPage() {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
-  
+
+  // Filter categories based on the selected event
+  const filteredCategories = useMemo(() => {
+    let cates = [...categories]
+
+    if (selectedEvent !== "all") {
+      cates = cates.filter(c => c.event._id.includes(selectedEvent))
+    }
+
+
+    return cates
+  }, [events, categories, selectedEvent])
+
   // Filter and sort nominees using useMemo for performance
   const filteredNominees = useMemo(() => {
     let nominees = [...allCandidates];
-    
+
     // Search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      nominees = nominees.filter(n => 
+      nominees = nominees.filter(n =>
         n.first_name.toLowerCase().includes(query) ||
         n.last_name.toLowerCase().includes(query) ||
         n.candidate_code.toLowerCase().includes(query) ||
@@ -497,27 +508,28 @@ export default function NomineesPage() {
         n.tags?.some(t => t.toLowerCase().includes(query))
       );
     }
-    
+
     // Filter by event
     if (selectedEvent !== 'all') {
-      nominees = nominees.filter(n => n.event === selectedEvent);
+      nominees = nominees.filter(n => n.event._id === selectedEvent);
     }
-    
+
     // Filter by category
     if (selectedCategory !== 'all') {
-      nominees = nominees.filter(n => n.categories.includes(selectedCategory));
+      console.log(selectedCategory)
+      nominees = nominees.filter(n => n.categories.map(c => c._id).includes(selectedCategory));
     }
-    
+
     // Filter by status (not used for public view, but kept for compatibility)
     if (selectedStatus !== 'all') {
       nominees = nominees.filter(n => n.status === selectedStatus);
     }
-    
+
     // Filter by featured
     if (showFeaturedOnly) {
       nominees = nominees.filter(n => n.is_featured);
     }
-    
+
     // Sort
     switch (sortBy) {
       case 'votes':
@@ -533,73 +545,73 @@ export default function NomineesPage() {
         nominees.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
     }
-    
+
     return nominees;
   }, [allCandidates, searchQuery, selectedEvent, selectedCategory, selectedStatus, showFeaturedOnly, sortBy]);
-  
+
   // Calculate pagination
   const totalPages = Math.ceil(filteredNominees.length / ITEMS_PER_PAGE);
   const paginatedNominees = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredNominees.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredNominees, currentPage]);
-  
+
   // Reset to page 1 when filters change
   const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>, value: string) => {
     setter(value);
     setCurrentPage(1);
   };
-  
+
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
     setCurrentPage(1);
   };
-  
+
   const handleFeaturedToggle = () => {
     setShowFeaturedOnly(!showFeaturedOnly);
     setCurrentPage(1);
   };
-  
+
   // Get unique events and categories from candidates
-  const availableEvents = events.filter(e => 
-    allCandidates.some(c => c.event === e._id)
+  const availableEvents = events.filter(e =>
+    allCandidates.some(c => c.event._id === e._id)
   );
-  
-  const availableCategories = categories.filter(c => 
-    allCandidates.some(cand => cand.categories.includes(c._id))
+
+  const availableCategories = filteredCategories.filter(c =>
+    allCandidates.some(cand => cand.categories.map(c => c._id).includes(c._id))
   );
-  
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <AnnouncementBar />
       <Header />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#0152be]/20 via-transparent to-transparent" />
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#0152be]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-3xl mx-auto">
             <Badge className="mb-4 bg-[#0152be]/20 text-[#0152be] border-[#0152be]/30">
               <Users className="w-3 h-3 mr-1" />
               Meet Our Nominees
             </Badge>
-            
+
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
               Discover{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0152be] to-sky-400">
                 Outstanding Nominees
               </span>
             </h1>
-            
+
             <p className="text-lg text-gray-300 mb-8">
-              Browse through our talented nominees competing across various categories. 
+              Browse through our talented nominees competing across various categories.
               Each nominee brings unique skills, experience, and vision to their respective fields.
             </p>
-            
+
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
               <GlassCard className="p-4 text-center">
@@ -609,7 +621,7 @@ export default function NomineesPage() {
                 </div>
                 <p className="text-sm text-gray-400">Total Nominees</p>
               </GlassCard>
-              
+
               <GlassCard className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Vote className="w-5 h-5 text-green-500" />
@@ -617,7 +629,7 @@ export default function NomineesPage() {
                 </div>
                 <p className="text-sm text-gray-400">Total Votes</p>
               </GlassCard>
-              
+
               <GlassCard className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Star className="w-5 h-5 text-yellow-500" />
@@ -625,7 +637,7 @@ export default function NomineesPage() {
                 </div>
                 <p className="text-sm text-gray-400">Featured</p>
               </GlassCard>
-              
+
               <GlassCard className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Eye className="w-5 h-5 text-sky-500" />
@@ -637,7 +649,7 @@ export default function NomineesPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Search and Filters */}
       <section className="py-8 border-y border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-20 z-40">
         <div className="container mx-auto px-4">
@@ -662,7 +674,7 @@ export default function NomineesPage() {
                 </button>
               )}
             </div>
-            
+
             {/* Filters */}
             <div className="flex flex-wrap gap-3 items-center flex-1">
               {/* Event Filter */}
@@ -677,7 +689,7 @@ export default function NomineesPage() {
                   <option key={event._id} value={event._id}>{event.name}</option>
                 ))}
               </select>
-              
+
               {/* Category Filter */}
               <select
                 value={selectedCategory}
@@ -690,7 +702,7 @@ export default function NomineesPage() {
                   <option key={cat._id} value={cat._id}>{cat.name}</option>
                 ))}
               </select>
-              
+
               {/* Sort */}
               <select
                 value={sortBy}
@@ -703,41 +715,38 @@ export default function NomineesPage() {
                 <option value="name">Name (A-Z)</option>
                 <option value="newest">Newest First</option>
               </select>
-              
+
               {/* Featured Toggle */}
               <button
                 onClick={handleFeaturedToggle}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-all ${
-                  showFeaturedOnly 
-                    ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400' 
-                    : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'
-                }`}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-all ${showFeaturedOnly
+                  ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400'
+                  : 'bg-gray-800/50 border-gray-700 text-gray-400 hover:border-gray-600'
+                  }`}
               >
                 <Star className={`w-4 h-4 ${showFeaturedOnly ? 'fill-current' : ''}`} />
                 Featured
               </button>
             </div>
-            
+
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-[#0152be] text-white' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className={`p-2 rounded transition-colors ${viewMode === 'grid'
+                  ? 'bg-[#0152be] text-white'
+                  : 'text-gray-400 hover:text-white'
+                  }`}
                 aria-label="Grid view"
               >
                 <LayoutGrid className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded transition-colors ${
-                  viewMode === 'list' 
-                    ? 'bg-[#0152be] text-white' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
+                className={`p-2 rounded transition-colors ${viewMode === 'list'
+                  ? 'bg-[#0152be] text-white'
+                  : 'text-gray-400 hover:text-white'
+                  }`}
                 aria-label="List view"
               >
                 <List className="w-5 h-5" />
@@ -746,7 +755,7 @@ export default function NomineesPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Nominees Grid/List */}
       <section className="py-12">
         <div className="container mx-auto px-4">
@@ -768,7 +777,7 @@ export default function NomineesPage() {
               </p>
             )}
           </div>
-          
+
           {isLoading ? (
             // Loading skeletons
             viewMode === 'grid' ? (
@@ -789,7 +798,7 @@ export default function NomineesPage() {
               <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">No Nominees Found</h3>
               <p className="text-gray-400 mb-6">
-                {searchQuery 
+                {searchQuery
                   ? `No nominees match your search for "${searchQuery}"`
                   : 'No nominees match your current filters'}
               </p>
@@ -809,17 +818,17 @@ export default function NomineesPage() {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedNominees.map(nominee => (
-                <NomineeCard key={nominee._id} nominee={nominee} events={events} categories={categories} />
+                <NomineeCard key={nominee._id} nominee={nominee} events={events} categories={filteredCategories} />
               ))}
             </div>
           ) : (
             <div className="space-y-4">
               {paginatedNominees.map(nominee => (
-                <NomineeRow key={nominee._id} nominee={nominee} events={events} categories={categories} />
+                <NomineeRow key={nominee._id} nominee={nominee} events={events} categories={filteredCategories} />
               ))}
             </div>
           )}
-          
+
           {/* Pagination */}
           <Pagination
             currentPage={currentPage}
@@ -828,7 +837,7 @@ export default function NomineesPage() {
           />
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-[#0152be]/20 to-sky-500/20 border-t border-gray-800">
         <div className="container mx-auto px-4 text-center">
@@ -857,12 +866,12 @@ export default function NomineesPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Featured Banners */}
       <section className="container mx-auto px-6 pb-16">
         <PromoBanner variant="card" />
       </section>
-      
+
       <Footer />
     </div>
   );
