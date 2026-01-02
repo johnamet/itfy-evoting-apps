@@ -21,8 +21,9 @@ class CategoryController extends BaseController {
    * POST /api/categories
    */
   async create(req, res) {
+        const adminId = this.getUserId(req);
+        req.body.created_by = adminId;
     const validated = this.validate(req.body, CategoryValidation.createCategorySchema);
-    const adminId = this.getUserId(req);
     const category = await this.service("categoryService").createCategory(validated, adminId);
 
     return this.created(res, {

@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   BarChart3,
   TrendingUp,
-  TrendingDown,
   Users,
   Vote,
   DollarSign,
@@ -20,8 +19,6 @@ import {
   Globe,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   BarChart,
@@ -34,7 +31,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +46,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { analyticsApi } from "@/lib/api/analytics";
+import { analyticsApi, VotingAnalytics, PaymentAnalytics } from "@/lib/api/analytics";
 
 // Colors
 const COLORS = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4"];
@@ -69,14 +65,25 @@ const cardVariants = {
   show: { opacity: 1, y: 0 },
 };
 
+// Tooltip payload entry type
+interface TooltipPayloadEntry {
+  name: string;
+  value: number;
+  color: string;
+}
+
 // Custom tooltip
-const CustomTooltip = ({ active, payload, label }: any) => {
+function CustomTooltip({ active, payload, label }: { 
+  active?: boolean; 
+  payload?: TooltipPayloadEntry[]; 
+  label?: string 
+}) {
   if (active && payload && payload.length) {
     return (
       <div className="bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-lg p-3 shadow-xl">
         <p className="text-slate-300 text-sm mb-1">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
+        {payload.map((entry, index) => (
+          <p key={index} className={`text-sm text-[${entry.color}]`}>
             {entry.name}: {entry.value.toLocaleString()}
           </p>
         ))}
@@ -84,31 +91,86 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
-};
+}
+
+// Type for device data (with index signature for recharts)
+interface DeviceDataItem {
+  name: string;
+  value: number;
+  color: string;
+  [key: string]: string | number;
+}
+
+// Type for region data
+interface RegionDataItem {
+  region: string;
+  votes: number;
+  percentage: number;
+}
+
+// Type for category data (with index signature for recharts)
+interface CategoryDataItem {
+  name: string;
+  votes: number;
+  percentage: number;
+  [key: string]: string | number;
+}
+
+// Type for top candidate
+interface TopCandidateItem {
+  name: string;
+  code: string;
+  votes: number;
+  event: string;
+  trend: number;
+  category: string;
+}
+
+// Type for voting trend
+interface VotingTrendItem {
+  date: string;
+  votes: number;
+  revenue: number;
+}
+
+// Type for device analytics response
+interface DeviceAnalyticsData {
+  totalActivities: number;
+  deviceTypes: Array<{
+    type: string;
+    count: number;
+    percentage: string;
+  }>;
+}
+
+// Type for region analytics response
+interface RegionAnalyticsData {
+  totalActivities: number;
+  countries: Array<{
+    country: string;
+    count: number;
+    percentage: string;
+  }>;
+}
 
 export default function AdminAnalyticsTab() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
   
-  // Analytics data state
-  const [votingAnalytics, setVotingAnalytics] = useState<any>(null);
-  const [paymentAnalytics, setPaymentAnalytics] = useState<any>(null);
-  const [platformDashboard, setPlatformDashboard] = useState<any>(null);
-  const [deviceAnalytics, setDeviceAnalytics] = useState<any>(null);
-  const [regionAnalytics, setRegionAnalytics] = useState<any>(null);
+  // Analytics data state with proper types
+  const [votingAnalytics, setVotingAnalytics] = useState<VotingAnalytics | null>(null);
+  const [paymentAnalytics, setPaymentAnalytics] = useState<PaymentAnalytics | null>(null);
+  const [deviceAnalytics, setDeviceAnalytics] = useState<DeviceAnalyticsData | null>(null);
+  const [regionAnalytics, setRegionAnalytics] = useState<RegionAnalyticsData | null>(null);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       
       // Calculate date range based on period
       const endDate = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
       
       switch (period) {
         case "7d":
@@ -125,7 +187,7 @@ export default function AdminAnalyticsTab() {
           break;
       }
 
-      const [votingResponse, paymentResponse, platformResponse, deviceResponse, regionResponse] = await Promise.all([
+      const [votingResponse, paymentResponse, , deviceResponse, regionResponse] = await Promise.all([
         analyticsApi.getVotingAnalytics({
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
@@ -145,57 +207,64 @@ export default function AdminAnalyticsTab() {
         }),
       ]);
 
-      setVotingAnalytics(votingResponse.data);
-      setPaymentAnalytics(paymentResponse.data);
-      setPlatformDashboard(platformResponse.data);
-      setDeviceAnalytics(deviceResponse.data);
-      setRegionAnalytics(regionResponse.data);
+      setVotingAnalytics(votingResponse.data || null);
+      setPaymentAnalytics(paymentResponse.data || null);
+      setDeviceAnalytics(deviceResponse.data as DeviceAnalyticsData || null);
+      setRegionAnalytics(regionResponse.data as RegionAnalyticsData || null);
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [period]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   const handleExport = async () => {
     try {
-      await analyticsApi.exportAnalytics({ format: "csv", type: "all" });
+      await analyticsApi.exportAnalytics({ type: "csv", analytics: "comprehensive" });
     } catch (error) {
       console.error("Failed to export analytics:", error);
     }
   };
 
   // Format voting trends for charts
-  const votingTrends = votingAnalytics?.votesByDay?.map((item: any) => ({
+  const votingTrends: VotingTrendItem[] = votingAnalytics?.votesByDay?.map((item) => ({
     date: new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     votes: item.count || 0,
     revenue: item.amount || 0,
   })) || [];
 
   // Format category data for pie chart
-  const categoryData = votingAnalytics?.votesByCategory?.map((item: any) => ({
+  const categoryData: CategoryDataItem[] = votingAnalytics?.votesByCategory?.map((item) => ({
     name: item.category,
     votes: item.count,
     percentage: item.percentage,
   })) || [];
 
   // Top candidates with real trends from API
-  const topCandidates = votingAnalytics?.topCandidates?.slice(0, 5).map((c: any, idx: number) => ({
-    ...c,
-    trend: c.trend || 0, // Real trend calculation from backend
+  const topCandidates: TopCandidateItem[] = votingAnalytics?.topCandidates?.slice(0, 5).map((c) => ({
+    name: c.name,
+    code: c.code,
+    votes: c.votes,
+    event: c.event,
+    trend: 0,
     category: c.event || "Unknown",
   })) || [];
 
   // Format device data from API
-  const deviceData = deviceAnalytics?.deviceTypes?.map((item: any) => ({
+  const deviceData: DeviceDataItem[] = deviceAnalytics?.deviceTypes?.map((item) => ({
     name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
     value: parseFloat(item.percentage),
     color: item.type === "mobile" ? "#3b82f6" : item.type === "desktop" ? "#8b5cf6" : "#10b981",
   })) || [];
 
   // Format region data from API (top 5 countries)
-  const regionData = regionAnalytics?.countries?.slice(0, 5).map((item: any) => ({
-    name: item.country,
+  const regionData: RegionDataItem[] = regionAnalytics?.countries?.slice(0, 5).map((item) => ({
+    region: item.country,
+    votes: item.count || 0,
     percentage: parseFloat(item.percentage),
   })) || [];
 
@@ -414,7 +483,7 @@ export default function AdminAnalyticsTab() {
                           paddingAngle={2}
                           dataKey="percentage"
                         >
-                          {categoryData.map((_, index) => (
+                          {categoryData.map((_: CategoryDataItem, index: number) => (
                             <Cell key={index} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -422,12 +491,11 @@ export default function AdminAnalyticsTab() {
                       </RePieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-2">
-                      {categoryData.map((cat, index) => (
+                      {categoryData.map((cat: CategoryDataItem, index: number) => (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                              className={`w-3 h-3 rounded-full ${index === 0 ? 'bg-blue-500' : index === 1 ? 'bg-purple-500' : index === 2 ? 'bg-green-500' : index === 3 ? 'bg-amber-500' : index === 4 ? 'bg-red-500' : 'bg-cyan-500'}`}
                             />
                             <span className="text-slate-300 text-sm truncate max-w-[120px]">{cat.name}</span>
                           </div>
@@ -450,7 +518,7 @@ export default function AdminAnalyticsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {topCandidates.map((candidate, index) => (
+                  {topCandidates.map((candidate: TopCandidateItem, index: number) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
@@ -541,17 +609,20 @@ export default function AdminAnalyticsTab() {
                         paddingAngle={2}
                         dataKey="value"
                       >
-                        {deviceData.map((entry, index) => (
+                        {deviceData.map((entry: DeviceDataItem, index: number) => (
                           <Cell key={index} fill={entry.color} />
                         ))}
                       </Pie>
                     </RePieChart>
                   </ResponsiveContainer>
                   <div className="flex-1 space-y-3">
-                    {deviceData.map((device, index) => (
+                    {deviceData.map((device: DeviceDataItem, index: number) => (
                       <div key={index} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: device.color }} />
+                          <span 
+                            className="w-3 h-3 rounded-full inline-block" 
+                            style={{ backgroundColor: device.color }} 
+                          />
                           <span className="text-slate-300">{device.name}</span>
                         </div>
                         <span className="text-white font-medium">{device.value}%</span>
@@ -572,7 +643,7 @@ export default function AdminAnalyticsTab() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {regionData.map((region, index) => (
+                  {regionData.map((region: RegionDataItem, index: number) => (
                     <div key={index}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-slate-300 text-sm">{region.region}</span>

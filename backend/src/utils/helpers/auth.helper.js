@@ -57,6 +57,7 @@ export class AuthHelpers {
    * @returns {object} The decoded payload
    */
   static verifyToken(token) {
+     console.log("Verifying token:", token);
     try {
       return jwtLibrary.verify(token, JWT_CONFIG.SECRET_KEY, {
         algorithms: [JWT_CONFIG.ALGORITHM],

@@ -7,6 +7,7 @@
 import { BaseRepository } from "../shared/base.repository.js";
 import CandidateModel from "./candidate.model.js";
 import { STATUS } from "../../utils/constants/candidate.constants.js";
+import { th } from "@faker-js/faker";
 
 class CandidateRepository extends BaseRepository {
   constructor() {
@@ -309,9 +310,13 @@ class CandidateRepository extends BaseRepository {
     try {
       const candidate = await this.model.findById(candidateId);
 
+      console.log("Approving candidate:", candidateId, candidate);
+
       if (!candidate) {
         throw new Error("Candidate not found");
       }
+
+      await this.updateById(candidateId, { status: STATUS.APPROVED });
 
       return await candidate.approve();
     } catch (error) {

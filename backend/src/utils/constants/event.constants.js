@@ -31,7 +31,7 @@ const CURRENCY = {
     USD: "USD",
     EUR: "EUR",
     GBP: "GBP",
-    GHS: "GH₵",
+    GHS: "GHS",
     NGN: "₦",
     ZAR: "R",
     INR: "₹",

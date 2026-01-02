@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -8,19 +8,15 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Download,
   User,
   Vote,
   CreditCard,
   Settings,
   Shield,
-  Calendar,
   Clock,
-  MapPin,
   Monitor,
   Globe,
-  AlertCircle,
   CheckCircle,
   XCircle,
   Info,
@@ -30,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -41,7 +37,7 @@ import {
 } from "@/components/ui/select";
 
 import { activitiesApi } from "@/lib/api/activities";
-import type { Activity as ActivityType } from "@/lib/api/activities";
+import type { Activity as ActivityType, ActivityAction } from "@/lib/api/activities";
 
 // Activity types with icons and colors
 const activityConfig: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -112,7 +108,6 @@ function ActivityRow({ activity }: { activity: ActivityType }) {
             <p className="text-white font-medium">{activity.description}</p>
             <div className="flex items-center gap-2 mt-1">
               <Avatar className="w-5 h-5">
-                <AvatarImage src={activity.user?.avatar || undefined} />
                 <AvatarFallback className="text-[10px] bg-slate-700">
                   {activity.user?.name?.charAt(0) || "U"}
                 </AvatarFallback>
@@ -123,7 +118,7 @@ function ActivityRow({ activity }: { activity: ActivityType }) {
           <div className="text-right shrink-0">
             <span className="text-slate-500 text-xs">{formatRelativeTime(activity.created_at)}</span>
             <Badge variant="outline" className="ml-2 text-xs bg-slate-800/50 border-slate-700 text-slate-400">
-              {activity.entity_type}
+              {activity.type}
             </Badge>
           </div>
         </div>
@@ -162,23 +157,18 @@ export default function AdminActivitiesTab() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchActivities();
-  }, [currentPage, typeFilter, dateFilter, searchQuery]);
-
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       setLoading(true);
       const response = await activitiesApi.getActivities({
         page: currentPage,
         limit: 20,
-        search: searchQuery || undefined,
-        action: typeFilter !== "all" ? typeFilter : undefined,
+        action: typeFilter !== "all" ? (typeFilter as ActivityAction) : undefined,
       });
 
       if (response.success && response.data) {
         setActivities(response.data);
-        setTotalPages(response.pagination?.totalPages || 1);
+        setTotalPages(response.pagination?.total_pages || 1);
       } else {
         setActivities([]);
       }
@@ -188,11 +178,15 @@ export default function AdminActivitiesTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, typeFilter]);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [fetchActivities, dateFilter, searchQuery]);
 
   const handleExport = async () => {
     try {
-      await activitiesApi.exportActivities({ format: "csv" });
+      await activitiesApi.exportActivities("csv");
     } catch (error) {
       console.error("Failed to export activities:", error);
     }

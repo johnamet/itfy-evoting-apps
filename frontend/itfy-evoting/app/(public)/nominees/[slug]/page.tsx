@@ -32,10 +32,10 @@ import {
   Globe,
   Youtube,
   X,
-  GraduationCap,
-  Loader2
+  GraduationCap
 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import { Spinner } from '@/components/ui/Spinner';
 import { candidatesApi } from '@/lib/api/candidates';
 import { Candidate, Event, Category } from '@/types';
 import Header from '@/components/Header';
@@ -131,10 +131,7 @@ export default function NomineeDetailPage({ params }: { params: Promise<{ slug: 
       <div className="min-h-screen bg-gray-900 text-white">
         <Header />
         <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 text-[#0152be] animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading nominee...</p>
-          </div>
+          <Spinner size="lg" text="Loading nominee..." />
         </div>
         <Footer />
       </div>

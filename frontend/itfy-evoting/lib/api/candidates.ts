@@ -236,7 +236,7 @@ export const candidatesApi = {
    * Approve candidate
    */
   approve: async (candidateId: string): Promise<ApiResponse<Candidate>> => {
-    return api.post<ApiResponse<Candidate>>(`/candidates/${candidateId}/approve`);
+    return api.put<ApiResponse<Candidate>>(`/candidates/${candidateId}/approve`);
   },
 
   /**
@@ -277,6 +277,40 @@ export const candidatesApi = {
   bulkDelete: async (candidateIds: string[]): Promise<ApiResponse<{ deleted: number }>> => {
     return api.post<ApiResponse<{ deleted: number }>>('/candidates/bulk-delete', {
       candidate_ids: candidateIds,
+    });
+  },
+
+  /**
+   * Publish candidate (make visible to public)
+   */
+  publish: async (candidateId: string): Promise<ApiResponse<Candidate>> => {
+    return api.put<ApiResponse<Candidate>>(`/candidates/${candidateId}`, { is_published: true });
+  },
+
+  /**
+   * Unpublish candidate (hide from public)
+   */
+  unpublish: async (candidateId: string): Promise<ApiResponse<Candidate>> => {
+    return api.put<ApiResponse<Candidate>>(`/candidates/${candidateId}`, { is_published: false });
+  },
+
+  /**
+   * Bulk publish candidates
+   */
+  bulkPublish: async (candidateIds: string[]): Promise<ApiResponse<{ updated: number }>> => {
+    return api.post<ApiResponse<{ updated: number }>>('/candidates/bulk-update', {
+      candidate_ids: candidateIds,
+      update: { is_published: true },
+    });
+  },
+
+  /**
+   * Bulk unpublish candidates
+   */
+  bulkUnpublish: async (candidateIds: string[]): Promise<ApiResponse<{ updated: number }>> => {
+    return api.post<ApiResponse<{ updated: number }>>('/candidates/bulk-update', {
+      candidate_ids: candidateIds,
+      update: { is_published: false },
     });
   },
 

@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "nodemon",
-    "start": "babel-node src/app.js",
+    "start": "babel-node dist/app.js",
     "build": "babel src -d dist",
     "test": "jest",
     "prelint": "eslint src",

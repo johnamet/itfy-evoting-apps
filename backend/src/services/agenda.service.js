@@ -501,25 +501,133 @@ class AgendaManager {
     );
 
     // ========================================
-    // 3. SCHEDULED TASKS
+    // 3. SCHEDULED TASKS - STATUS MANAGEMENT
     // ========================================
 
     /**
-     * Close expired events (runs hourly)
+     * Activate events when their start date is reached (runs every minute)
+     * Changes status from 'upcoming' or 'pending' to 'active'
+     */
+    this.agenda.define(
+      "activate-starting-events",
+      { priority: "high", concurrency: 1 },
+      async () => {
+        try {
+          console.log("🚀 Checking for events to activate...");
+
+          const { default: EventRepository } = await import("../modules/event/event.repository.js");
+          const { STATUS } = await import("../utils/constants/event.constants.js");
+
+          const now = new Date();
+
+          // Find events that should be active (start_date has passed, end_date hasn't)
+          const eventsToActivate = await EventRepository.findAll(
+            {
+              status: { $in: [STATUS.UPCOMING, STATUS.PENDING] },
+              start_date: { $lte: now },
+              end_date: { $gt: now },
+            },
+            1,
+            100
+          );
+
+          console.log(`Found ${eventsToActivate.data.length} events to activate`)
+
+          let activatedCount = 0;
+          for (const event of eventsToActivate.data) {
+            await EventRepository.updateById(event._id, { 
+              status: STATUS.ACTIVE,
+            });
+            
+            console.log(`✅ Activated event: ${event.name} (${event._id})`);
+            
+            // Queue notification for event start
+            await this.now("send-event-started-notification", { 
+              eventId: event._id,
+              eventName: event.name 
+            });
+            
+            activatedCount++;
+          }
+
+          if (activatedCount > 0) {
+            console.log(`✅ Activated ${activatedCount} events`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to activate starting events:", error);
+        }
+      }
+    );
+
+    /**
+     * Archive expired events (runs every 5 minutes)
+     * Changes status from 'active' to 'archived' when end_date passes
      * Triggers cascading cleanup jobs
+     */
+    this.agenda.define(
+      "archive-expired-events",
+      { priority: "normal", concurrency: 1 },
+      async () => {
+        try {
+          console.log("🔒 Checking for events to archive...");
+
+          const { default: EventRepository } = await import("../modules/event/event.repository.js");
+          const { STATUS } = await import("../utils/constants/event.constants.js");
+
+          const now = new Date();
+
+          const expiredEvents = await EventRepository.findAll(
+            {
+              status: STATUS.ACTIVE,
+              end_date: { $lt: now },
+            },
+            1,
+            100
+          );
+
+          let archivedCount = 0;
+          for (const event of expiredEvents.data) {
+            // Archive the event
+            await EventRepository.updateById(event._id, { 
+              status: STATUS.ARCHIVED,
+              archived_at: now
+            });
+
+            console.log(`📦 Archived event: ${event.name} (${event._id})`);
+
+            // Trigger immediate cascading cleanup
+            await this.now("close-event-cascade", { eventId: event._id });
+
+            archivedCount++;
+          }
+
+          if (archivedCount > 0) {
+            console.log(`✅ Archived ${archivedCount} expired events`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to archive expired events:", error);
+        }
+      }
+    );
+
+    /**
+     * Legacy: Close expired events (keeping for backward compatibility)
+     * @deprecated Use archive-expired-events instead
      */
     this.agenda.define(
       "close-expired-events",
       { priority: "normal", concurrency: 1 },
       async () => {
         try {
-          console.log("🔒 Closing expired events...");
-
+          console.log("🔒 Running legacy close-expired-events (redirecting to archive-expired-events)...");
+          
+          // Delegate to the new job
           const { default: EventRepository } = await import("../modules/event/event.repository.js");
+          const { STATUS } = await import("../utils/constants/event.constants.js");
 
           const expiredEvents = await EventRepository.findAll(
             {
-              status: "active",
+              status: STATUS.ACTIVE,
               end_date: { $lt: new Date() },
             },
             1,
@@ -528,18 +636,410 @@ class AgendaManager {
 
           let count = 0;
           for (const event of expiredEvents.data) {
-            // Close the event
-            await EventRepository.updateById(event._id, { status: "closed" });
-
-            // Trigger immediate cascading cleanup
+            await EventRepository.updateById(event._id, { status: STATUS.ARCHIVED });
             await this.now("close-event-cascade", { eventId: event._id });
-
             count++;
           }
 
-          console.log(`✅ Closed ${count} expired events`);
+          console.log(`✅ Archived ${count} expired events`);
         } catch (error) {
           console.error("❌ Failed to close expired events:", error);
+        }
+      }
+    );
+
+    /**
+     * Send notification when event starts
+     */
+    this.agenda.define(
+      "send-event-started-notification",
+      { priority: "normal", concurrency: 10 },
+      async (job) => {
+        const { eventId, eventName } = job.attrs.data;
+
+        try {
+          console.log("📧 Sending event started notification:", eventName);
+
+          // Log the event start
+          await this.now("log-activity", {
+            action: "EVENT_STARTED",
+            entityType: "EVENT",
+            entityId: eventId,
+            eventId: eventId,
+            description: `Event "${eventName}" has started`,
+            severity: "info",
+          });
+
+          console.log("✅ Event started notification sent");
+        } catch (error) {
+          console.error("❌ Failed to send event started notification:", error);
+        }
+      }
+    );
+
+    /**
+     * Handle registration deadline expiry (runs every 5 minutes)
+     * Updates events where registration deadline has passed
+     */
+    this.agenda.define(
+      "check-registration-deadlines",
+      { priority: "normal", concurrency: 1 },
+      async () => {
+        try {
+          console.log("📋 Checking registration deadlines...");
+
+          const { default: EventRepository } = await import("../modules/event/event.repository.js");
+          const { STATUS } = await import("../utils/constants/event.constants.js");
+
+          const now = new Date();
+
+          // Find events with expired registration deadlines that are still accepting registrations
+          const events = await EventRepository.findAll(
+            {
+              status: { $in: [STATUS.UPCOMING, STATUS.ACTIVE] },
+              registration_deadline: { $lt: now },
+              is_registration_open: true, // Only if this field exists
+            },
+            1,
+            100
+          );
+
+          let closedCount = 0;
+          for (const event of events.data) {
+            await EventRepository.updateById(event._id, { 
+              is_registration_open: false,
+              registration_closed_at: now
+            });
+            
+            console.log(`📋 Closed registration for event: ${event.name}`);
+            closedCount++;
+          }
+
+          if (closedCount > 0) {
+            console.log(`✅ Closed registration for ${closedCount} events`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to check registration deadlines:", error);
+        }
+      }
+    );
+
+    // ========================================
+    // 3b. CATEGORY VOTING STATUS MANAGEMENT
+    // ========================================
+
+    /**
+     * Open voting for categories when voting_start_date is reached (runs every minute)
+     * Updates is_voting_open to true
+     */
+    this.agenda.define(
+      "open-category-voting",
+      { priority: "high", concurrency: 1 },
+      async () => {
+        try {
+          console.log("🗳️ Checking for categories to open voting...");
+
+          const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+          const { STATUS } = await import("../utils/constants/category.constants.js");
+
+          const now = new Date();
+
+          // Find categories where voting should be open
+          const categoriesToOpen = await CategoryRepository.findAll(
+            {
+              status: STATUS.ACTIVE,
+              is_voting_open: false,
+              voting_start_date: { $lte: now },
+              voting_deadline: { $gt: now },
+            },
+            1,
+            500
+          );
+
+          console.log(`Found ${categoriesToOpen.data.length} categories to open`)
+
+          let openedCount = 0;
+          for (const category of categoriesToOpen.data) {
+            await CategoryRepository.updateById(category._id, { 
+              is_voting_open: true,
+            });
+            
+            console.log(`✅ Opened voting for category: ${category.name} (${category._id})`);
+            
+            // Queue notification for voting start
+            await this.now("send-voting-started-notification", { 
+              categoryId: category._id,
+              categoryName: category.name,
+              eventId: category.event
+            });
+            
+            openedCount++;
+          }
+
+          if (openedCount > 0) {
+            console.log(`✅ Opened voting for ${openedCount} categories`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to open category voting:", error);
+        }
+      }
+    );
+
+    /**
+     * Close voting for categories when voting_deadline is reached (runs every minute)
+     * Updates is_voting_open to false and status to CLOSED
+     */
+    this.agenda.define(
+      "close-category-voting",
+      { priority: "high", concurrency: 1 },
+      async () => {
+        try {
+          console.log("🔒 Checking for categories to close voting...");
+
+          const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+          const { STATUS } = await import("../utils/constants/category.constants.js");
+
+          const now = new Date();
+
+          // Find categories where voting should be closed
+          const categoriesToClose = await CategoryRepository.findAll(
+            {
+              status: { $in: [STATUS.ACTIVE] },
+              voting_deadline: { $lte: now },
+              $or: [
+                { is_voting_open: true },
+                { status: STATUS.ACTIVE }
+              ]
+            },
+            1,
+            500
+          );
+
+          let closedCount = 0;
+          for (const category of categoriesToClose.data) {
+            await CategoryRepository.updateById(category._id, { 
+              is_voting_open: false,
+              status: STATUS.CLOSED,
+              voting_closed_at: now
+            });
+            
+            console.log(`🔒 Closed voting for category: ${category.name} (${category._id})`);
+            
+            // Queue notification for voting end
+            await this.now("send-voting-ended-notification", { 
+              categoryId: category._id,
+              categoryName: category.name,
+              eventId: category.event
+            });
+
+            // Queue vote aggregation
+            await this.now("aggregate-category-votes", { 
+              categoryId: category._id 
+            });
+            
+            closedCount++;
+          }
+
+          if (closedCount > 0) {
+            console.log(`✅ Closed voting for ${closedCount} categories`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to close category voting:", error);
+        }
+      }
+    );
+
+    /**
+     * Archive categories for archived events (runs every 15 minutes)
+     * Ensures categories are archived when their parent event is archived
+     */
+    this.agenda.define(
+      "sync-category-status-with-events",
+      { priority: "low", concurrency: 1 },
+      async () => {
+        try {
+          console.log("🔄 Syncing category status with events...");
+
+          const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+          const { default: EventRepository } = await import("../modules/event/event.repository.js");
+          const { STATUS: CATEGORY_STATUS } = await import("../utils/constants/category.constants.js");
+          const { STATUS: EVENT_STATUS } = await import("../utils/constants/event.constants.js");
+
+          // Find archived events
+          const archivedEvents = await EventRepository.findAll(
+            { status: EVENT_STATUS.ARCHIVED },
+            1,
+            100
+          );
+
+          let archivedCount = 0;
+          for (const event of archivedEvents.data) {
+            // Find active categories for this event
+            const activeCategories = await CategoryRepository.findAll(
+              {
+                event: event._id,
+                status: { $nin: [CATEGORY_STATUS.ARCHIVED, CATEGORY_STATUS.DELETED] }
+              },
+              1,
+              500
+            );
+
+            for (const category of activeCategories.data) {
+              await CategoryRepository.updateById(category._id, {
+                status: CATEGORY_STATUS.ARCHIVED,
+                is_voting_open: false,
+                archived_at: new Date()
+              });
+              archivedCount++;
+            }
+          }
+
+          if (archivedCount > 0) {
+            console.log(`✅ Archived ${archivedCount} categories to sync with events`);
+          }
+        } catch (error) {
+          console.error("❌ Failed to sync category status with events:", error);
+        }
+      }
+    );
+
+    /**
+     * Send voting started notification
+     */
+    this.agenda.define(
+      "send-voting-started-notification",
+      { priority: "normal", concurrency: 10 },
+      async (job) => {
+        const { categoryId, categoryName, eventId } = job.attrs.data;
+
+        try {
+          console.log("📧 Sending voting started notification:", categoryName);
+
+          // Log the voting start
+          await this.now("log-activity", {
+            action: "VOTING_STARTED",
+            entityType: "CATEGORY",
+            entityId: categoryId,
+            eventId: eventId,
+            description: `Voting has started for category "${categoryName}"`,
+            severity: "info",
+          });
+
+          console.log("✅ Voting started notification sent");
+        } catch (error) {
+          console.error("❌ Failed to send voting started notification:", error);
+        }
+      }
+    );
+
+    /**
+     * Send voting ended notification
+     */
+    this.agenda.define(
+      "send-voting-ended-notification",
+      { priority: "normal", concurrency: 10 },
+      async (job) => {
+        const { categoryId, categoryName, eventId } = job.attrs.data;
+
+        try {
+          console.log("📧 Sending voting ended notification:", categoryName);
+
+          // Log the voting end
+          await this.now("log-activity", {
+            action: "VOTING_ENDED",
+            entityType: "CATEGORY",
+            entityId: categoryId,
+            eventId: eventId,
+            description: `Voting has ended for category "${categoryName}"`,
+            severity: "info",
+          });
+
+          console.log("✅ Voting ended notification sent");
+        } catch (error) {
+          console.error("❌ Failed to send voting ended notification:", error);
+        }
+      }
+    );
+
+    /**
+     * Aggregate votes for a specific category
+     */
+    this.agenda.define(
+      "aggregate-category-votes",
+      { priority: "normal", concurrency: 5 },
+      async (job) => {
+        const { categoryId } = job.attrs.data;
+
+        try {
+          console.log("📊 Aggregating votes for category:", categoryId);
+
+          const { default: VoteRepository } = await import("../modules/vote/vote.repository.js");
+          const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+
+          // Get total votes for this category
+          const voteStats = await VoteRepository.model.aggregate([
+            { $match: { category: categoryId, status: "completed" } },
+            { $group: { _id: "$category", totalVotes: { $sum: "$vote_count" } } }
+          ]);
+
+          const totalVotes = voteStats[0]?.totalVotes || 0;
+
+          await CategoryRepository.updateById(categoryId, {
+            total_votes: totalVotes,
+            votes_aggregated_at: new Date()
+          });
+
+          console.log(`✅ Aggregated ${totalVotes} votes for category ${categoryId}`);
+        } catch (error) {
+          console.error("❌ Failed to aggregate category votes:", error);
+        }
+      }
+    );
+
+    /**
+     * Send category voting deadline reminders (runs daily)
+     * Notifies about categories closing in 24 hours
+     */
+    this.agenda.define(
+      "send-category-deadline-reminders",
+      { priority: "normal", concurrency: 1 },
+      async () => {
+        try {
+          console.log("📧 Sending category voting deadline reminders...");
+
+          const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+          const { STATUS } = await import("../utils/constants/category.constants.js");
+
+          // Find categories closing in 24 hours
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const dayAfter = new Date(tomorrow);
+          dayAfter.setDate(dayAfter.getDate() + 1);
+
+          const closingSoon = await CategoryRepository.findAll(
+            {
+              status: STATUS.ACTIVE,
+              is_voting_open: true,
+              voting_deadline: { $gte: tomorrow, $lt: dayAfter },
+            },
+            1,
+            100
+          );
+
+          for (const category of closingSoon.data) {
+            await this.now("log-activity", {
+              action: "VOTING_DEADLINE_REMINDER",
+              entityType: "CATEGORY",
+              entityId: category._id,
+              eventId: category.event,
+              description: `Voting deadline reminder: ${category.name} closes in 24 hours`,
+              severity: "info",
+            });
+          }
+
+          console.log(`✅ Sent deadline reminders for ${closingSoon.data.length} categories`);
+        } catch (error) {
+          console.error("❌ Failed to send category deadline reminders:", error);
         }
       }
     );
@@ -562,6 +1062,7 @@ class AgendaManager {
 
           const { default: EventRepository } = await import("../modules/event/event.repository.js");
           const { default: CategoryRepository } = await import("../modules/category/category.repository.js");
+          const { STATUS: CATEGORY_STATUS } = await import("../utils/constants/category.constants.js");
 
           // 1. Unfeature the event if it's featured
           await EventRepository.updateById(eventId, {
@@ -572,17 +1073,18 @@ class AgendaManager {
 
           // 2. Archive and unfeature all categories for this event
           const categories = await CategoryRepository.findAll(
-            { event_id: eventId },
+            { event: eventId },
             1,
             1000
           );
 
           for (const category of categories.data) {
             await CategoryRepository.updateById(category._id, {
-              status: "archived",
+              status: CATEGORY_STATUS.ARCHIVED,
               archived_at: new Date(),
               is_featured: false,
-              featured_at: null
+              featured_at: null,
+              is_voting_open: false
             });
           }
           console.log(`✅ Archived and unfeatured ${categories.data.length} categories`);
@@ -1169,28 +1671,77 @@ class AgendaManager {
     try {
       console.log("⚙️ Setting up recurring tasks...");
 
-      // Close expired events every hour
-      await this.every("0 * * * *", "close-expired-events");
+      // ========================================
+      // EVENT STATUS MANAGEMENT (High Priority)
+      // ========================================
+      
+      // Activate events when start_date is reached - runs every minute
+      await this.every("* * * * *", "activate-starting-events");
 
+      // Archive events when end_date passes - runs every 5 minutes
+      await this.every("*/5 * * * *", "archive-expired-events");
+
+      // Check registration deadlines - runs every 5 minutes
+      await this.every("*/5 * * * *", "check-registration-deadlines");
+
+      // ========================================
+      // CATEGORY VOTING STATUS MANAGEMENT (High Priority)
+      // ========================================
+      
+      // Open voting for categories when voting_start_date is reached - runs every minute
+      await this.every("* * * * *", "open-category-voting");
+
+      // Close voting for categories when voting_deadline passes - runs every minute
+      await this.every("* * * * *", "close-category-voting");
+
+      // Sync category status with their parent events - runs every 15 minutes
+      await this.every("*/15 * * * *", "sync-category-status-with-events");
+
+      // Send category voting deadline reminders - runs daily at 10 AM
+      await this.every("0 10 * * *", "send-category-deadline-reminders");
+
+      // ========================================
+      // VOTE AGGREGATION (Normal Priority)
+      // ========================================
+      
       // Aggregate vote counts every 5 minutes
       await this.every("*/5 * * * *", "aggregate-vote-counts", {});
 
+      // ========================================
+      // FRAUD DETECTION (Normal Priority)
+      // ========================================
+      
       // Detect fraud patterns every hour
       await this.every("0 * * * *", "detect-fraud-patterns", {});
 
+      // ========================================
+      // ANALYTICS (Low Priority)
+      // ========================================
+      
       // Generate daily analytics at midnight
       await this.every("0 0 * * *", "generate-daily-analytics");
 
+      // ========================================
+      // CLEANUP TASKS (Low Priority)
+      // ========================================
+      
       // Clean up old jobs weekly on Sunday at 3 AM
       await this.every("0 3 * * 0", "cleanup-old-jobs");
 
       // Clean up expired tokens daily at 4 AM
       await this.every("0 4 * * *", "cleanup-expired-tokens");
 
+      // ========================================
+      // REMINDER NOTIFICATIONS (Normal Priority)
+      // ========================================
+      
       // Send voting deadline reminders daily at 10 AM
       await this.every("0 10 * * *", "send-voting-deadline-reminders");
 
-      // Activity-related recurring tasks
+      // ========================================
+      // ACTIVITY MONITORING (Normal Priority)
+      // ========================================
+      
       // Detect suspicious activities every hour
       await this.every("0 * * * *", "detect-suspicious-activities", {
         thresholdMinutes: 5,
@@ -1202,7 +1753,14 @@ class AgendaManager {
         retentionMonths: 24,
       });
 
-      console.log("✅ Recurring tasks configured");
+      console.log("✅ Recurring tasks configured successfully");
+      console.log("📋 Status management jobs:");
+      console.log("   - activate-starting-events: every minute");
+      console.log("   - archive-expired-events: every 5 minutes");
+      console.log("   - open-category-voting: every minute");
+      console.log("   - close-category-voting: every minute");
+      console.log("   - sync-category-status-with-events: every 15 minutes");
+      console.log("   - check-registration-deadlines: every 5 minutes");
     } catch (error) {
       console.error("❌ Failed to setup recurring tasks:", error);
     }

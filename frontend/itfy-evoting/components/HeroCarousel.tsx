@@ -234,9 +234,9 @@ export default function HeroCarousel() {
                   </p>
                 )}
                 {heroSlides[activeIndex]?.description && (
-                  <p className="text-base sm:text-lg text-gray-300 mb-10 max-w-xl leading-relaxed">
+                    <p className="text-base sm:text-lg text-gray-300 mb-10 max-w-xl leading-relaxed line-clamp-3">
                     {heroSlides[activeIndex].description}
-                  </p>
+                    </p>
                 )}
               </div>
 

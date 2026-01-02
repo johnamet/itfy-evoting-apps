@@ -25,8 +25,10 @@ class EventController extends BaseController {
    * POST /api/events
    */
   async create(req, res) {
-    const validated = this.validate(req.body, createEventSchema);
     const adminId = this.getUserId(req);
+    req.body.created_by = adminId;
+
+    const validated = this.validate(req.body, createEventSchema);
     const event = await this.service("eventService").createEvent(validated, adminId);
 
     return this.created(res, {

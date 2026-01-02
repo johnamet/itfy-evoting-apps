@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { InlineSpinner } from '@/components/ui/Spinner';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
@@ -15,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { 
-  Loader2, CheckCircle2, AlertCircle, Ticket, User, Mail, 
+  CheckCircle2, AlertCircle, Ticket, User, Mail, 
   Phone, Building2, Briefcase, CalendarCheck, Info,
   FileText, Star
 } from 'lucide-react';
@@ -630,7 +631,7 @@ export function RegistrationFormDialog({ event, open, onOpenChange }: Registrati
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <InlineSpinner className="w-4 h-4 mr-2" />
                   Submitting...
                 </>
               ) : (

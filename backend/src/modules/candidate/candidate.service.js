@@ -243,7 +243,7 @@ class CandidateService extends BaseService {
       const updated = await this.repository.updateById(candidateId, validated);
 
       // Request re-approval if candidate was previously approved
-      if (candidate.status === STATUS.APPROVED || candidate.status === STATUS.PROFILE_UPDATE_PENDING) {
+      if (candidate.status === STATUS.APPROVED || candidate.status === STATUS.PENDING) {
         await this.repository.requestReApproval(
           candidateId,
           changedFields,

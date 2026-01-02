@@ -669,6 +669,7 @@ class AuthService extends BaseService {
    * @returns {Promise<Object>} - { accessToken, refreshToken }
    */
   async refreshToken(data) {
+    data.refresh_token = data.refreshToken; // Normalize key for validation
     try {
       // Validate input
       const validated = this.validate(data, AuthValidation.refreshTokenSchema);

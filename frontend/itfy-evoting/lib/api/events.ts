@@ -232,28 +232,42 @@ export const eventsApi = {
    * Publish event
    */
   publish: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/publish`);
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/publish`);
   },
 
   /**
    * Unpublish event
    */
   unpublish: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/unpublish`);
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/unpublish`);
   },
 
   /**
-   * Feature event
+   * Toggle featured status
    */
-  feature: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/feature`);
+  toggleFeatured: async (eventId: string): Promise<ApiResponse<Event>> => {
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/featured`);
   },
 
   /**
-   * Unfeature event
+   * Update event status
    */
-  unfeature: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/unfeature`);
+  updateStatus: async (eventId: string, status: string): Promise<ApiResponse<Event>> => {
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/status`, { status });
+  },
+
+  /**
+   * Cancel event
+   */
+  cancel: async (eventId: string, reason?: string): Promise<ApiResponse<Event>> => {
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/cancel`, { reason });
+  },
+
+  /**
+   * Complete event
+   */
+  complete: async (eventId: string): Promise<ApiResponse<Event>> => {
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/complete`);
   },
 
   /**
@@ -261,6 +275,17 @@ export const eventsApi = {
    */
   getStats: async (eventId: string): Promise<ApiResponse<EventStatsResponse>> => {
     return api.get<ApiResponse<EventStatsResponse>>(`/events/${eventId}/stats`);
+  },
+
+  /**
+   * Get event vote summary
+   */
+  getVoteSummary: async (eventId: string): Promise<ApiResponse<{
+    total_votes: number;
+    votes_by_category: Array<{ category_id: string; category_name: string; vote_count: number }>;
+    votes_by_day: Array<{ date: string; count: number }>;
+  }>> => {
+    return api.get(`/events/${eventId}/votes/summary`);
   },
 
   /**
@@ -274,14 +299,14 @@ export const eventsApi = {
    * Publish event results
    */
   publishResults: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/results/publish`);
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/results/publish`);
   },
 
   /**
    * Hide event results
    */
   hideResults: async (eventId: string): Promise<ApiResponse<Event>> => {
-    return api.post<ApiResponse<Event>>(`/events/${eventId}/results/hide`);
+    return api.put<ApiResponse<Event>>(`/events/${eventId}/results/hide`);
   },
 
   /**

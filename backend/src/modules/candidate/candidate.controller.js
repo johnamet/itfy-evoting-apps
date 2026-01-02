@@ -185,9 +185,8 @@ class CandidateController extends BaseController {
    */
   async update(req, res) {
     const { id } = req.params;
-    const validated = this.validate(req.body, CandidateValidation.updateCandidateSchema);
     const adminId = this.getUserId(req);
-    const candidate = await this.service("candidateService").updateCandidateByAdmin(id, validated, adminId);
+    const candidate = await this.service("candidateService").updateProfileByAdmin(id, req.body, adminId);
 
     return this.success(res, {
       data: candidate,
@@ -378,7 +377,7 @@ class CandidateController extends BaseController {
   async approve(req, res) {
     const { id } = req.params;
     const adminId = this.getUserId(req);
-    const candidate = await this.service("candidateService").approveCandidate(id, adminId);
+    const candidate = await this.service("candidateService").approveProfile(id, adminId);
 
     return this.success(res, {
       data: candidate,

@@ -34,12 +34,13 @@ export interface PaginatedResponse<T> {
 }
 
 export interface PaginationMeta {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  itemsPerPage: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
+  // Backend returns snake_case
+  page: number;
+  limit: number;
+  total_items: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
 }
 
 export interface PaginationParams {
@@ -290,12 +291,36 @@ export interface Event {
 export interface CreateEventRequest {
   name: string;
   description: string;
-  location: EventLocation;
+  location?: EventLocation;
   start_date: string;
   end_date: string;
   event_type?: EventType;
   visibility?: EventVisibility;
   currency?: Currency;
+  // Media & theme
+  cover_image?: string;
+  color_theme?: string;
+  gallery?: string[];
+  logo_url?: string;
+  banner_url?: string;
+  // Registration
+  max_attendees?: number;
+  registration_deadline?: string;
+  registration_fee?: EventRegistrationFee;
+  // Organizer & contact
+  organizer?: EventOrganizer;
+  contact_email?: string;
+  social_links?: EventSocialLinks;
+  // Additional
+  tags?: string[];
+  requirements?: string[];
+  cancellation_policy?: string;
+  // Complex fields
+  timeline?: EventTimelineItem[];
+  speakers?: EventSpeaker[];
+  sponsors?: EventSponsor[];
+  guestOfHonor?: EventGuestOfHonor[];
+  related_events?: string[]; // ObjectId strings
 }
 
 export interface UpdateEventRequest {
@@ -306,8 +331,31 @@ export interface UpdateEventRequest {
   end_date?: string;
   event_type?: EventType;
   visibility?: EventVisibility;
+  currency?: Currency;
+  // Media & theme
+  cover_image?: string;
+  color_theme?: string;
+  gallery?: string[];
   logo_url?: string;
   banner_url?: string;
+  // Registration
+  max_attendees?: number;
+  registration_deadline?: string;
+  registration_fee?: EventRegistrationFee;
+  // Organizer & contact
+  organizer?: EventOrganizer;
+  contact_email?: string;
+  social_links?: EventSocialLinks;
+  // Additional
+  tags?: string[];
+  requirements?: string[];
+  cancellation_policy?: string;
+  // Complex fields
+  timeline?: EventTimelineItem[];
+  speakers?: EventSpeaker[];
+  sponsors?: EventSponsor[];
+  guestOfHonor?: EventGuestOfHonor[];
+  related_events?: string[]; // ObjectId strings
 }
 
 export interface UpdateEventStatusRequest {
@@ -492,6 +540,15 @@ export interface CandidateSocialLinks {
   portfolio?: string;
 }
 
+export interface CandidateProfileUpdateHistory {
+  updated_at: string;
+  updated_by_candidate: boolean;
+  reason?: string;
+  fields_changed: string[];
+  previous_status?: string;
+  new_status?: string;
+}
+
 export interface Candidate {
   _id: ObjectId;
   first_name: string;
@@ -515,6 +572,7 @@ export interface Candidate {
   event: ObjectId;
   categories: ObjectId[];
   admin_verified_categories?: ObjectId[];
+  profile_update_history?: CandidateProfileUpdateHistory[];
   vote_count: number;
   view_count?: number;
   is_featured: boolean;
@@ -538,16 +596,29 @@ export interface CreateCandidateRequest {
   phone_number?: string;
   bio?: string;
   profile_image?: string;
+  cover_image?: string;
+  video_url?: string;
   event: ObjectId;
   categories?: ObjectId[];
+  status?: CandidateStatus;
+  is_featured?: boolean;
+  is_published?: boolean;
+  display_order?: number;
+  why_nominate_me?: string;
+  impact_statement?: string;
+  social_links?: CandidateSocialLinks;
+  skills?: string[];
+  tags?: string[];
 }
 
 export interface UpdateCandidateRequest {
   first_name?: string;
   last_name?: string;
+  email?: string;
   phone_number?: string;
   bio?: string;
   why_nominate_me?: string;
+  impact_statement?: string;
   profile_image?: string;
   cover_image?: string;
   gallery?: string[];
@@ -558,6 +629,12 @@ export interface UpdateCandidateRequest {
   experience?: CandidateExperience[];
   achievements?: CandidateAchievement[];
   social_links?: CandidateSocialLinks;
+  categories?: ObjectId[];
+  status?: CandidateStatus;
+  is_featured?: boolean;
+  is_published?: boolean;
+  display_order?: number;
+  tags?: string[];
 }
 
 export interface CandidateProfileUpdateRequest {
@@ -1134,7 +1211,7 @@ export interface SlideButton {
   text?: string;
   url?: string;
   style?: ButtonStyle;
-  open_in_new_tab?: boolean;
+  opens_in_new_tab?: boolean;
 }
 
 export interface SlideAnimation {
@@ -1163,13 +1240,20 @@ export interface Slide {
   text_color: string;
   overlay_opacity: number;
   button?: SlideButton;
+  secondary_button?: SlideButton;
   position: SlidePosition;
   order: number;
-  animation?: SlideAnimation;
-  validity_start?: string;
-  validity_end?: string;
+  display_order?: number;
+  animation?: AnimationType;
+  animation_duration?: number;
+  start_date?: string;
+  end_date?: string;
+  is_published?: boolean;
+  view_count?: number;
+  click_count?: number;
   target_audience?: TargetAudience[];
   analytics?: SlideAnalytics;
+  metadata?: Record<string, string>;
   created_at: string;
   updated_at: string;
 }
@@ -1179,6 +1263,7 @@ export interface CreateSlideRequest {
   subtitle?: string;
   description?: string;
   slide_type?: SlideType;
+  status?: SlideStatus;
   event?: ObjectId;
   image: {
     url: string;
@@ -1192,12 +1277,17 @@ export interface CreateSlideRequest {
   text_color?: string;
   overlay_opacity?: number;
   button?: SlideButton;
+  secondary_button?: SlideButton;
   position?: SlidePosition;
   order?: number;
-  animation?: SlideAnimation;
-  validity_start?: string;
-  validity_end?: string;
+  display_order?: number;
+  animation?: AnimationType;
+  animation_duration?: number;
+  start_date?: string;
+  end_date?: string;
+  is_published?: boolean;
   target_audience?: TargetAudience[];
+  metadata?: Record<string, string>;
 }
 
 export interface UpdateSlideRequest {
@@ -1205,6 +1295,7 @@ export interface UpdateSlideRequest {
   subtitle?: string;
   description?: string;
   slide_type?: SlideType;
+  status?: SlideStatus;
   event?: ObjectId;
   image?: {
     url: string;
@@ -1218,12 +1309,17 @@ export interface UpdateSlideRequest {
   text_color?: string;
   overlay_opacity?: number;
   button?: SlideButton;
+  secondary_button?: SlideButton;
   position?: SlidePosition;
   order?: number;
-  animation?: SlideAnimation;
-  validity_start?: string;
-  validity_end?: string;
+  display_order?: number;
+  animation?: AnimationType;
+  animation_duration?: number;
+  start_date?: string;
+  end_date?: string;
+  is_published?: boolean;
   target_audience?: TargetAudience[];
+  metadata?: Record<string, string>;
 }
 
 export interface ReorderSlidesRequest {

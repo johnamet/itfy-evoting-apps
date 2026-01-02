@@ -24,7 +24,6 @@ import {
   X,
   Command,
   Plus,
-  Loader2,
   CheckCheck,
   FileText,
   Hash,
@@ -46,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Spinner, InlineSpinner } from "@/components/ui/Spinner";
 import {
   Tooltip,
   TooltipContent,
@@ -325,7 +325,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   {/* Search Input */}
                   <div className="flex items-center px-4 border-b border-slate-700/50">
                     {searchLoading ? (
-                      <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                      <InlineSpinner className="w-5 h-5" />
                     ) : (
                       <Search className="w-5 h-5 text-slate-400" />
                     )}
@@ -373,8 +373,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                       </div>
                     ) : searchLoading ? (
                       <div className="p-8 text-center">
-                        <Loader2 className="w-8 h-8 mx-auto mb-3 text-blue-400 animate-spin" />
-                        <p className="text-sm text-slate-400">Searching...</p>
+                        <Spinner size="md" text="Searching..." />
                       </div>
                     ) : totalSearchResults === 0 ? (
                       <div className="p-8 text-center">
@@ -802,7 +801,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                     <ScrollArea className="h-64">
                       {notificationsLoading ? (
                         <div className="flex items-center justify-center py-8">
-                          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                          <Spinner size="sm" />
                         </div>
                       ) : notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-slate-400">

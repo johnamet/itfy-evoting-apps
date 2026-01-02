@@ -437,8 +437,16 @@ export default function EventDetailPage() {
                   {event.name}
                 </h1>
                 
-                <p className="text-xl text-gray-200 mb-6 max-w-2xl">
+                <p className="text-xl text-gray-200 mb-6 max-w-2xl line-clamp-3">
                   {event.description}
+                  {event.description && event.description.split('\n').length > 3 && (
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className="text-[#0152be] hover:text-sky-400 ml-2 font-medium transition"
+                  >
+                    More
+                  </button>
+                  )}
                 </p>
 
                 <div className="flex flex-wrap gap-6 text-gray-200">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Users,
   Search,
@@ -18,36 +18,31 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Loader2,
   AlertCircle,
   CheckCircle,
   Ban,
-  Calendar,
   RotateCcw,
   Trash,
   Key,
   History,
-  FileText,
-  Filter,
   X,
   UserX,
   ShieldCheck,
   Settings,
 } from "lucide-react";
 
-import { ActivityLog, usersApi } from "@/lib/api/users";
+import { usersApi } from "@/lib/api/users";
 import { useAuthStore } from "@/store/auth";
-import type { User, UserRole } from "@/types";
+import type { User, UserRole, UserStatus } from "@/types";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { InlineSpinner } from "@/components/ui/Spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -84,8 +79,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { activitiesApi, Activity } from "@/lib/api";
-
-type UserStatus = 'active' | 'inactive' | 'suspended' | 'deleted';
 
 interface UserStats {
   total: number;
@@ -140,7 +133,7 @@ function UserCard({
   isSuperAdmin: boolean;
   isDeleted?: boolean;
 }) {
-  const userStatus = (user.deleted_at ? 'deleted' : user.status) as UserStatus;
+  const userStatus = user.status;
   
   return (
     <motion.div
@@ -391,8 +384,8 @@ export default function EnhancedAdminUsersTab() {
 
         if (response.success && response.data) {
           setDeletedUsers(response.data);
-          setTotalPages(response.pagination?.totalPages || 1);
-          setTotalUsers(response.pagination?.totalItems || response.data.length);
+          setTotalPages(response.pagination?.total_pages || 1);
+          setTotalUsers(response.pagination?.total_items || response.data.length);
         } else {
           setDeletedUsers([]);
         }
@@ -409,8 +402,8 @@ export default function EnhancedAdminUsersTab() {
 
         if (response.success && response.data) {
           setUsers(response.data);
-          setTotalPages(response.pagination?.totalPages || 1);
-          setTotalUsers(response.pagination?.totalItems || response.data.length);
+          setTotalPages(response.pagination?.total_pages || 1);
+          setTotalUsers(response.pagination?.total_items || response.data.length);
         } else {
           setUsers([]);
         }
@@ -592,7 +585,7 @@ export default function EnhancedAdminUsersTab() {
         case 'delete':
           await usersApi.bulkAction({
             userIds: selectedUsers,
-            action: action as any,
+            action: action === 'verify' ? 'verify_email' : action as 'activate' | 'deactivate' | 'suspend' | 'delete',
           });
           break;
       }
@@ -600,7 +593,7 @@ export default function EnhancedAdminUsersTab() {
       setShowBulkActionsModal(false);
       setSelectedUsers([]);
       await handleRefresh();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Failed to perform bulk ${action}:`, error);
     } finally {
       setActionLoading(false);
@@ -631,9 +624,9 @@ export default function EnhancedAdminUsersTab() {
         bio: "",
       });
       await handleRefresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to create user:", error);
-      setFormError(error?.message || "Failed to create user");
+      setFormError(error instanceof Error ? error.message : "Failed to create user");
     } finally {
       setActionLoading(false);
     }
@@ -656,9 +649,9 @@ export default function EnhancedAdminUsersTab() {
       setShowEditModal(false);
       setSelectedUser(null);
       await handleRefresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update user:", error);
-      setFormError(error?.message || "Failed to update user");
+      setFormError(error instanceof Error ? error.message : "Failed to update user");
     } finally {
       setActionLoading(false);
     }
@@ -668,7 +661,7 @@ export default function EnhancedAdminUsersTab() {
     try {
       await usersApi.exportUsers('csv', {
         role: roleFilter !== "all" ? (roleFilter as UserRole) : undefined,
-        status: statusFilter !== "all" ? (statusFilter as any) : undefined,
+        status: statusFilter !== "all" ? (statusFilter as 'active' | 'inactive' | 'suspended') : undefined,
         search: debouncedSearch || undefined,
       });
     } catch (error) {
@@ -936,7 +929,7 @@ export default function EnhancedAdminUsersTab() {
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => {
-                    const userStatus = (user.deleted_at ? 'deleted' : user.status) as UserStatus;
+                    const userStatus = user.status;
                     return (
                     <TableRow key={user._id} className="border-slate-700">
                       <TableCell>
@@ -1139,7 +1132,7 @@ export default function EnhancedAdminUsersTab() {
               disabled={actionLoading}
               className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
             >
-              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {actionLoading ? <InlineSpinner className="w-4 h-4 mr-2" /> : null}
               Create User
             </Button>
           </DialogFooter>
@@ -1212,7 +1205,7 @@ export default function EnhancedAdminUsersTab() {
               disabled={actionLoading}
               className="bg-gradient-to-r from-blue-500 to-purple-500 text-white"
             >
-              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {actionLoading ? <InlineSpinner className="w-4 h-4 mr-2" /> : null}
               Save Changes
             </Button>
           </DialogFooter>
@@ -1242,7 +1235,7 @@ export default function EnhancedAdminUsersTab() {
               disabled={actionLoading}
               className="bg-red-500 text-white hover:bg-red-600"
             >
-              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {actionLoading ? <InlineSpinner className="w-4 h-4 mr-2" /> : null}
               Delete
             </Button>
           </DialogFooter>
@@ -1294,10 +1287,6 @@ export default function EnhancedAdminUsersTab() {
                         ? new Date(selectedUser.last_login).toLocaleString()
                         : "Never"}
                     </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-slate-500 text-sm">Login Attempts</p>
-                    <p className="text-white">{selectedUser.login_attempts}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-slate-500 text-sm">Account Created</p>
@@ -1502,7 +1491,7 @@ export default function EnhancedAdminUsersTab() {
           </DialogHeader>
           <div className="py-4">
             <p className="text-slate-300">
-              A password reset link will be sent to the user's email address. They will be required to create a new password.
+              A password reset link will be sent to the user&apos;s email address. They will be required to create a new password.
             </p>
           </div>
           <DialogFooter>
