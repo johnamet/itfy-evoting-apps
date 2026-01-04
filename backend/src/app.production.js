@@ -19,7 +19,7 @@ import cors from "cors";
 import compression from "compression";
 import dotenv from "dotenv";
 
-// Load environment variables first (single call)
+// Load environment variables first
 dotenv.config();
 
 import db from "./database/app.database.js";
@@ -31,7 +31,7 @@ import { setupAPIDocs } from "./config/swagger.config.js";
 import BaseController from "./modules/shared/base.controller.js";
 import Joi from "joi";
 
-// Production middleware imports
+// Production middleware
 import logger, { httpLogFormat, closeLogger } from "./utils/logger.js";
 import {
   helmetConfig,
@@ -45,8 +45,13 @@ import {
   requestContextMiddleware,
   clientIPMiddleware,
 } from "./middleware/request-context.middleware.js";
-import { globalRateLimiter } from "./middleware/rate-limit.middleware.js";
-import { metricsMiddleware, metricsHandler } from "./services/metrics.service.js";
+import {
+  globalRateLimiter,
+} from "./middleware/rate-limit.middleware.js";
+import {
+  metricsMiddleware,
+  metricsHandler,
+} from "./services/metrics.service.js";
 
 // Initialize Joi validation for controllers
 BaseController.setValidation(Joi);
@@ -63,6 +68,7 @@ let isShuttingDown = false;
 // TRUST PROXY (for load balancers/reverse proxies)
 // ========================================
 if (isProduction) {
+  // Trust first proxy (e.g., nginx, AWS ALB)
   app.set("trust proxy", 1);
 }
 
@@ -77,10 +83,10 @@ app.use(requestContextMiddleware);
 // Security headers (enhanced Helmet config)
 app.use(helmetConfig);
 
-// CORS configuration (production-ready)
+// CORS configuration
 app.use(cors(createCorsConfig()));
 
-// Additional security headers
+// Additional security headers not covered by Helmet
 app.use(additionalSecurityHeaders);
 
 // Block suspicious request patterns
@@ -88,10 +94,13 @@ app.use(blockSuspiciousPatterns);
 
 // Response compression (skip for small responses)
 app.use(compression({
-  level: 6,
-  threshold: 1024,
+  level: 6, // Balanced compression level
+  threshold: 1024, // Only compress responses > 1KB
   filter: (req, res) => {
-    if (req.headers["x-no-compression"]) return false;
+    // Don't compress if client doesn't accept it
+    if (req.headers["x-no-compression"]) {
+      return false;
+    }
     return compression.filter(req, res);
   },
 }));
@@ -101,7 +110,8 @@ app.use(express.json({
   limit: "10mb",
   strict: true,
   verify: (req, res, buf) => {
-    req.rawBody = buf; // Store raw body for webhook signature verification
+    // Store raw body for webhook signature verification
+    req.rawBody = buf;
   },
 }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -114,42 +124,65 @@ app.use(validateContentType);
 
 // Static file serving for uploads (with caching headers)
 app.use("/uploads", express.static("uploads", {
-  maxAge: isProduction ? "1d" : 0,
+  maxAge: isProduction ? "1d" : 0, // Cache for 1 day in production
   etag: true,
   lastModified: true,
 }));
 
-// HTTP request logging (structured logging)
+// HTTP request logging (Morgan with Winston stream)
 app.use((req, res, next) => {
-  if (req.path === "/api/v1/health" || req.path === "/metrics") return next();
-  httpLogFormat.stream.write(`${req.method} ${req.path} - ${req.clientIP || req.ip}`);
+  // Skip logging for health checks and metrics
+  if (req.path === "/api/v1/health" || req.path === "/metrics") {
+    return next();
+  }
+  httpLogFormat.stream.write(
+    `${req.method} ${req.path} ${res.statusCode} - ${req.clientIP}`
+  );
   next();
 });
 
 // Prometheus metrics collection
 app.use(metricsMiddleware);
 
-// Global rate limiting in production
+// Global rate limiting (applies to all routes)
 if (isProduction) {
   app.use(globalRateLimiter);
 }
-
-// ========================================
-// PROMETHEUS METRICS ENDPOINT
-// ========================================
-app.get("/metrics", metricsHandler);
 
 // ========================================
 // API DOCUMENTATION
 // ========================================
 setupAPIDocs(app);
 
-
 // ========================================
-// ROUTES
+// HEALTH & MONITORING ROUTES
 // ========================================
 
-// Quick health check (for load balancers, etc.)
+// Liveness probe (for Kubernetes/container orchestration)
+app.get("/health/live", (req, res) => {
+  res.status(200).json({ status: "alive", timestamp: new Date().toISOString() });
+});
+
+// Readiness probe (checks if app is ready to serve traffic)
+app.get("/health/ready", async (req, res) => {
+  try {
+    if (isShuttingDown) {
+      return res.status(503).json({ status: "shutting_down" });
+    }
+
+    const health = await healthService.getQuickHealth();
+    const isReady = health.services.database === "connected";
+
+    res.status(isReady ? 200 : 503).json({
+      status: isReady ? "ready" : "not_ready",
+      ...health,
+    });
+  } catch (error) {
+    res.status(503).json({ status: "error", error: error.message });
+  }
+});
+
+// Quick health check (for load balancers)
 app.get("/api/v1/health", async (req, res) => {
   const health = await healthService.getQuickHealth();
   res.json(health);
@@ -163,6 +196,7 @@ app.get("/api/v1/health/detailed", async (req, res) => {
                        health.status === "degraded" ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
+    logger.error("Health check failed", { error: error.message });
     res.status(500).json({
       status: "error",
       error: error.message,
@@ -171,20 +205,32 @@ app.get("/api/v1/health/detailed", async (req, res) => {
   }
 });
 
-// API routes
+// Prometheus metrics endpoint
+app.get("/metrics", metricsHandler);
+
+// ========================================
+// API ROUTES
+// ========================================
+
+// API version header
 app.use("/api/v1", (req, res, next) => {
-  res.setHeader("X-Powered-By", "ITFY E-Voting");
+  res.setHeader("X-API-Version", "v1");
   next();
 });
 
+// Main API routes
 app.use("/api/v1", router);
 
-
-
-app.use("/api/v1/", (req, res) =>{
+// API info endpoint
+app.get("/api/v1/", (req, res) => {
   res.json({
-    message: "Welcome to the ITFY E-Voting API v1\nVisit /api/v1/health to check server status.",
-    api_routes: {
+    message: "Welcome to the ITFY E-Voting API v1",
+    version: "1.1.0",
+    documentation: {
+      swagger: "/api-docs",
+      redoc: "/api-docs/redoc",
+    },
+    endpoints: {
       auth: "/api/v1/auth",
       users: "/api/v1/users",
       events: "/api/v1/events",
@@ -195,13 +241,13 @@ app.use("/api/v1/", (req, res) =>{
       payments: "/api/v1/payments",
       notifications: "/api/v1/notifications",
     },
-    api_routes_docs: {
-      swagger_ui: "/api-docs",
-      redoc: "/api-docs/redoc",
-    },
+    health: "/api/v1/health",
   });
-})
+});
 
+// ========================================
+// ERROR HANDLERS
+// ========================================
 
 // 404 handler
 app.use((req, res) => {
@@ -209,39 +255,32 @@ app.use((req, res) => {
     success: false,
     message: "Route not found",
     path: req.originalUrl,
+    requestId: req.requestId,
   });
 });
 
 // Global error handler
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  // Log error with request context
-  const errorContext = {
-    requestId: req.requestId,
-    method: req.method,
+  // Log error with context
+  logger.error("Unhandled error", {
+    error: err.message,
+    stack: err.stack,
     path: req.path,
-    ip: req.clientIP || req.ip,
-    userId: req.user?.id,
-    statusCode: err.statusCode || 500,
-  };
+    method: req.method,
+    requestId: req.requestId,
+  });
 
-  // Log at appropriate level based on status code
-  if (err.statusCode >= 500 || !err.statusCode) {
-    logger.error("Server error", { ...errorContext, error: err.message, stack: err.stack });
-  } else if (err.statusCode >= 400) {
-    logger.warn("Client error", { ...errorContext, error: err.message });
-  }
-
-  const statusCode = err.statusCode || 500;
-  const message = isProduction && statusCode === 500 
-    ? "Internal server error" 
+  const statusCode = err.statusCode || err.status || 500;
+  const message = isProduction && statusCode === 500
+    ? "Internal server error"
     : err.message || "Internal server error";
 
   res.status(statusCode).json({
     success: false,
     message,
     requestId: req.requestId,
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    ...(!isProduction && { stack: err.stack }),
   });
 });
 
@@ -252,40 +291,49 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     // 1. Connect to MongoDB
-    logger.info("🔌 Connecting to MongoDB...");
+    logger.info("Connecting to MongoDB...");
     await db.connect();
-    logger.info("✅ MongoDB connected successfully");
+    logger.info("MongoDB connected successfully");
 
     // 2. Connect to Redis cache
-    logger.info("🔌 Connecting to Redis cache...");
+    logger.info("Connecting to Redis cache...");
     await cache.connect();
-    logger.info("✅ Cache connected successfully");
+    logger.info("Cache connected successfully");
 
     // 3. Initialize Agenda job queue
-    logger.info("🔌 Initializing Agenda.js...");
+    logger.info("Initializing Agenda.js...");
     await agendaManager.initialize();
-    logger.info("✅ Agenda.js initialized successfully");
+    logger.info("Agenda.js initialized successfully");
 
     // 4. Setup recurring tasks
-    logger.info("⚙️ Setting up recurring tasks...");
+    logger.info("Setting up recurring tasks...");
     await agendaManager.setupRecurringTasks();
-    logger.info("✅ Recurring tasks configured");
+    logger.info("Recurring tasks configured");
 
     // 5. Start Express server
     server = app.listen(PORT, () => {
       logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      logger.info(`🚀 ITFY E-Voting Server is running`);
-      logger.info(`📍 Port: ${PORT}`);
-      logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-      logger.info(`⏰ Started at: ${new Date().toISOString()}`);
+      logger.info("ITFY E-Voting Server is running", {
+        port: PORT,
+        environment: process.env.NODE_ENV || "development",
+        nodeVersion: process.version,
+        pid: process.pid,
+      });
       logger.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+      // Signal PM2 that app is ready (for graceful reloads)
+      if (process.send) {
+        process.send("ready");
+      }
     });
 
-    // Set server timeout for long-running requests
-    server.timeout = 120000; // 2 minutes
+    // Set server timeout
+    server.timeout = 30000; // 30 seconds
     server.keepAliveTimeout = 65000; // Slightly higher than ALB idle timeout
+    server.headersTimeout = 66000; // Slightly higher than keepAliveTimeout
+
   } catch (error) {
-    logger.error("❌ Failed to start server:", { error: error.message, stack: error.stack });
+    logger.error("Failed to start server", { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }
@@ -295,94 +343,101 @@ async function startServer() {
 // ========================================
 
 async function gracefulShutdown(signal) {
-  // Prevent duplicate shutdown calls
   if (isShuttingDown) {
-    logger.warn(`Shutdown already in progress, ignoring ${signal}`);
+    logger.warn("Shutdown already in progress, ignoring signal", { signal });
     return;
   }
+
   isShuttingDown = true;
+  logger.warn(`${signal} received. Starting graceful shutdown...`);
 
-  logger.info(`\n⚠️ ${signal} received. Starting graceful shutdown...`);
-
-  // Set a timeout to force exit if graceful shutdown takes too long
-  const forceExitTimeout = setTimeout(() => {
-    logger.error("❌ Graceful shutdown timed out, forcing exit");
+  const shutdownTimeout = setTimeout(() => {
+    logger.error("Graceful shutdown timed out, forcing exit");
     process.exit(1);
-  }, 30000); // 30 seconds max
+  }, 30000); // 30 second timeout
 
   try {
-    // Stop accepting new requests
+    // 1. Stop accepting new connections
     if (server) {
-      logger.info("🛑 Stopping Express server...");
+      logger.info("Stopping HTTP server...");
       await new Promise((resolve, reject) => {
         server.close((err) => {
           if (err) reject(err);
           else resolve();
         });
       });
-      logger.info("✅ Express server stopped");
+      logger.info("HTTP server stopped");
     }
 
-    // Stop Agenda job processing
-    logger.info("🛑 Stopping Agenda.js...");
+    // 2. Stop Agenda job processing
+    logger.info("Stopping Agenda.js...");
     await agendaManager.stop();
-    logger.info("✅ Agenda.js stopped");
+    logger.info("Agenda.js stopped");
 
-    // Close database connection
-    logger.info("🛑 Closing MongoDB connection...");
+    // 3. Close database connection
+    logger.info("Closing MongoDB connection...");
     const mongoose = await import("mongoose");
     await mongoose.default.connection.close();
-    logger.info("✅ MongoDB connection closed");
+    logger.info("MongoDB connection closed");
 
-    // Close cache connection
-    logger.info("🛑 Closing cache connection...");
+    // 4. Close cache connection
+    logger.info("Closing cache connection...");
     await cache.disconnect();
-    logger.info("✅ Cache connection closed");
+    logger.info("Cache connection closed");
 
-    // Close logger transports
-    logger.info("🛑 Closing logger...");
+    // 5. Close logger
     await closeLogger();
 
-    clearTimeout(forceExitTimeout);
-    console.log("✅ Graceful shutdown completed");
+    clearTimeout(shutdownTimeout);
+    logger.info("Graceful shutdown completed");
     process.exit(0);
   } catch (error) {
-    clearTimeout(forceExitTimeout);
-    console.error("❌ Error during shutdown:", error);
+    clearTimeout(shutdownTimeout);
+    logger.error("Error during shutdown", { error: error.message });
     process.exit(1);
   }
 }
+
+// ========================================
+// PROCESS EVENT HANDLERS
+// ========================================
 
 // Handle shutdown signals
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions (log and exit)
 process.on("uncaughtException", (error) => {
-  logger.error("❌ Uncaught Exception:", { error: error.message, stack: error.stack });
-  // In production, attempt graceful shutdown
-  if (isProduction) {
-    gracefulShutdown("UNCAUGHT_EXCEPTION");
-  } else {
-    // In development, crash immediately for debugging
-    process.exit(1);
-  }
+  logger.error("Uncaught Exception", {
+    error: error.message,
+    stack: error.stack,
+  });
+  // Exit with failure - let process manager restart
+  process.exit(1);
 });
 
 // Handle unhandled promise rejections
-process.on("unhandledRejection", (reason) => {
-  logger.error("❌ Unhandled Rejection", {
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("Unhandled Promise Rejection", {
     reason: reason instanceof Error ? reason.message : reason,
     stack: reason instanceof Error ? reason.stack : undefined,
   });
-  // In production, attempt graceful shutdown
-  if (isProduction) {
-    gracefulShutdown("UNHANDLED_REJECTION");
-  }
-  // In development, log but continue (might be a non-critical promise)
+  // Don't exit for unhandled rejections in production
+  // Node.js 15+ exits by default, so this keeps the app running
 });
 
-// Start the server
+// Handle warnings
+process.on("warning", (warning) => {
+  logger.warn("Node.js Warning", {
+    name: warning.name,
+    message: warning.message,
+    stack: warning.stack,
+  });
+});
+
+// ========================================
+// START THE SERVER
+// ========================================
 startServer();
 
 export default app;

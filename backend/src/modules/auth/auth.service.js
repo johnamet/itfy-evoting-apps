@@ -324,16 +324,13 @@ class AuthService extends BaseService {
           .select("+password_hash +login_attempts +locked_until");
       }
 
-      console.log("Candidate found:", candidate);
-
       // Use dummy hash if candidate doesn't exist (prevent timing attacks)
       const passwordHash =
         candidate?.password_hash ||
         "$2b$10$X/invalid/hash/that/will/never/match/anythingXXXXXXXXXXXXXXXXX";
 
-      console.log("Using password hash:", validated.password, passwordHash);
+      // Password comparison with timing-safe check
       const isValid = await AuthHelpers.comparePassword(validated.password, passwordHash);
-      console.log("Password valid:", isValid);
 
       // Check if candidate exists AFTER password comparison (constant time)
       if (!candidate) {

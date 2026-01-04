@@ -196,6 +196,53 @@ class CacheManager {
   }
 
   /**
+   * Decrement counter (for rate limiting with skipSuccessfulRequests)
+   * @param {string} key
+   * @returns {Promise<number>}
+   */
+  async decr(key) {
+    try {
+      if (this.useInMemory) {
+        const current = this.inMemoryStore.get(key);
+        const value = current ? Math.max(0, parseInt(current, 10) - 1) : 0;
+        this.inMemoryStore.set(key, String(value));
+        return value;
+      }
+      return await this.client.decr(key);
+    } catch (error) {
+      console.warn(`Cache DECR failed (${key}):`, error.message);
+      const current = this.inMemoryStore.get(key);
+      const value = current ? Math.max(0, parseInt(current, 10) - 1) : 0;
+      this.inMemoryStore.set(key, String(value));
+      return value;
+    }
+  }
+
+  /**
+   * Increment by specific amount
+   * @param {string} key
+   * @param {number} amount
+   * @returns {Promise<number>}
+   */
+  async incrBy(key, amount) {
+    try {
+      if (this.useInMemory) {
+        const current = this.inMemoryStore.get(key);
+        const value = (current ? parseInt(current, 10) : 0) + amount;
+        this.inMemoryStore.set(key, String(value));
+        return value;
+      }
+      return await this.client.incrby(key, amount);
+    } catch (error) {
+      console.warn(`Cache INCRBY failed (${key}):`, error.message);
+      const current = this.inMemoryStore.get(key);
+      const value = (current ? parseInt(current, 10) : 0) + amount;
+      this.inMemoryStore.set(key, String(value));
+      return value;
+    }
+  }
+
+  /**
    * Set expiration on existing key
    * @param {string} key
    * @param {number} seconds

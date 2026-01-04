@@ -7,6 +7,8 @@
  * - Image optimization and validation
  * - File type and size restrictions
  * - Automatic cleanup of temporary files
+ * - Path traversal protection
+ * - Magic number validation
  * 
  * @class FileService
  * @singleton
@@ -15,8 +17,10 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
+import { createReadStream } from "fs";
 import sharp from "sharp";
 import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import {
   MAX_FILE_SIZE_MB,
   FILE_SIZE_LIMITS,
@@ -29,6 +33,41 @@ import {
   FILE_ERROR_CODES,
 } from "../utils/constants/file.constants.js";
 import { ERROR_MESSAGES } from "../utils/constants/error.constants.js";
+import logger from "../utils/logger.js";
+
+// File magic numbers for validation (first bytes of files)
+const FILE_SIGNATURES = {
+  // Images
+  'image/jpeg': [
+    [0xFF, 0xD8, 0xFF], // JPEG/JPG
+  ],
+  'image/png': [
+    [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], // PNG
+  ],
+  'image/gif': [
+    [0x47, 0x49, 0x46, 0x38, 0x37, 0x61], // GIF87a
+    [0x47, 0x49, 0x46, 0x38, 0x39, 0x61], // GIF89a
+  ],
+  'image/webp': [
+    [0x52, 0x49, 0x46, 0x46], // RIFF header (WebP starts with RIFF)
+  ],
+  // Documents
+  'application/pdf': [
+    [0x25, 0x50, 0x44, 0x46], // %PDF
+  ],
+  'application/msword': [
+    [0xD0, 0xCF, 0x11, 0xE0], // DOC (OLE compound)
+  ],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [
+    [0x50, 0x4B, 0x03, 0x04], // DOCX (ZIP-based)
+  ],
+  'application/vnd.ms-excel': [
+    [0xD0, 0xCF, 0x11, 0xE0], // XLS (OLE compound)
+  ],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
+    [0x50, 0x4B, 0x03, 0x04], // XLSX (ZIP-based)
+  ],
+};
 
 class FileService {
   constructor() {
@@ -57,11 +96,158 @@ class FileService {
         await fs.mkdir(dir, { recursive: true });
       }
       this.isReady = true;
-      console.log("✅ Upload directories initialized");
+      logger.info("✅ Upload directories initialized");
     } catch (error) {
-      console.error("❌ Failed to create upload directories:", error);
+      logger.error("❌ Failed to create upload directories:", { error: error.message });
       throw new Error("Failed to initialize file service");
     }
+  }
+
+  // ========================================
+  // SECURITY UTILITIES
+  // ========================================
+
+  /**
+   * Sanitize filename to prevent path traversal and injection
+   * @param {string} filename - Original filename
+   * @returns {string} - Sanitized filename
+   * @private
+   */
+  sanitizeFilename(filename) {
+    if (!filename || typeof filename !== 'string') {
+      return `file_${Date.now()}`;
+    }
+
+    // Remove path components
+    let sanitized = path.basename(filename);
+    
+    // Remove null bytes and other dangerous characters
+    sanitized = sanitized
+      .replace(/\0/g, '') // null bytes
+      .replace(/\.\.+/g, '.') // multiple dots
+      .replace(/[<>:"|?*\x00-\x1f]/g, '_') // Windows forbidden chars and control chars
+      .replace(/^\s+|\s+$/g, '') // trim whitespace
+      .replace(/\s+/g, '_'); // replace spaces with underscore
+
+    // Ensure filename isn't empty after sanitization
+    if (!sanitized || sanitized === '.' || sanitized === '..') {
+      sanitized = `file_${Date.now()}`;
+    }
+
+    // Limit filename length (preserve extension)
+    const ext = path.extname(sanitized);
+    const nameWithoutExt = path.basename(sanitized, ext);
+    if (nameWithoutExt.length > 100) {
+      sanitized = nameWithoutExt.substring(0, 100) + ext;
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * Validate that a path is within the allowed upload directory
+   * Prevents path traversal attacks
+   * @param {string} filePath - Path to validate
+   * @returns {boolean} - True if path is safe
+   * @private
+   */
+  isPathSafe(filePath) {
+    if (!filePath) return false;
+
+    const resolvedPath = path.resolve(filePath);
+    const uploadBasePath = path.resolve(this.uploadDir);
+    
+    // Check if the resolved path starts with the upload base path
+    return resolvedPath.startsWith(uploadBasePath + path.sep) || 
+           resolvedPath === uploadBasePath;
+  }
+
+  /**
+   * Validate file content matches claimed MIME type using magic numbers
+   * @param {string} filePath - Path to uploaded file
+   * @param {string} claimedMimeType - MIME type claimed by client
+   * @returns {Promise<{isValid: boolean, detectedType: string|null}>}
+   * @private
+   */
+  async validateFileMagicNumber(filePath, claimedMimeType) {
+    try {
+      // Read first 16 bytes of file
+      const buffer = Buffer.alloc(16);
+      const fileHandle = await fs.open(filePath, 'r');
+      try {
+        await fileHandle.read(buffer, 0, 16, 0);
+      } finally {
+        await fileHandle.close();
+      }
+
+      // Check against known signatures
+      const expectedSignatures = FILE_SIGNATURES[claimedMimeType];
+      if (!expectedSignatures) {
+        // Unknown MIME type, allow but log warning
+        logger.warn('Unknown MIME type for magic number validation', { claimedMimeType });
+        return { isValid: true, detectedType: null };
+      }
+
+      for (const signature of expectedSignatures) {
+        let matches = true;
+        for (let i = 0; i < signature.length; i++) {
+          if (buffer[i] !== signature[i]) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return { isValid: true, detectedType: claimedMimeType };
+        }
+      }
+
+      // Try to detect actual type
+      let detectedType = null;
+      for (const [mimeType, signatures] of Object.entries(FILE_SIGNATURES)) {
+        for (const signature of signatures) {
+          let matches = true;
+          for (let i = 0; i < signature.length; i++) {
+            if (buffer[i] !== signature[i]) {
+              matches = false;
+              break;
+            }
+          }
+          if (matches) {
+            detectedType = mimeType;
+            break;
+          }
+        }
+        if (detectedType) break;
+      }
+
+      logger.warn('File magic number mismatch', {
+        claimedMimeType,
+        detectedType,
+        filePath: path.basename(filePath),
+      });
+
+      return { isValid: false, detectedType };
+    } catch (error) {
+      logger.error('Magic number validation failed', { error: error.message });
+      return { isValid: false, detectedType: null };
+    }
+  }
+
+  /**
+   * Generate a cryptographically secure filename
+   * @param {string} originalName - Original filename
+   * @param {string} userId - User ID (optional)
+   * @returns {string} - Secure filename
+   * @private
+   */
+  generateSecureFilename(originalName, userId = 'anon') {
+    const sanitizedOriginal = this.sanitizeFilename(originalName);
+    const ext = path.extname(sanitizedOriginal).toLowerCase();
+    const timestamp = Date.now();
+    const randomBytes = crypto.randomBytes(8).toString('hex');
+    const userPrefix = String(userId).substring(0, 10).replace(/[^a-zA-Z0-9]/g, '');
+    
+    return `${userPrefix}_${timestamp}_${randomBytes}${ext}`;
   }
 
   // ========================================
@@ -90,18 +276,11 @@ class FileService {
       filename: (req, file, cb) => {
         try {
           const userId = req.user?._id || req.user?.id || "anonymous";
-          const timestamp = Date.now();
-          const uniqueId = uuidv4().split("-")[0];
-          const ext = path.extname(file.originalname).toLowerCase();
-          const nameWithoutExt = path
-            .basename(file.originalname, ext)
-            .replace(/[^a-zA-Z0-9]/g, "_")
-            .substring(0, 30);
-
-          const filename = `${userId}_${timestamp}_${uniqueId}_${nameWithoutExt}${ext}`;
+          // Use secure filename generation
+          const filename = this.generateSecureFilename(file.originalname, userId);
           cb(null, filename);
         } catch (error) {
-          console.error("Failed to generate filename:", error);
+          logger.error("Failed to generate filename:", { error: error.message });
           cb(error, null);
         }
       },
@@ -465,7 +644,7 @@ class FileService {
    */
   async deleteFile(filePath) {
     if (!filePath) {
-      console.warn("deleteFile called with empty path");
+      logger.warn("deleteFile called with empty path");
       return false;
     }
 
@@ -475,18 +654,30 @@ class FileService {
         ? filePath
         : path.join(process.cwd(), filePath.replace(/^\//, ""));
 
+      // SECURITY: Validate path is within allowed directory
+      if (!this.isPathSafe(absolutePath)) {
+        logger.error("Path traversal attempt blocked", { 
+          requestedPath: filePath,
+          resolvedPath: absolutePath 
+        });
+        throw new Error("Invalid file path");
+      }
+
       // Check if file exists before attempting deletion
       const exists = await this.fileExists(absolutePath);
       if (!exists) {
-        console.warn(`File does not exist: ${filePath}`);
+        logger.warn(`File does not exist: ${path.basename(filePath)}`);
         return false;
       }
 
       await fs.unlink(absolutePath);
-      console.log(`🗑️  File deleted: ${filePath}`);
+      logger.info(`🗑️  File deleted: ${path.basename(filePath)}`);
       return true;
     } catch (error) {
-      console.error(`Failed to delete file ${filePath}:`, error.message);
+      logger.error(`Failed to delete file:`, { 
+        file: path.basename(filePath), 
+        error: error.message 
+      });
       throw new Error(`${FILE_ERROR_CODES.DELETE_FAILED}: ${error.message}`);
     }
   }

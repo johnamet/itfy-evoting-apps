@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../frontend/itfy-evoting"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../frontend/itfy-webpage"
+		}
+	],
+	"settings": {}
+}

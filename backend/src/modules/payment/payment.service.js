@@ -1,6 +1,12 @@
 /**
  * Payment Service
  * Handles business logic for payment processing with Paystack
+ * 
+ * Production Features:
+ * - Retry logic with exponential backoff
+ * - Circuit breaker pattern for external API calls
+ * - Request timeout handling
+ * - Idempotency support
  */
 
 import BaseService from "../shared/base.service.js";
@@ -21,11 +27,135 @@ import crypto from "crypto";
 import axios from "axios";
 import { configDotenv } from "dotenv";
 import voteService from "../vote/vote/vote.service.js";
+import logger from "../../utils/logger.js";
 
 // Set up validation module for this service
 BaseService.setValidation(PaymentValidation);
 
 configDotenv();
+
+// Circuit breaker state
+const circuitBreaker = {
+  failures: 0,
+  lastFailure: null,
+  isOpen: false,
+  threshold: 5, // Open circuit after 5 failures
+  resetTimeout: 60000, // Reset after 60 seconds
+};
+
+/**
+ * Check if circuit breaker allows request
+ * @returns {boolean}
+ */
+function isCircuitClosed() {
+  if (!circuitBreaker.isOpen) return true;
+  
+  // Check if enough time has passed to reset
+  const timeSinceLastFailure = Date.now() - circuitBreaker.lastFailure;
+  if (timeSinceLastFailure >= circuitBreaker.resetTimeout) {
+    circuitBreaker.isOpen = false;
+    circuitBreaker.failures = 0;
+    logger.info("Circuit breaker reset - allowing requests");
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Record circuit breaker failure
+ */
+function recordFailure() {
+  circuitBreaker.failures++;
+  circuitBreaker.lastFailure = Date.now();
+  
+  if (circuitBreaker.failures >= circuitBreaker.threshold) {
+    circuitBreaker.isOpen = true;
+    logger.error("Circuit breaker opened - blocking Paystack requests", {
+      failures: circuitBreaker.failures,
+    });
+  }
+}
+
+/**
+ * Record circuit breaker success
+ */
+function recordSuccess() {
+  circuitBreaker.failures = 0;
+  circuitBreaker.isOpen = false;
+}
+
+/**
+ * Sleep utility for retry delays
+ * @param {number} ms - Milliseconds to sleep
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Make HTTP request with retry logic
+ * @param {Function} requestFn - Async function that makes the request
+ * @param {Object} options - Retry options
+ * @returns {Promise<any>}
+ */
+async function withRetry(requestFn, options = {}) {
+  const {
+    maxRetries = 3,
+    baseDelay = 1000,
+    maxDelay = 10000,
+    retryOn = [408, 429, 500, 502, 503, 504],
+  } = options;
+
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Check circuit breaker before attempt
+      if (!isCircuitClosed()) {
+        throw new Error("Payment service temporarily unavailable. Please try again later.");
+      }
+
+      const result = await requestFn();
+      recordSuccess();
+      return result;
+    } catch (error) {
+      lastError = error;
+      
+      // Check if we should retry
+      const statusCode = error.response?.status;
+      const isRetryable = retryOn.includes(statusCode) || 
+                         error.code === 'ECONNABORTED' ||
+                         error.code === 'ETIMEDOUT';
+
+      if (attempt < maxRetries && isRetryable) {
+        // Calculate delay with exponential backoff and jitter
+        const delay = Math.min(
+          baseDelay * Math.pow(2, attempt) + Math.random() * 1000,
+          maxDelay
+        );
+        
+        logger.warn("Paystack request failed, retrying", {
+          attempt: attempt + 1,
+          maxRetries,
+          delay,
+          statusCode,
+          error: error.message,
+        });
+        
+        await sleep(delay);
+        continue;
+      }
+
+      // Record failure for circuit breaker
+      if (statusCode >= 500 || !statusCode) {
+        recordFailure();
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
 
 class PaymentService extends BaseService {
   constructor(dependencies = {
@@ -44,6 +174,36 @@ class PaymentService extends BaseService {
     this.emailService = dependencies.emailService || EmailService;
     this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     this.paystackBaseUrl = "https://api.paystack.co";
+    this.requestTimeout = parseInt(process.env.PAYSTACK_TIMEOUT_MS, 10) || 30000;
+  }
+
+  /**
+   * Make authenticated request to Paystack API with retry logic
+   * @param {string} method - HTTP method
+   * @param {string} endpoint - API endpoint
+   * @param {Object} data - Request body
+   * @returns {Promise<Object>}
+   * @private
+   */
+  async _makePaystackRequest(method, endpoint, data = null) {
+    return withRetry(async () => {
+      const config = {
+        method,
+        url: `${this.paystackBaseUrl}${endpoint}`,
+        headers: {
+          Authorization: `Bearer ${this.paystackSecretKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: this.requestTimeout,
+      };
+
+      if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
+        config.data = data;
+      }
+
+      const response = await axios(config);
+      return response.data;
+    });
   }
 
   /**
@@ -331,29 +491,30 @@ class PaymentService extends BaseService {
         },
       };
 
-      // Log payload for debugging
-      console.log("Paystack Payload:", JSON.stringify(paystackPayload, null, 2));
+      // Log payload for debugging (without sensitive data)
+      if (process.env.NODE_ENV === 'development') {
+        logger.debug("Paystack Payload (sanitized):", {
+          email: paystackPayload.email,
+          amount: paystackPayload.amount,
+          bundleCount: bundlesData.length,
+        });
+      }
 
-      console.log(this.paystackSecretKey)
-      const paystackResponse = await axios.post(
-        `${this.paystackBaseUrl}/transaction/initialize`,
-        paystackPayload,
-        {
-          headers: {
-            Authorization: `Bearer ${this.paystackSecretKey}`,
-            "Content-Type": "application/json",
-          },
-        }
+      // Use resilient Paystack request with retry and circuit breaker
+      const paystackResponse = await this._makePaystackRequest(
+        'POST',
+        '/transaction/initialize',
+        paystackPayload
       );
 
-      if (!paystackResponse.data.status) {
-        throw new Error(paystackResponse.data.message || "Paystack initialization failed");
+      if (!paystackResponse.status) {
+        throw new Error(paystackResponse.message || "Paystack initialization failed");
       }
 
       // Update payment with Paystack details
       await this.repository.updatePaymentById(payment._id, {
-        paystack_reference: paystackResponse.data.data.reference,
-        paystack_access_code: paystackResponse.data.data.access_code,
+        paystack_reference: paystackResponse.data.reference,
+        paystack_access_code: paystackResponse.data.access_code,
       });
 
       // Log activity (fire-and-forget)
@@ -370,21 +531,27 @@ class PaymentService extends BaseService {
           bundleCount: bundlesData.length,
           totalVotes,
         },
-      }).catch(err => console.error("Activity log failed:", err));
+      }).catch(err => logger.error("Activity log failed:", { error: err.message }));
 
       return {
         payment_id: payment._id,
         transaction_reference: transactionReference,
         vote_code: voteCode,
-        authorization_url: paystackResponse.data.data.authorization_url,
-        access_code: paystackResponse.data.data.access_code,
+        authorization_url: paystackResponse.data.authorization_url,
+        access_code: paystackResponse.data.access_code,
         amount: finalAmount,
         total_votes: totalVotes,
         bundle_count: bundlesData.length,
       };
     } catch (error) {
-      if (error.response && error.response.data) {
-        console.error("Paystack Error Detail:", JSON.stringify(error.response.data, null, 2));
+      // Log error with context (without sensitive data)
+      logger.error("Payment initialization failed", {
+        error: error.message,
+        eventId,
+        voterEmail: voterEmail?.substring(0, 3) + '***', // Partially mask email
+      });
+      
+      if (error.response?.data) {
         const message = error.response.data.message || error.message;
         throw new Error(`Failed to initialize payment: ${message}`);
       }

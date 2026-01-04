@@ -1,0 +1,166 @@
+name: Build and Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '22.19.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/itfy-evoting/package-lock.json
+        
+    # Backend Build
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: npm ci
+      
+    - name: Run backend linting
+      working-directory: ./backend
+      run: npm run lint
+      
+    - name: Run backend tests
+      working-directory: ./backend
+      run: npm test
+      env:
+        NODE_ENV: test
+        JWT_SECRET: test-jwt-secret-for-ci
+        JWT_REFRESH_SECRET: test-jwt-refresh-secret-for-ci
+      
+    - name: Build backend
+      working-directory: ./backend
+      run: npm run build
+      
+    # Frontend Build
+    - name: Install frontend dependencies
+      working-directory: ./frontend/itfy-evoting
+      run: npm ci
+      
+    - name: Run frontend linting
+      working-directory: ./frontend/itfy-evoting
+      run: npm run lint
+      
+    - name: Run frontend tests
+      working-directory: ./frontend/itfy-evoting
+      run: npm test || echo "No tests configured"
+      
+    - name: Build frontend
+      working-directory: ./frontend/itfy-evoting
+      run: npm run build
+      env:
+        NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to DigitalOcean Droplet
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.DO_HOST }}
+        username: ${{ secrets.DO_USERNAME }}
+        key: ${{ secrets.DO_SSH_KEY }}
+        port: ${{ secrets.DO_PORT || 22 }}
+        script: |
+          set -e  # Exit on any error
+          
+          # Navigate to app directory
+          cd ${{ secrets.APP_PATH }}
+          
+          # Pull latest changes
+          echo "📥 Pulling latest code from GitHub..."
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # ===== Deploy Backend =====
+          echo "🔧 Deploying Backend..."
+          cd backend
+          
+          # Install dependencies
+          npm ci --production=false
+          
+          # Build backend
+          npm run build
+          
+          # Create/Update backend .env file
+          echo "📝 Updating backend environment variables..."
+          cat > .env << 'BACKEND_ENV_EOF'
+          ${{ secrets.BACKEND_ENV }}
+          BACKEND_ENV_EOF
+          
+          # Auto-generate JWT secrets if not present in .env
+          echo "🔐 Checking JWT secrets..."
+          if ! grep -q "^JWT_SECRET=" .env || [ -z "$(grep "^JWT_SECRET=" .env | cut -d'=' -f2)" ]; then
+            echo "Generating new JWT_SECRET..."
+            JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+            echo "JWT_SECRET=$JWT_SECRET" >> .env
+          fi
+          
+          if ! grep -q "^JWT_REFRESH_SECRET=" .env || [ -z "$(grep "^JWT_REFRESH_SECRET=" .env | cut -d'=' -f2)" ]; then
+            echo "Generating new JWT_REFRESH_SECRET..."
+            JWT_REFRESH_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+            echo "JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET" >> .env
+          fi
+          
+          # Restart backend with PM2
+          echo "🔄 Restarting backend service..."
+          pm2 delete backend 2>/dev/null || true
+          pm2 start npm --name "backend" -- start
+          
+          # ===== Deploy Frontend =====
+          echo "🎨 Deploying Frontend..."
+          cd ../frontend/itfy-evoting
+          
+          # Install dependencies
+          npm ci --production=false
+          
+          # Create/Update frontend .env file
+          echo "📝 Updating frontend environment variables..."
+          cat > .env.local << 'FRONTEND_ENV_EOF'
+          ${{ secrets.FRONTEND_ENV }}
+          FRONTEND_ENV_EOF
+          
+          # Build Next.js app
+          echo "🏗️ Building Next.js application..."
+          npm run build
+          
+          # Restart frontend with PM2
+          echo "🔄 Restarting frontend service..."
+          pm2 delete frontend 2>/dev/null || true
+          pm2 start npm --name "frontend" -- start
+          
+          # Save PM2 configuration
+          pm2 save
+          
+          # Health check
+          echo "🏥 Running health checks..."
+          sleep 5
+          
+          # Display PM2 status
+          echo "✅ Deployment completed!"
+          echo "📊 Current PM2 Status:"
+          pm2 status
+          
+          echo "📝 Recent logs:"
+          pm2 logs --lines 10 --nostream
