@@ -138,8 +138,10 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
   }, []);
 
-  // Debounced search effect
+  // Debounced search effect with proper cleanup
   useEffect(() => {
+    let mounted = true;
+    
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
@@ -147,7 +149,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     if (searchQuery.trim().length >= 2) {
       setSearchLoading(true);
       searchTimeoutRef.current = setTimeout(() => {
-        performSearch(searchQuery);
+        if (mounted) {
+          performSearch(searchQuery);
+        }
       }, 300);
     } else {
       setSearchResults({ events: [], candidates: [], users: [] });
@@ -155,8 +159,10 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
 
     return () => {
+      mounted = false;
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
       }
     };
   }, [searchQuery, performSearch]);
@@ -185,19 +191,42 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   // Get total search results count
   const totalSearchResults = searchResults.events.length + searchResults.candidates.length + searchResults.users.length;
 
-  // Fetch notifications from backend
+  // Fetch notifications from backend with proper cleanup
   useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+    
     const fetchNotifications = async () => {
+      if (!mounted) return;
+      
       try {
         setNotificationsLoading(true);
         const response = await notificationsApi.getMyNotifications({ limit: 10 });
-        if (response.success && response.data) {
+        if (mounted && response.success && response.data) {
           setNotifications(response.data);
         }
       } catch (error) {
-        console.error("Failed to fetch notifications:", error);
+        // Only log if not aborted and component is mounted
+        if (mounted && !(error instanceof Error && error.name === 'AbortError')) {
+          console.error("Failed to fetch notifications:", error);
+        }
       } finally {
-        setNotificationsLoading(false);
+        if (mounted) {
+          setNotificationsLoading(false);
+        }
+      }
+    };
+
+    fetchNotifications();
+    // Refetch every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    
+    return () => {
+      mounted = false;
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, []);
       }
     };
 

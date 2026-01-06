@@ -193,6 +193,9 @@ export function useCreateCategory() {
         });
       }
     },
+    onError: (error) => {
+      console.error('Failed to create category:', error);
+    },
   });
 }
 
@@ -232,6 +235,11 @@ export function useDeleteCategory() {
       // Invalidate category lists
       queryClient.invalidateQueries({ queryKey: categoryQueryKeys.lists() });
     },
+    onError: (error, categoryId) => {
+      console.error(`Failed to delete category ${categoryId}:`, error);
+    },
+    // Retry once on failure (network issues)
+    retry: 1,
   });
 }
 

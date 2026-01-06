@@ -5,7 +5,7 @@
  * Provides authentication context and handles auth initialization
  */
 
-import { useEffect, useMemo, createContext, useContext, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, createContext, useContext, useRef, useCallback, type ReactNode } from 'react';
 import { useAuthStore } from '@/store/auth';
 import type { User, Candidate } from '@/types';
 
@@ -73,26 +73,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const clearCandidateError = useAuthStore((state) => state.clearCandidateError);
   const initialize = useAuthStore((state) => state.initialize);
 
-  // Track initialization
+  // Track initialization with proper cleanup
   const initRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  // Stable logout handler to prevent stale closure issues
+  const handleLogout = useCallback(() => {
+    if (mountedRef.current) {
+      logoutUser();
+    }
+  }, [logoutUser]);
 
   // Initialize auth on mount (only once)
   useEffect(() => {
+    mountedRef.current = true;
+    
     if (!initRef.current && !isInitialized) {
       initRef.current = true;
       initialize();
     }
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, [isInitialized, initialize]);
 
   // Listen for auth:logout events (from API client on 401)
   useEffect(() => {
-    const handleLogout = () => {
-      logoutUser();
-    };
-
     window.addEventListener('auth:logout', handleLogout);
     return () => window.removeEventListener('auth:logout', handleLogout);
-  }, [logoutUser]);
+  }, [handleLogout]);
 
   // Memoize the context value
   const value = useMemo<AuthContextValue>(() => ({

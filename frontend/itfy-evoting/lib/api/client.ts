@@ -185,13 +185,25 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 /**
- * Refresh access token
+ * Refresh access token with proper mutex pattern
  */
 let refreshPromise: Promise<boolean> | null = null;
-let isLoggingOut = false; // Flag to prevent recursive logout
+let isLoggingOut = false;
+let logoutTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-async function refreshAccessToken(): Promise<boolean> {
-  // Prevent multiple simultaneous refresh requests
+/**
+ * Reset logout state - ensures clean state after logout attempts
+ */
+function resetLogoutState(): void {
+  if (logoutTimeoutId) {
+    clearTimeout(logoutTimeoutId);
+    logoutTimeoutId = null;
+  }
+  isLoggingOut = false;
+}
+
+async function refreshAccessToken(signal?: AbortSignal): Promise<boolean> {
+  // Prevent multiple simultaneous refresh requests (mutex pattern)
   if (refreshPromise) {
     return refreshPromise;
   }
@@ -203,13 +215,24 @@ async function refreshAccessToken(): Promise<boolean> {
 
   refreshPromise = (async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      // Combine signals if provided
+      if (signal) {
+        signal.addEventListener('abort', () => controller.abort());
+      }
+
       const response = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         tokenManager.clearUserTokens();
@@ -227,8 +250,11 @@ async function refreshAccessToken(): Promise<boolean> {
       }
 
       return false;
-    } catch {
-      tokenManager.clearUserTokens();
+    } catch (error) {
+      // Don't clear tokens on abort - request may have been cancelled by user
+      if (error instanceof Error && error.name !== 'AbortError') {
+        tokenManager.clearUserTokens();
+      }
       return false;
     } finally {
       refreshPromise = null;
@@ -239,11 +265,19 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 /**
- * Main API request function
+ * Request options with abort signal support
+ */
+export interface ExtendedRequestOptions extends RequestOptions {
+  signal?: AbortSignal;
+  timeout?: number;
+}
+
+/**
+ * Main API request function with improved error handling and abort support
  */
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestOptions = {}
+  options: ExtendedRequestOptions = {}
 ): Promise<T> {
   const {
     body,
@@ -251,10 +285,21 @@ export async function apiRequest<T>(
     authType = 'user',
     skipAuth = false,
     headers: customHeaders = {},
+    signal: externalSignal,
+    timeout = 30000, // 30s default timeout
     ...fetchOptions
   } = options;
 
   const url = buildUrl(endpoint, params);
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  // Combine external signal with timeout signal
+  if (externalSignal) {
+    externalSignal.addEventListener('abort', () => controller.abort());
+  }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -271,49 +316,59 @@ export async function apiRequest<T>(
     ...fetchOptions,
     headers,
     body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    signal: controller.signal,
   };
 
-  let response = await fetch(url, config);
+  try {
+    let response = await fetch(url, config);
+    clearTimeout(timeoutId);
 
-  // Handle 401 - attempt token refresh for user auth only
-  if (response.status === 401 && !skipAuth) {
-    // Prevent recursive logout attempts
-    const isLogoutRequest = endpoint.includes('/logout');
-    
-    if (authType === 'user') {
-      const refreshed = await refreshAccessToken();
+    // Handle 401 - attempt token refresh for user auth only
+    if (response.status === 401 && !skipAuth) {
+      const isLogoutRequest = endpoint.includes('/logout');
       
-      if (refreshed) {
-        // Retry request with new token
-        const newHeaders = {
-          ...headers,
-          ...getAuthHeader(authType),
-        };
+      if (authType === 'user') {
+        const refreshed = await refreshAccessToken(controller.signal);
         
-        response = await fetch(url, {
-          ...config,
-          headers: newHeaders,
-        });
-      } else if (!isLoggingOut && !isLogoutRequest) {
-        // Trigger logout event for UI to handle (only once and not for logout requests)
-        isLoggingOut = true;
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:logout'));
+        if (refreshed) {
+          // Retry request with new token
+          const newHeaders = {
+            ...headers,
+            ...getAuthHeader(authType),
+          };
+          
+          response = await fetch(url, {
+            ...config,
+            headers: newHeaders,
+          });
+        } else if (!isLoggingOut && !isLogoutRequest) {
+          // Trigger logout event for UI to handle (only once and not for logout requests)
+          isLoggingOut = true;
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:logout'));
+          }
+          // Reset flag after a delay with proper cleanup
+          resetLogoutState();
+          logoutTimeoutId = setTimeout(resetLogoutState, 1000);
         }
-        // Reset flag after a delay to allow for future logout attempts
-        setTimeout(() => { isLoggingOut = false; }, 1000);
-      }
-    } else if (authType === 'candidate' && !isLogoutRequest) {
-      // For candidates, clear token and trigger candidate logout event
-      // Don't attempt refresh or recursive logout
-      tokenManager.clearCandidateToken();
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('candidate:unauthorized'));
+      } else if (authType === 'candidate' && !isLogoutRequest) {
+        // For candidates, clear token and trigger candidate logout event
+        tokenManager.clearCandidateToken();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('candidate:unauthorized'));
+        }
       }
     }
-  }
 
-  return handleResponse<T>(response);
+    return handleResponse<T>(response);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError('Request timed out or was cancelled', 408, 'TIMEOUT');
+    }
+    throw error;
+  }
 }
 
 /**

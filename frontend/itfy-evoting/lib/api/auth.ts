@@ -54,8 +54,8 @@ export const authApi = {
       { skipAuth: true }
     );
 
-    // Store tokens on successful login
-    if (response.data?.access_token) {
+    // Store tokens on successful login with defensive checks
+    if (response.success && response.data?.access_token) {
       tokenManager.setAccessToken(response.data.access_token);
       if (response.data.refresh_token) {
         tokenManager.setRefreshToken(response.data.refresh_token);
@@ -77,20 +77,28 @@ export const authApi = {
   },
 
   /**
-   * Logout user
+   * Logout user - ensures tokens are cleared even if API call fails
    */
   logout: async (): Promise<ApiResponse<{ message: string }>> => {
+    const refreshToken = tokenManager.getRefreshToken();
+    
+    // Clear tokens first to ensure user is logged out even if API fails
+    tokenManager.clearUserTokens();
+    
     try {
-      const refreshToken = tokenManager.getRefreshToken();
       const response = await api.post<ApiResponse<{ message: string }>>(
         '/auth/logout',
         { refresh_token: refreshToken },
-        { skipAuth: false }
+        { skipAuth: true } // Use skipAuth since we've cleared tokens
       );
       return response;
-    } finally {
-      // Always clear tokens, even if request fails
-      tokenManager.clearUserTokens();
+    } catch (error) {
+      // Return success even if API fails - user is effectively logged out
+      return {
+        success: true,
+        message: 'Logged out locally',
+        data: { message: 'Logged out successfully' },
+      };
     }
   },
 

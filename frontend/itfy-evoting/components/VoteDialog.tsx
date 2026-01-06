@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -79,10 +79,13 @@ export default function VoteDialog({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter valid categories
-  const validCategories = categories?.filter(c => c.is_voting_open) || [];
+  // Filter valid categories - memoized to prevent unnecessary recalculations
+  const validCategories = useMemo(() => 
+    categories?.filter(c => c.is_voting_open) || [], 
+    [categories]
+  );
 
-  // Initialize
+  // Initialize and cleanup
   useEffect(() => {
     if (open) {
       if (category && category.is_voting_open) {
@@ -97,8 +100,16 @@ export default function VoteDialog({
         // No valid categories available
         setStep('voting_closed');
       }
+    } else {
+      // Reset state when dialog closes to prevent stale state
+      setVoteCode('');
+      setVoteQuantity(1);
+      setCodeInfo(null);
+      setError(null);
+      setIsValidating(false);
+      setIsSubmitting(false);
     }
-  }, [open, category, categories]);
+  }, [open, category, validCategories]);
 
   const resetDialog = () => {
     if (category && category.is_voting_open) {
@@ -307,7 +318,7 @@ export default function VoteDialog({
                   </div>
                 </div>
                 <div className="text-right hidden sm:block">
-                  <p className="text-2xl font-bold text-white">{candidate.vote_count.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-white">{(candidate.vote_count ?? 0).toLocaleString()}</p>
                   <p className="text-[10px] text-gray-500 uppercase tracking-wider">Current Votes</p>
                 </div>
               </div>

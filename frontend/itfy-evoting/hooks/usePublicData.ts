@@ -274,30 +274,35 @@ export function useCandidateById(candidateId: string, enabled = true) {
 /**
  * Hook to fetch top candidates across featured categories
  * Combines data from featured categories to get top performing candidates
+ * Note: Uses sequential queries to avoid unnecessary API calls
  */
 export function useTopCandidates(limit = 8) {
   // First fetch featured categories
-  const { data: categoriesData, isLoading: categoriesLoading, error: categoriesError } = useFeaturedCategories({ limit: 3 });
+  const { 
+    data: categoriesData, 
+    isLoading: categoriesLoading, 
+    error: categoriesError 
+  } = useFeaturedCategories({ limit: 3 });
   
-  // Get the first featured category ID to fetch candidates from
-  const featuredCategoryId = categoriesData?.data?.[0]?._id;
+  // Safely get the first featured category ID - memoized to prevent unnecessary re-renders
+  const featuredCategoryId = categoriesData?.data?.[0]?._id ?? '';
   
-  // Fetch candidates from the first featured category
+  // Fetch candidates from the first featured category only when we have an ID
   const { 
     data: candidatesData, 
     isLoading: candidatesLoading, 
     error: candidatesError 
   } = useCandidatesByCategory(
-    featuredCategoryId || '', 
+    featuredCategoryId, 
     { limit },
-    !!featuredCategoryId
+    Boolean(featuredCategoryId) // Enable only when ID exists
   );
   
-  // Return combined loading/error states
+  // Return combined loading/error states with stable references
   return {
-    data: candidatesData?.data || [],
-    categoryName: categoriesData?.data?.[0]?.name,
-    isLoading: categoriesLoading || candidatesLoading,
+    data: candidatesData?.data ?? [],
+    categoryName: categoriesData?.data?.[0]?.name ?? null,
+    isLoading: categoriesLoading || (Boolean(featuredCategoryId) && candidatesLoading),
     error: categoriesError || candidatesError,
   };
 }

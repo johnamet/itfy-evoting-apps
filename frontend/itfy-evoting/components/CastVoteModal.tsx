@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { 
   Vote, 
@@ -70,7 +70,7 @@ export default function CastVoteModal({
     });
   }, [categories, searchQuery, candidatesByCategory]);
 
-  const getFilteredCandidates = (categoryId: string) => {
+  const getFilteredCandidates = useCallback((categoryId: string) => {
     const categoryCandidates = candidatesByCategory.get(categoryId) || [];
     if (!searchQuery) return categoryCandidates;
     const query = searchQuery.toLowerCase();
@@ -78,16 +78,27 @@ export default function CastVoteModal({
       `${c.first_name} ${c.last_name}`.toLowerCase().includes(query) ||
       c.candidate_code.toLowerCase().includes(query)
     );
-  };
+  }, [candidatesByCategory, searchQuery]);
 
-  const toggleCategory = (categoryId: string) => {
-    const newSet = new Set(expandedCategories);
-    newSet.has(categoryId) ? newSet.delete(categoryId) : newSet.add(categoryId);
-    setExpandedCategories(newSet);
-  };
+  const toggleCategory = useCallback((categoryId: string) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  }, []);
 
-  const expandAll = () => setExpandedCategories(new Set(categories.map(c => String(c._id))));
-  const collapseAll = () => setExpandedCategories(new Set());
+  const expandAll = useCallback(() => {
+    setExpandedCategories(new Set(categories.map(c => String(c._id))));
+  }, [categories]);
+  
+  const collapseAll = useCallback(() => {
+    setExpandedCategories(new Set());
+  }, []);
 
   const handleCandidateClick = (candidate: Candidate, category: Category) => {
     setSelectedCandidate(candidate);

@@ -191,12 +191,16 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       changePassword: async (currentPassword, newPassword) => {
+        const { user, candidate } = get();
+        const userType = user ? 'user' : candidate ? 'candidate' : 'user';
+        
         set({ isUserLoading: true, userError: null });
 
         try {
           const response = await authApi.changePassword({
             current_password: currentPassword,
             new_password: newPassword,
+            userType,
           });
           set({ isUserLoading: false });
           return {
@@ -293,13 +297,24 @@ export const useAuthStore = create<AuthStore>()(
       // ==================== General Actions ====================
 
       initialize: async () => {
-        const { fetchCurrentUser, fetchCurrentCandidate } = get();
+        const { fetchCurrentUser, fetchCurrentCandidate, isInitialized } = get();
+        
+        // Prevent double initialization
+        if (isInitialized) return;
 
-        // Check for existing tokens and fetch user data
-        await Promise.all([
+        // Use allSettled to ensure both complete regardless of individual failures
+        const results = await Promise.allSettled([
           fetchCurrentUser(),
           fetchCurrentCandidate(),
         ]);
+        
+        // Log any initialization errors for debugging
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            const context = index === 0 ? 'user' : 'candidate';
+            console.warn(`Auth initialization failed for ${context}:`, result.reason);
+          }
+        });
 
         set({ isInitialized: true });
       },
