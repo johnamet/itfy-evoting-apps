@@ -128,8 +128,8 @@ module.exports = {
   deploy: {
     production: {
       user: process.env.DEPLOY_USER || "deploy",
-      host: process.env.DEPLOY_HOST || "production.server.com",
-      ref: "origin/main",
+      host: process.env.DEPLOY_HOST || "api.itforyouthghana.org",
+      ref: "origin/production",
       repo: process.env.DEPLOY_REPO || "git@github.com:itfy/evoting-backend.git",
       path: "/var/www/itfy-evoting-backend",
       "pre-deploy-local": "",
@@ -142,8 +142,8 @@ module.exports = {
     
     staging: {
       user: process.env.DEPLOY_USER || "deploy",
-      host: process.env.STAGING_HOST || "staging.server.com",
-      ref: "origin/develop",
+      host: process.env.STAGING_HOST || "staging.itforyouthghana.org",
+      ref: "origin/staging",
       repo: process.env.DEPLOY_REPO || "git@github.com:itfy/evoting-backend.git",
       path: "/var/www/itfy-evoting-staging",
       "post-deploy": "npm install && npm run build && pm2 reload ecosystem.config.cjs --env staging",
