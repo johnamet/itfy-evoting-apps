@@ -40,6 +40,8 @@ import {
   validateContentType,
   blockSuspiciousPatterns,
   additionalSecurityHeaders,
+  protectAPIDocs,
+  validateProductionEnvironment,
 } from "./middleware/security.middleware.js";
 import {
   requestContextMiddleware,
@@ -47,6 +49,9 @@ import {
 } from "./middleware/request-context.middleware.js";
 import { globalRateLimiter } from "./middleware/rate-limit.middleware.js";
 import { metricsMiddleware, metricsHandler } from "./services/metrics.service.js";
+
+// Validate production environment variables
+validateProductionEnvironment();
 
 // Initialize Joi validation for controllers
 BaseController.setValidation(Joi);
@@ -140,8 +145,10 @@ if (isProduction) {
 app.get("/metrics", metricsHandler);
 
 // ========================================
-// API DOCUMENTATION
+// API DOCUMENTATION (Protected in Production)
 // ========================================
+// Apply protection middleware for documentation routes
+app.use(["/api-docs", "/docs"], protectAPIDocs);
 setupAPIDocs(app);
 
 

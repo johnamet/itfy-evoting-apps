@@ -297,6 +297,85 @@ export const additionalSecurityHeaders = (req, res, next) => {
   next();
 };
 
+/**
+ * API Documentation Protection Middleware
+ * Optionally protects Swagger/ReDoc in production with basic auth
+ */
+export const protectAPIDocs = (req, res, next) => {
+  const isProduction = process.env.NODE_ENV === "production";
+  const swaggerEnabled = process.env.SWAGGER_ENABLED !== "false";
+  
+  // If Swagger is disabled in production, return 404
+  if (isProduction && !swaggerEnabled) {
+    return res.status(404).json({
+      success: false,
+      message: "Not found",
+    });
+  }
+
+  // Optional: Basic auth protection for API docs in production
+  const swaggerPassword = process.env.SWAGGER_PASSWORD;
+  if (isProduction && swaggerPassword) {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith("Basic ")) {
+      res.setHeader("WWW-Authenticate", 'Basic realm="API Documentation"');
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required for API documentation",
+      });
+    }
+
+    const base64Credentials = authHeader.split(" ")[1];
+    const credentials = Buffer.from(base64Credentials, "base64").toString("ascii");
+    const [username, password] = credentials.split(":");
+
+    if (username !== "admin" || password !== swaggerPassword) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+  }
+
+  next();
+};
+
+/**
+ * Environment validation middleware
+ * Ensures critical environment variables are set in production
+ */
+export const validateProductionEnvironment = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+  
+  if (!isProduction) return;
+
+  const requiredVars = [
+    "JWT_SECRET",
+    "JWT_REFRESH_SECRET",
+    "MONGODB_URI",
+    "CORS_ORIGIN",
+  ];
+
+  const missing = requiredVars.filter((varName) => !process.env[varName]);
+
+  if (missing.length > 0) {
+    logger.error("Missing required environment variables for production", { missing });
+    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+  }
+
+  // Warn about insecure configurations
+  if (process.env.CORS_ORIGIN === "*") {
+    logger.warn("SECURITY WARNING: CORS_ORIGIN is set to '*' in production!");
+  }
+
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
+    logger.warn("SECURITY WARNING: JWT_SECRET should be at least 32 characters!");
+  }
+
+  logger.info("Production environment validation passed");
+};
+
 export default {
   helmetConfig,
   createCorsConfig,
@@ -304,4 +383,6 @@ export default {
   validateContentType,
   blockSuspiciousPatterns,
   additionalSecurityHeaders,
+  protectAPIDocs,
+  validateProductionEnvironment,
 };
