@@ -6,7 +6,7 @@
 
 import agendaManager from "../services/agenda.service.js";
 import { ACTION_TYPE, ENTITY_TYPE } from "../utils/constants/activity.constants.js";
-import UAParser from "ua-parser-js";
+import { UAParser } from "ua-parser-js";
 import geoip from "geoip-lite";
 
 /**

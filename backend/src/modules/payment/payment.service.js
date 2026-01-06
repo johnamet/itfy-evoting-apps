@@ -26,7 +26,7 @@ import { ENTITY_TYPE, ACTION_TYPE } from "../../utils/constants/activity.constan
 import crypto from "crypto";
 import axios from "axios";
 import { configDotenv } from "dotenv";
-import voteService from "../vote/vote/vote.service.js";
+// Note: voteService is loaded lazily to avoid circular dependency
 import logger from "../../utils/logger.js";
 
 // Set up validation module for this service
@@ -159,7 +159,6 @@ async function withRetry(requestFn, options = {}) {
 
 class PaymentService extends BaseService {
   constructor(dependencies = {
-    votingService: voteService
   }) {
     super();
     this.repository = dependencies.repository || PaymentRepository;
@@ -169,12 +168,25 @@ class PaymentService extends BaseService {
     this.bundleService = dependencies.bundleService || BundleService;
     this.couponService = dependencies.couponService || CouponService;
     this.activityService = dependencies.activityService || ActivityService;
-    this.voteService = dependencies.votingService || voteService;
+    this._voteService = dependencies.votingService || null; // Lazy loaded to avoid circular dependency
     this.notificationService = dependencies.notificationService || NotificationService;
     this.emailService = dependencies.emailService || EmailService;
     this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
     this.paystackBaseUrl = "https://api.paystack.co";
     this.requestTimeout = parseInt(process.env.PAYSTACK_TIMEOUT_MS, 10) || 30000;
+  }
+
+  /**
+   * Get voteService lazily to avoid circular dependency
+   * @returns {Promise<Object>} voteService instance
+   */
+  async getVoteService() {
+    if (!this._voteService) {
+      // Dynamic import to break circular dependency
+      const voteServiceModule = await import("../vote/vote/vote.service.js");
+      this._voteService = voteServiceModule.default || voteServiceModule;
+    }
+    return this._voteService;
   }
 
   /**
@@ -1022,8 +1034,8 @@ class PaymentService extends BaseService {
 
       console.log(`Starting aggregated vote casting for ${bundleCategoryMap.length} bundle-category mappings...`);
 
-      // Use the NEW aggregated voting method
-      const votingSvc = this.voteService || voteService;
+      // Use the NEW aggregated voting method - lazy loaded to avoid circular dependency
+      const votingSvc = await this.getVoteService();
       if (!votingSvc) {
         throw new Error("Vote service is not available for auto-voting");
       }

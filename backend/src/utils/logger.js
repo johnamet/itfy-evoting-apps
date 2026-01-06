@@ -99,7 +99,7 @@ const redactSensitive = (obj) => {
  * Custom format for development (pretty print)
  */
 const devFormat = winston.format.combine(
-  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss.SSS" }),
+  winston.format.timestamp(),
   winston.format.colorize({ all: true }),
   winston.format.printf(({ timestamp, level, message, requestId, ...metadata }) => {
     const reqId = requestId ? `[${requestId}]` : "";
@@ -112,7 +112,7 @@ const devFormat = winston.format.combine(
  * Custom format for production (JSON)
  */
 const prodFormat = winston.format.combine(
-  winston.format.timestamp({ format: "YYYY-MM-DD'T'HH:mm:ss.SSSZ" }),
+  winston.format.timestamp(),
   winston.format.errors({ stack: true }),
   winston.format((info) => {
     // Redact sensitive data in production

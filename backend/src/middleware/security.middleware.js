@@ -139,9 +139,15 @@ export const sanitizeInput = (req, res, next) => {
     req.body = sanitizeObject(req.body);
   }
 
-  // Sanitize query parameters
+  // Sanitize query parameters (in place since req.query is read-only)
   if (req.query && typeof req.query === "object") {
-    req.query = sanitizeObject(req.query);
+    for (const key of Object.keys(req.query)) {
+      if (typeof req.query[key] === "string") {
+        req.query[key] = sanitizeString(req.query[key]);
+      } else if (typeof req.query[key] === "object" && req.query[key] !== null) {
+        req.query[key] = sanitizeObject(req.query[key]);
+      }
+    }
   }
 
   // Sanitize params
