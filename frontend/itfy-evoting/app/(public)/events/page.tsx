@@ -184,8 +184,8 @@ export default function EventsPage() {
           ) : (
             <>
               Showing <span className="text-white font-semibold">{sortedEvents.length}</span>
-              {eventsData?.pagination?.totalItems && eventsData.pagination.totalItems > sortedEvents.length && (
-                <> of <span className="text-white font-semibold">{eventsData.pagination.totalItems}</span></>
+              {eventsData?.pagination?.total_items && eventsData.pagination.total_items > sortedEvents.length && (
+                <> of <span className="text-white font-semibold">{eventsData.pagination.total_items}</span></>
               )}
               {' '}events
             </>

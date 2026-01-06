@@ -22,6 +22,11 @@ type ViewMode = 'grid' | 'list';
 type FilterStatus = 'all' | 'voting' | 'upcoming' | 'closed';
 type SortOption = 'popular' | 'newest' | 'alphabetical' | 'deadline';
 
+// Helper to extract event ID from category.event (can be string or Event object)
+const getEventId = (event: string | Event): string => {
+  return typeof event === 'string' ? event : event._id;
+};
+
 export default function CategoriesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
@@ -329,7 +334,7 @@ export default function CategoriesPage() {
           ) : viewMode === 'grid' ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredCategories.map((category) => {
-                const event = eventsMap[category.event];
+                const event = eventsMap[getEventId(category.event)];
                 const votingStatus = getVotingStatus(category);
                 const visibilityInfo = getVisibilityInfo(category.results_visibility);
                 const VisibilityIcon = visibilityInfo.icon;
@@ -426,7 +431,7 @@ export default function CategoriesPage() {
             /* List View */
             <div className="space-y-4">
               {filteredCategories.map((category) => {
-                const event = eventsMap[category.event];
+                const event = eventsMap[getEventId(category.event)];
                 const votingStatus = getVotingStatus(category);
                 const visibilityInfo = getVisibilityInfo(category.results_visibility);
                 const VisibilityIcon = visibilityInfo.icon;

@@ -70,11 +70,10 @@ function UserResetPasswordContent() {
     }
 
     // Call backend API to reset password with token verification
-    // Backend expects: token, password, and confirmPassword
+    // Backend expects: token and password (confirmPassword is for frontend validation only)
     const result = await resetPassword({ 
       token, 
-      password: data.password,
-      confirmPassword: data.confirmPassword
+      password: data.password
     });
 
     if (result.success) {

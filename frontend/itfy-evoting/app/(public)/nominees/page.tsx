@@ -485,7 +485,11 @@ export default function NomineesPage() {
     let cates = [...categories]
 
     if (selectedEvent !== "all") {
-      cates = cates.filter(c => c.event._id.includes(selectedEvent))
+      cates = cates.filter(c => {
+        // Handle both cases: event as string ID or populated Event object
+        const eventId = typeof c.event === 'string' ? c.event : c.event?._id;
+        return eventId?.includes(selectedEvent);
+      })
     }
 
 
@@ -511,13 +515,20 @@ export default function NomineesPage() {
 
     // Filter by event
     if (selectedEvent !== 'all') {
-      nominees = nominees.filter(n => n.event._id === selectedEvent);
+      nominees = nominees.filter(n => {
+        // Event can be string ID or populated object at runtime
+        const eventId = typeof n.event === 'string' ? n.event : (n.event as unknown as Event)?._id;
+        return eventId === selectedEvent;
+      });
     }
 
     // Filter by category
     if (selectedCategory !== 'all') {
       console.log(selectedCategory)
-      nominees = nominees.filter(n => n.categories.map(c => c._id).includes(selectedCategory));
+      nominees = nominees.filter(n => n.categories.some(c => {
+        const catId = typeof c === 'string' ? c : (c as unknown as Category)?._id;
+        return catId === selectedCategory;
+      }));
     }
 
     // Filter by status (not used for public view, but kept for compatibility)
@@ -574,11 +585,20 @@ export default function NomineesPage() {
 
   // Get unique events and categories from candidates
   const availableEvents = events.filter(e =>
-    allCandidates.some(c => c.event._id === e._id)
+    allCandidates.some(c => {
+      const eventId = typeof c.event === 'string' ? c.event : (c.event as unknown as Event)?._id;
+      return eventId === e._id;
+    })
   );
 
-  const availableCategories = filteredCategories.filter(c =>
-    allCandidates.some(cand => cand.categories.map(c => c._id).includes(c._id))
+  const availableCategories = filteredCategories.filter(cat =>
+    allCandidates.some(cand => {
+      // Categories can be string IDs or populated objects at runtime
+      return cand.categories.some(c => {
+        const catId = typeof c === 'string' ? c : (c as unknown as Category)?._id;
+        return catId === cat._id;
+      });
+    })
   );
 
   return (

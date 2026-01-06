@@ -511,11 +511,26 @@ export const analyticsApi = {
    * Export analytics data
    */
   exportAnalytics: async (params: ExportParams): Promise<Blob> => {
-    const response = await api.get<Blob>('/analytics/export', {
-      params,
-      responseType: 'blob',
+    const urlParams = new URLSearchParams();
+    if (params.format) urlParams.append('format', params.format);
+    if (params.eventId) urlParams.append('eventId', params.eventId);
+    if (params.startDate) urlParams.append('startDate', params.startDate);
+    if (params.endDate) urlParams.append('endDate', params.endDate);
+    if (params.categoryId) urlParams.append('categoryId', params.categoryId);
+    
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    const response = await fetch(`${API_BASE_URL}/analytics/export?${urlParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('access_token') : ''}`,
+      },
     });
-    return response as unknown as Blob;
+    
+    if (!response.ok) {
+      throw new Error('Failed to export analytics');
+    }
+    
+    return response.blob();
   },
 };
 

@@ -124,7 +124,8 @@ export function EditProfileModal({
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
 
   // Fetch all categories for the candidate's event
-  const eventId = typeof candidate.event === 'string' ? candidate.event : candidate.event._id;
+  // Note: event can be string ID or populated Event object at runtime
+  const eventId = typeof candidate.event === 'string' ? candidate.event : (candidate.event as unknown as { _id: string })?._id;
   const { data: categoriesResponse, isLoading: categoriesLoading } = useCategoriesByEvent(
     eventId,
     { limit: 100 },
@@ -708,16 +709,17 @@ export function EditProfileModal({
                     <div className="flex flex-wrap gap-2">
                       {candidate.categories && candidate.categories.length > 0 ? (
                         candidate.categories.map((cat) => {
-                          const category = typeof cat === 'object' ? cat : null;
+                          // Categories can be string IDs or populated objects at runtime
+                          const category = typeof cat === 'string' ? null : (cat as unknown as { _id: string; name: string });
+                          const catId = typeof cat === 'string' ? cat : category?._id;
                           const isVerified =
                             candidate.admin_verified_categories?.some(
-                              (verifiedId) =>
-                                verifiedId === (category?._id || cat)
+                              (verifiedId) => verifiedId === catId
                             ) || false;
 
                           return (
                             <Badge
-                              key={category?._id || cat}
+                              key={catId}
                               variant={isVerified ? 'default' : 'secondary'}
                               className="flex items-center gap-1"
                             >
@@ -734,8 +736,8 @@ export function EditProfileModal({
                       )}
                     </div>
                     {candidate.categories?.some((cat) => {
-                      const catId = typeof cat === 'object' ? cat._id : cat;
-                      return !candidate.admin_verified_categories?.includes(catId);
+                      const catId = typeof cat === 'string' ? cat : (cat as unknown as { _id: string })?._id;
+                      return !candidate.admin_verified_categories?.includes(catId as string);
                     }) && (
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
@@ -762,7 +764,7 @@ export function EditProfileModal({
                                 .filter((cat) => {
                                   // Exclude categories the candidate is already in
                                   const candidateCategoryIds = candidate.categories?.map((c) =>
-                                    typeof c === 'object' ? c._id : c
+                                    typeof c === 'string' ? c : (c as unknown as { _id: string })?._id
                                   );
                                   return !candidateCategoryIds?.includes(cat._id);
                                 })
@@ -799,7 +801,7 @@ export function EditProfileModal({
                                 ))}
                               {(categoriesResponse.data as Category[]).filter((cat) => {
                                 const candidateCategoryIds = candidate.categories?.map((c) =>
-                                  typeof c === 'object' ? c._id : c
+                                  typeof c === 'string' ? c : (c as unknown as { _id: string })?._id
                                 );
                                 return !candidateCategoryIds?.includes(cat._id);
                               }).length === 0 && (

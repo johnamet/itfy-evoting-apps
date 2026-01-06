@@ -24,7 +24,6 @@ export {
   type LoginResponse,
   type RegisterResponse,
   type RefreshTokenResponse,
-  type CandidateAuthResponse,
 } from './auth';
 
 // Users service

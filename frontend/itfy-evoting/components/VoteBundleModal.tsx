@@ -77,13 +77,18 @@ export default function VoteBundleModal({
 
   const bundleCategories = useMemo(() => {
     if (bundle.categories && bundle.categories.length > 0) {
+      // bundle.categories can be string IDs or populated Category objects
+      const bundleCatIds = bundle.categories.map(c => typeof c === 'string' ? c : c._id);
       return categories.filter(cat =>
-        bundle.categories?.includes(cat._id) && cat.is_voting_open
+        bundleCatIds.includes(cat._id) && cat.is_voting_open
       );
     }
-    return categories.filter(cat =>
-      cat.event === bundle.event && cat.is_voting_open
-    );
+    // Compare bundle.event (can be string or Event object)
+    const bundleEventId = typeof bundle.event === 'string' ? bundle.event : bundle.event?._id;
+    return categories.filter(cat => {
+      const catEventId = typeof cat.event === 'string' ? cat.event : cat.event?._id;
+      return catEventId === bundleEventId && cat.is_voting_open;
+    });
   }, [bundle.categories, bundle.event, categories]);
 
   const filteredCategories = useMemo(() => {
@@ -423,17 +428,17 @@ export default function VoteBundleModal({
       {selectedCandidateForPurchase && (
         <VoteDialog
           open={!!selectedCandidateForPurchase}
-          onOpenChange={(open) => !open && setSelectedCandidate(null)}
+          onOpenChange={(open) => !open && setSelectedCandidateForPurchase(null)}
           candidate={selectedCandidateForPurchase}
-          category={selectedCandidateForPurchase.categories[0] || undefined}
-          eventId={typeof selectedCategory?.event === 'object' ? (selectedCategory.event as any)._id : selectedCategory?.event}
-          eventName={getEventName(selectedCategory?.event)}
+          category={typeof selectedCandidateForPurchase.categories[0] === 'string' ? undefined : selectedCandidateForPurchase.categories[0] as Category | undefined}
+          eventId={typeof bundle.event === 'string' ? bundle.event : (bundle.event as Event)?._id}
+          eventName={event?.name || getEventName(bundle.event)}
         />
       )}
       <PurchaseVotesDialog
         open={isPurchaseDialogOpen}
         onOpenChange={setIsPurchaseDialogOpen}
-        eventId={bundle.event._id}
+        eventId={typeof bundle.event === 'string' ? bundle.event : (bundle.event as Event)?._id}
         eventName={event?.name}
         candidateId={selectedCandidateForPurchase?._id}
         candidateName={selectedCandidateForPurchase ? `${selectedCandidateForPurchase.first_name} ${selectedCandidateForPurchase.last_name}` : undefined}

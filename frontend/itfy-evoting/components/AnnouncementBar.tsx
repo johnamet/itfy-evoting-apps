@@ -100,7 +100,7 @@ export default function AnnouncementBar({
                 {currentAnnouncement.title}
               </span>
               
-              {currentAnnouncement.button && (
+              {currentAnnouncement.button && currentAnnouncement.button.url && (
                 <Link
                   href={currentAnnouncement.button.url}
                   className="inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-sm font-medium transition-all hover:gap-2"

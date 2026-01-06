@@ -255,7 +255,7 @@ export default function EventsSection() {
         )}
 
         {/* View All Button */}
-        {!isLoadingEvents && activeEvents.length > 0 && eventsData?.pagination?.hasNextPage && (
+        {!isLoadingEvents && activeEvents.length > 0 && eventsData?.pagination?.has_next && (
           <div className="text-center mt-16">
             <Link href="/events">
               <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-10 py-7 text-lg">

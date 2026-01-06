@@ -51,15 +51,15 @@ export default function CategoriesSection() {
     name: string;
     slug: string;
     description?: string;
-    image?: string;
+    image?: string | null;
     is_featured?: boolean;
     is_voting_open?: boolean;
-    voting_start_date?: string;
-    voting_deadline?: string;
+    voting_start_date?: string | null;
+    voting_deadline?: string | null;
     total_votes?: number;
     candidates?: { length: number } | string[];
     event?: { _id: string; name: string } | string;
-    color_theme?: string;
+    color_theme?: string | null;
     results_visibility?: ResultsVisibility;
   };
 

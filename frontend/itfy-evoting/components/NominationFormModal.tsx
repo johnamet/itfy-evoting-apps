@@ -66,7 +66,7 @@ export default function NominationFormModal({
     }
 
     // Email validation
-    if (field.field_type === 'email' && value) {
+    if (field.field_type === 'email' && value && typeof value === 'string') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(value)) {
         return 'Please enter a valid email address';
@@ -74,7 +74,7 @@ export default function NominationFormModal({
     }
 
     // Phone validation
-    if (field.field_type === 'tel' && value) {
+    if (field.field_type === 'phone' && value && typeof value === 'string') {
       const phoneRegex = /^[\d\s\-\+\(\)]+$/;
       if (!phoneRegex.test(value)) {
         return 'Please enter a valid phone number';
@@ -82,7 +82,7 @@ export default function NominationFormModal({
     }
 
     // URL validation
-    if (field.field_type === 'url' && value) {
+    if (field.field_type === 'url' && value && typeof value === 'string') {
       try {
         new URL(value);
       } catch {
@@ -91,7 +91,7 @@ export default function NominationFormModal({
     }
 
     // Number validation
-    if (field.field_type === 'number' && value) {
+    if (field.field_type === 'number' && value && typeof value === 'number') {
       if (field.validation?.min_value !== undefined && value < field.validation.min_value) {
         return `Minimum value is ${field.validation.min_value}`;
       }
@@ -101,7 +101,7 @@ export default function NominationFormModal({
     }
 
     // String length validation
-    if ((field.field_type === 'text' || field.field_type === 'textarea') && value) {
+    if ((field.field_type === 'text' || field.field_type === 'textarea') && value && typeof value === 'string') {
       if (field.validation?.min_length && value.length < field.validation.min_length) {
         return `Minimum length is ${field.validation.min_length} characters`;
       }
@@ -214,26 +214,26 @@ export default function NominationFormModal({
 
   const renderField = (field: FormField) => {
     const fieldId = field.field_id;
-    const value = formData[fieldId] || '';
+    const value = formData[fieldId] ?? '';
     const error = errors[fieldId];
 
     switch (field.field_type) {
       case 'text':
       case 'email':
-      case 'tel':
+      case 'phone':
       case 'url':
       case 'number':
         return (
           <div key={fieldId} className="space-y-2">
             <Label htmlFor={fieldId} className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <Input
               id={fieldId}
-              type={field.type}
+              type={field.field_type === 'phone' ? 'tel' : field.field_type}
               placeholder={field.placeholder}
-              value={value}
+              value={typeof value === 'string' || typeof value === 'number' ? value : ''}
               onChange={(e) => handleInputChange(fieldId, e.target.value, field)}
               className={cn(
                 'bg-white/5 border-white/10 text-white placeholder:text-slate-400',
@@ -257,12 +257,12 @@ export default function NominationFormModal({
           <div key={fieldId} className="space-y-2">
             <Label htmlFor={fieldId} className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <Textarea
               id={fieldId}
               placeholder={field.placeholder}
-              value={value}
+              value={typeof value === 'string' ? value : ''}
               onChange={(e) => handleInputChange(fieldId, e.target.value, field)}
               rows={4}
               className={cn(
@@ -283,15 +283,14 @@ export default function NominationFormModal({
         );
 
       case 'select':
-      case 'dropdown':
         return (
           <div key={fieldId} className="space-y-2">
             <Label htmlFor={fieldId} className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <Select
-              value={value}
+              value={typeof value === 'string' ? value : ''}
               onValueChange={(val) => handleInputChange(fieldId, val, field)}
             >
               <SelectTrigger className={cn(
@@ -329,7 +328,7 @@ export default function NominationFormModal({
           <div key={fieldId} className="space-y-2">
             <Label className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <div className="space-y-2">
               {field.options?.map((option, idx) => {
@@ -343,7 +342,7 @@ export default function NominationFormModal({
                       id={`${fieldId}-${idx}`}
                       name={fieldId}
                       value={optionValue}
-                      checked={value === optionValue}
+                      checked={String(value) === optionValue}
                       onChange={(e) => handleInputChange(fieldId, e.target.value, field)}
                       className="w-4 h-4 text-purple-600 focus:ring-purple-500"
                     />
@@ -374,7 +373,7 @@ export default function NominationFormModal({
           <div key={fieldId} className="space-y-2">
             <Label className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <div className="space-y-2">
               {field.options?.map((option, idx) => {
@@ -422,7 +421,7 @@ export default function NominationFormModal({
           <div key={fieldId} className="space-y-2">
             <Label htmlFor={fieldId} className="text-white">
               {field.label}
-              {field.required && <span className="text-red-400 ml-1">*</span>}
+              {field.validation?.required && <span className="text-red-400 ml-1">*</span>}
             </Label>
             <div className={cn(
               'border-2 border-dashed rounded-lg p-4',
@@ -434,7 +433,7 @@ export default function NominationFormModal({
                 type="file"
                 onChange={(e) => handleFileChange(fieldId, e.target.files?.[0] || null)}
                 className="hidden"
-                accept={field.validation?.accept}
+                accept={(field as unknown as { accept?: string }).accept}
               />
               <label htmlFor={fieldId} className="cursor-pointer">
                 {files[fieldId] ? (

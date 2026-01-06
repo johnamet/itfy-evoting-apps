@@ -31,7 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import PurchaseVotesDialog from '@/components/PurchaseVotesDialog';
-import { Candidate, Category } from '@/types';
+import { Candidate, Category, Event } from '@/types';
 import { votesApi } from '@/lib/api/votes';
 
 interface VoteDialogProps {
@@ -742,7 +742,7 @@ export default function VoteDialog({
       <PurchaseVotesDialog
         open={isPurchaseDialogOpen}
         onOpenChange={setIsPurchaseDialogOpen}
-        eventId={eventId || candidate.event._id || categories[0].event._id}
+        eventId={eventId || (typeof candidate.event === 'string' ? candidate.event : (candidate.event as Event)?._id) || (categories && categories[0] ? (typeof categories[0].event === 'string' ? categories[0].event : (categories[0].event as Event)?._id) : '') || ''}
         eventName={eventName}
         candidateId={candidate._id as string}
         candidateName={`${candidate.first_name} ${candidate.last_name}`}

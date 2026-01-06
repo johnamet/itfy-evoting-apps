@@ -855,7 +855,7 @@ function CandidatePortalContent() {
               <ImageUploadCard
                 title="Profile Image"
                 description="Your main profile photo (square recommended)"
-                currentImage={candidate.profile_image}
+                currentImage={candidate.profile_image ?? undefined}
                 onUpload={handleProfileImageUpload}
                 onDelete={handleProfileImageDelete}
                 aspectRatio="square"
@@ -864,7 +864,7 @@ function CandidatePortalContent() {
               <ImageUploadCard
                 title="Cover Image"
                 description="Banner image for your profile (wide recommended)"
-                currentImage={candidate.cover_image}
+                currentImage={candidate.cover_image ?? undefined}
                 onUpload={handleCoverImageUpload}
                 aspectRatio="video"
                 icon={Camera}

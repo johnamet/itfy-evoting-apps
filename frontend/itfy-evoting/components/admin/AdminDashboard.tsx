@@ -227,14 +227,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       clearInterval(interval);
     };
   }, []);
-      }
-    };
-
-    fetchNotifications();
-    // Refetch every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Mark all notifications as read
   const handleMarkAllAsRead = async () => {

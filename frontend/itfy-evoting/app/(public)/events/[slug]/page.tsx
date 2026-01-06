@@ -327,8 +327,8 @@ export default function EventDetailPage() {
 
   const stats = [
     { label: 'Total Votes', value: totalVotes.toLocaleString(), icon: Vote, color: 'from-[#0152be] to-sky-500' },
-    { label: 'Categories', value: (categoriesData?.pagination?.totalItems || eventCategories.length).toString(), icon: Award, color: 'from-purple-500 to-pink-500' },
-    { label: 'Candidates', value: (candidatesData?.pagination?.totalItems || eventCandidates.length).toString(), icon: Users, color: 'from-green-500 to-emerald-500' },
+    { label: 'Categories', value: (categoriesData?.pagination?.total_items || eventCategories.length).toString(), icon: Award, color: 'from-purple-500 to-pink-500' },
+    { label: 'Candidates', value: (candidatesData?.pagination?.total_items || eventCandidates.length).toString(), icon: Users, color: 'from-green-500 to-emerald-500' },
     { label: 'Attendees', value: event?.current_attendees?.toLocaleString() || '0', icon: Users, color: 'from-yellow-500 to-orange-500' },
   ];
 

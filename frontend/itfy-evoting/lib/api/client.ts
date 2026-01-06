@@ -268,7 +268,7 @@ async function refreshAccessToken(signal?: AbortSignal): Promise<boolean> {
  * Request options with abort signal support
  */
 export interface ExtendedRequestOptions extends RequestOptions {
-  signal?: AbortSignal;
+  signal?: AbortSignal | null;
   timeout?: number;
 }
 

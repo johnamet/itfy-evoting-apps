@@ -2130,13 +2130,13 @@ export default function AdminEventsTab() {
 
       if (response.success && response.data) {
         setEvents(response.data);
-        setTotalPages(response.pagination?.totalPages || 1);
-        setTotalItems(response.pagination?.totalItems || response.data.length);
+        setTotalPages(response.pagination?.total_pages || 1);
+        setTotalItems(response.pagination?.total_items || response.data.length);
 
         // Calculate stats from response
         const allEvents = response.data;
         setStatsSummary({
-          total: response.pagination?.totalItems || allEvents.length,
+          total: response.pagination?.total_items || allEvents.length,
           active: allEvents.filter((e) => e.status === "active").length,
           upcoming: allEvents.filter((e) => e.status === "upcoming").length,
           archived: allEvents.filter((e) => e.status === "archived").length,

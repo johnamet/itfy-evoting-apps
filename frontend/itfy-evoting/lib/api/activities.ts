@@ -194,17 +194,26 @@ export const activitiesApi = {
     format: 'csv' | 'excel' | 'pdf',
     filters?: ActivityFilters
   ): Promise<Blob> => {
-    const response = await api.get<Blob>('/activities/export', {
-      params: {
-        format,
-        type: filters?.type,
-        action: filters?.action,
-        startDate: filters?.startDate,
-        endDate: filters?.endDate,
+    const params = new URLSearchParams();
+    params.append('format', format);
+    if (filters?.type) params.append('type', filters.type);
+    if (filters?.action) params.append('action', filters.action);
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+    const response = await fetch(`${API_BASE_URL}/activities/export?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('access_token') : ''}`,
       },
-      responseType: 'blob',
     });
-    return response as unknown as Blob;
+    
+    if (!response.ok) {
+      throw new Error('Failed to export activities');
+    }
+    
+    return response.blob();
   },
 
   /**

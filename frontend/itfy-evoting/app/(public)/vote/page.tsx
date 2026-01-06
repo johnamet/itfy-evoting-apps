@@ -112,8 +112,8 @@ export default function VotePage() {
         const filteredBundles = bundles.filter(bundle => {
             const matchesSearch = bundle.name.toLowerCase().includes(query) ||
                 bundle.description?.toLowerCase().includes(query);
-            console.log(bundle.event.name, selectedEventFilter);
-            const matchesEvent = selectedEventFilter === 'all' || bundle.event._id === selectedEventFilter;
+            const eventId = typeof bundle.event === 'string' ? bundle.event : bundle.event?._id;
+            const matchesEvent = selectedEventFilter === 'all' || eventId === selectedEventFilter;
             return matchesSearch && matchesEvent && bundle.status === 'active';
         });
 
@@ -126,8 +126,8 @@ export default function VotePage() {
             let matchesEvent = true;
             if (selectedEventFilter !== 'all') {
                 // Find categories for this candidate that belong to the selected event
-                const candidateCategories = candidate.categories
-                matchesEvent = candidate.event._id === selectedEventFilter;
+                const eventId = typeof candidate.event === 'string' ? candidate.event : (candidate.event as unknown as Event)?._id;
+                matchesEvent = eventId === selectedEventFilter;
             }
 
             return matchesSearch && matchesEvent && candidate.status === 'approved' && candidate.is_published;
@@ -137,7 +137,8 @@ export default function VotePage() {
         const filteredCategories = categories.filter(category => {
             const matchesSearch = category.name.toLowerCase().includes(query) ||
                 category.description?.toLowerCase().includes(query);
-            const matchesEvent = selectedEventFilter === 'all' || (typeof category.event !== 'string' && category.event._id === selectedEventFilter);
+            const eventId = typeof category.event === 'string' ? category.event : category.event?._id;
+            const matchesEvent = selectedEventFilter === 'all' || eventId === selectedEventFilter;
             return matchesSearch && matchesEvent && category.is_voting_open;
         });
 
@@ -367,7 +368,7 @@ export default function VotePage() {
                                                             {bundle.name}
                                                         </h3>
                                                         <p className="text-gray-400 text-sm line-clamp-2 min-h-[40px] mb-2">
-                                                            {bundle.description || `Get ${bundle.vote_count} votes for ${bundle.event.name}`}
+                                                            {bundle.description || `Get ${bundle.vote_count} votes for ${typeof bundle.event === 'string' ? 'this event' : bundle.event?.name || 'this event'}`}
                                                         </p>
 
                                                         {/* Rich Stats */}
@@ -419,7 +420,7 @@ export default function VotePage() {
                                                                     Event
                                                                 </span>
                                                                 <span className="font-semibold text-white truncate max-w-[150px]">
-                                                                    {bundle.event.name}
+                                                                    {typeof bundle.event === 'string' ? 'Event' : bundle.event?.name || 'Event'}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -511,11 +512,11 @@ export default function VotePage() {
                                                                 <div className="flex items-center gap-4 text-sm text-gray-400">
                                                                     <span className="flex items-center gap-1.5 truncate">
                                                                         <Award className="w-3.5 h-3.5 text-purple-400" />
-                                                                        {candidate.categories?.map(cat => cat.name).join(', ') || 'Uncategorized'}
+                                                                        {candidate.categories?.map(cat => typeof cat === 'string' ? cat : (cat as unknown as Category)?.name).filter(Boolean).join(', ') || 'Uncategorized'}
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5 truncate">
                                                                         <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                                                                        {candidate.event.name}
+                                                                        {typeof candidate.event === 'string' ? 'Event' : (candidate.event as unknown as Event)?.name || 'Event'}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -599,8 +600,8 @@ export default function VotePage() {
                                                                         <Award className="w-3.5 h-3.5 text-purple-400" />
                                                                         Category
                                                                     </span>
-                                                                    <span className="text-white truncate max-w-[120px]" title={candidate.categories[0].name}>
-                                                                        {candidate.categories.map(cat => cat.name).join(", ") || 'N/A'}
+                                                                    <span className="text-white truncate max-w-[120px]" title={candidate.categories?.[0] ? (typeof candidate.categories[0] === 'string' ? candidate.categories[0] : (candidate.categories[0] as unknown as Category)?.name) : 'N/A'}>
+                                                                        {candidate.categories?.map(cat => typeof cat === 'string' ? cat : (cat as unknown as Category)?.name).filter(Boolean).join(", ") || 'N/A'}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex items-center justify-between text-sm text-gray-400">
@@ -608,8 +609,8 @@ export default function VotePage() {
                                                                         <Globe className="w-3.5 h-3.5 text-blue-400" />
                                                                         Event
                                                                     </span>
-                                                                    <span className="text-white truncate max-w-[120px]" title={candidate.event.name}>
-                                                                        {candidate.event.name}
+                                                                    <span className="text-white truncate max-w-[120px]" title={typeof candidate.event === 'string' ? 'Event' : (candidate.event as unknown as Event)?.name || 'Event'}>
+                                                                        {typeof candidate.event === 'string' ? 'Event' : (candidate.event as unknown as Event)?.name || 'Event'}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -750,15 +751,9 @@ export default function VotePage() {
                                                             className="w-full bg-white text-black hover:bg-gray-200 group-hover:bg-[#0152be] group-hover:text-white transition-all duration-300 font-semibold shadow-xl shadow-black/20"
                                                             onClick={() => {
                                                                 setActiveTab('candidates');
-                                                                filteredData.candidates = category.candidates.map((c) => {
-                                                                    return {
-                                                                        ...c,
-                                                                        categories: [category]
-                                                                    }
-                                                                })
-
-                                                                console.log(filteredData.candidates)
-
+                                                                // Note: Category candidates may be populated or just IDs
+                                                                // Switching to candidates tab will use filteredData.candidates
+                                                                console.log('View candidates for category:', category.name);
                                                             }}
                                                         >
                                                             View Candidates
@@ -806,8 +801,8 @@ export default function VotePage() {
                             candidate={selectedCandidate}
                             category={undefined}
                             categories={selectedCandidate.categories as unknown as Category[]}
-                            eventId={selectedCandidate?.event._id as unknown as string}
-                            eventName={selectedCategory?.event.name}
+                            eventId={typeof selectedCandidate?.event === 'string' ? selectedCandidate.event : (selectedCandidate?.event as unknown as Event)?._id}
+                            eventName={typeof selectedCategory?.event === 'string' ? undefined : (selectedCategory?.event as Event)?.name}
                         />
                     )
                 }
