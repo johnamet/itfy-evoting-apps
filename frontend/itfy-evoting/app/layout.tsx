@@ -17,13 +17,78 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vote.itforyouthghana.org';
+
 export const metadata: Metadata = {
-  title: "IT FOR Youth Ghana Evoting Platform",
-  description: "Evoting platform for IT FOR Youth Ghana events and elections.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'IT FOR Youth Ghana E-Voting Platform',
+    template: '%s | IT FOR Youth Ghana',
+  },
+  description: 'Official e-voting platform for IT FOR Youth Ghana events and elections. Vote for your favorite candidates, nominate participants, and participate in youth empowerment initiatives.',
+  keywords: [
+    'IT FOR Youth Ghana',
+    'e-voting',
+    'Ghana elections',
+    'youth empowerment',
+    'online voting',
+    'Ghana awards',
+    'youth awards Ghana',
+    'vote Ghana',
+    'nominations',
+    'ITFY Ghana',
+  ],
+  authors: [{ name: 'IT FOR Youth Ghana', url: siteUrl }],
+  creator: 'IT FOR Youth Ghana',
+  publisher: 'IT FOR Youth Ghana',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   icons: {
-    icon: '/Asset-1.png', // Served from /public automatically
-    // Optional: Add apple icon for iOS
+    icon: '/Asset-1.png',
     apple: '/Asset-1.png',
+    shortcut: '/Asset-1.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_GH',
+    url: siteUrl,
+    siteName: 'IT FOR Youth Ghana E-Voting',
+    title: 'IT FOR Youth Ghana E-Voting Platform',
+    description: 'Vote for your favorite candidates in IT FOR Youth Ghana events. Participate in youth empowerment through democratic elections.',
+    images: [
+      {
+        url: '/Asset-2.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'IT FOR Youth Ghana E-Voting Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'IT FOR Youth Ghana E-Voting Platform',
+    description: 'Vote for your favorite candidates in IT FOR Youth Ghana events.',
+    images: ['/Asset-2.jpg'],
+    creator: '@ITFYGhana',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add these when you have them
+    // google: 'your-google-verification-code',
+    // yandex: 'your-yandex-verification-code',
   },
 };
 
