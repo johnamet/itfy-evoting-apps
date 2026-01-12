@@ -158,6 +158,12 @@ jobs:
           port: 22
           script: |
             set -e
+            # Add npm to PATH for non-interactive shell
+            export PATH="/root/.nvm/versions/node/v22.19.0/bin:$PATH"
+  
+            # Verify npm is available
+            echo "🔍 Node.js: $(node --version)"
+            echo "🔍 npm: $(npm --version)"
 
             echo "📥 Updating code..."
             cd ${{ secrets.APP_PATH }}
