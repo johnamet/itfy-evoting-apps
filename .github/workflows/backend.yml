@@ -161,8 +161,8 @@ jobs:
 
             echo "📥 Updating code..."
             cd ${{ secrets.APP_PATH }}
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch origin production
+            git reset --hard origin/production
 
             echo "📦 Installing dependencies..."
             cd backend
