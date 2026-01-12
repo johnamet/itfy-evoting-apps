@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * String Helper Tests
  * Tests common string manipulation utilities

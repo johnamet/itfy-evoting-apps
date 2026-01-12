@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * IP Helper Tests
  * Tests privacy-preserving IP address utilities

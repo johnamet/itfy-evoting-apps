@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * Auth Helper Tests
  * Tests JWT token management, password hashing, and authentication utilities
