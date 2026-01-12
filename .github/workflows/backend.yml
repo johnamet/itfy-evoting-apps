@@ -11,7 +11,16 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+  inputs:
+    deploy_env:
+      description: "Deployment environment"
+      required: true
+      default: "production"
+      type: choice
+      options:
+        - production
+
 
 env:
   NODE_VERSION: '22.19.0'
