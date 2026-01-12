@@ -1,9 +1,3 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.UPLOAD_DIRECTORIES = exports.MAX_FILE_SIZE_MB = exports.IMAGE_OPTIMIZATION = exports.FILE_VALIDATION = exports.FILE_SIZE_LIMITS = exports.FILE_ERROR_CODES = exports.CLOUD_STORAGE = exports.CLEANUP_SETTINGS = exports.ALLOWED_FILE_TYPES = void 0;
 /**
  * File Upload Constants
  * Defines file upload limits, allowed types, and storage configurations
@@ -12,7 +6,7 @@ exports["default"] = exports.UPLOAD_DIRECTORIES = exports.MAX_FILE_SIZE_MB = exp
 // ========================================
 // FILE SIZE LIMITS (in MB)
 // ========================================
-var FILE_SIZE_LIMITS = exports.FILE_SIZE_LIMITS = {
+export const FILE_SIZE_LIMITS = {
   PROFILE_PHOTO: 5,
   // 5MB for profile photos
   LOGO: 2,
@@ -27,12 +21,12 @@ var FILE_SIZE_LIMITS = exports.FILE_SIZE_LIMITS = {
 };
 
 // Default max file size (used as fallback)
-var MAX_FILE_SIZE_MB = exports.MAX_FILE_SIZE_MB = 10;
+export const MAX_FILE_SIZE_MB = 10;
 
 // ========================================
 // ALLOWED FILE TYPES (MIME types)
 // ========================================
-var ALLOWED_FILE_TYPES = exports.ALLOWED_FILE_TYPES = {
+export const ALLOWED_FILE_TYPES = {
   // Images
   IMAGES: ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"],
   // Documents
@@ -51,7 +45,7 @@ var ALLOWED_FILE_TYPES = exports.ALLOWED_FILE_TYPES = {
 // ========================================
 // FILE UPLOAD DIRECTORIES
 // ========================================
-var UPLOAD_DIRECTORIES = exports.UPLOAD_DIRECTORIES = {
+export const UPLOAD_DIRECTORIES = {
   PROFILES: "profiles",
   // User profile photos
   LOGOS: "logos",
@@ -68,7 +62,7 @@ var UPLOAD_DIRECTORIES = exports.UPLOAD_DIRECTORIES = {
 // ========================================
 // IMAGE OPTIMIZATION SETTINGS
 // ========================================
-var IMAGE_OPTIMIZATION = exports.IMAGE_OPTIMIZATION = {
+export const IMAGE_OPTIMIZATION = {
   // Profile photos
   PROFILE: {
     width: 500,
@@ -114,7 +108,7 @@ var IMAGE_OPTIMIZATION = exports.IMAGE_OPTIMIZATION = {
 // ========================================
 // FILE VALIDATION RULES
 // ========================================
-var FILE_VALIDATION = exports.FILE_VALIDATION = {
+export const FILE_VALIDATION = {
   // Maximum number of files per upload
   MAX_FILES: {
     SINGLE: 1,
@@ -164,7 +158,7 @@ var FILE_VALIDATION = exports.FILE_VALIDATION = {
 // ========================================
 // CLOUD STORAGE SETTINGS
 // ========================================
-var CLOUD_STORAGE = exports.CLOUD_STORAGE = {
+export const CLOUD_STORAGE = {
   PROVIDER: process.env.CLOUD_STORAGE_PROVIDER || "local",
   // 'local', 's3', 'cloudinary'
 
@@ -184,7 +178,7 @@ var CLOUD_STORAGE = exports.CLOUD_STORAGE = {
 // ========================================
 // FILE CLEANUP SETTINGS
 // ========================================
-var CLEANUP_SETTINGS = exports.CLEANUP_SETTINGS = {
+export const CLEANUP_SETTINGS = {
   TEMP_FILES_RETENTION_DAYS: 7,
   // Delete temp files older than 7 days
   ORPHANED_FILES_RETENTION_DAYS: 30,
@@ -195,7 +189,7 @@ var CLEANUP_SETTINGS = exports.CLEANUP_SETTINGS = {
 // ========================================
 // FILE ERROR CODES
 // ========================================
-var FILE_ERROR_CODES = exports.FILE_ERROR_CODES = {
+export const FILE_ERROR_CODES = {
   FILE_TOO_LARGE: "FILE_TOO_LARGE",
   INVALID_FILE_TYPE: "INVALID_FILE_TYPE",
   UPLOAD_FAILED: "UPLOAD_FAILED",
@@ -207,4 +201,4 @@ var FILE_ERROR_CODES = exports.FILE_ERROR_CODES = {
 };
 
 // Default export for primary constant
-var _default = exports["default"] = FILE_SIZE_LIMITS;
+export default FILE_SIZE_LIMITS;

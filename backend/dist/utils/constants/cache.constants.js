@@ -1,9 +1,3 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.INVALIDATION_STRATEGY = exports.ENTITY_TTL = exports.CACHE_TTL = exports.CACHE_PREFIX = exports.CACHE_FLAGS = void 0;
 /**
  * Cache Constants
  * TTL values and cache key patterns
@@ -13,7 +7,7 @@ exports["default"] = exports.INVALIDATION_STRATEGY = exports.ENTITY_TTL = export
  * Cache TTL (Time To Live) in seconds
  * Based on data volatility and access patterns
  */
-var CACHE_TTL = exports.CACHE_TTL = {
+export const CACHE_TTL = {
   // Very short-lived (frequently changing data)
   REAL_TIME: 30,
   // 30 seconds - live metrics, counters
@@ -41,7 +35,7 @@ var CACHE_TTL = exports.CACHE_TTL = {
 /**
  * Entity-specific TTL recommendations
  */
-var ENTITY_TTL = exports.ENTITY_TTL = {
+export const ENTITY_TTL = {
   user: {
     profile: CACHE_TTL.MEDIUM,
     list: CACHE_TTL.STANDARD,
@@ -94,7 +88,7 @@ var ENTITY_TTL = exports.ENTITY_TTL = {
 /**
  * Cache key prefixes for different types
  */
-var CACHE_PREFIX = exports.CACHE_PREFIX = {
+export const CACHE_PREFIX = {
   ENTITY: "entity",
   LIST: "list",
   STATS: "stats",
@@ -109,7 +103,7 @@ var CACHE_PREFIX = exports.CACHE_PREFIX = {
 /**
  * Cache invalidation strategies
  */
-var INVALIDATION_STRATEGY = exports.INVALIDATION_STRATEGY = {
+export const INVALIDATION_STRATEGY = {
   // Invalidate immediately on write
   WRITE_THROUGH: "write_through",
   // Invalidate after write completes
@@ -123,15 +117,15 @@ var INVALIDATION_STRATEGY = exports.INVALIDATION_STRATEGY = {
 /**
  * Cache behavior flags
  */
-var CACHE_FLAGS = exports.CACHE_FLAGS = {
+export const CACHE_FLAGS = {
   SKIP_CACHE: "skipCache",
   FORCE_REFRESH: "forceRefresh",
   CACHE_ONLY: "cacheOnly"
 };
-var _default = exports["default"] = {
-  CACHE_TTL: CACHE_TTL,
-  ENTITY_TTL: ENTITY_TTL,
-  CACHE_PREFIX: CACHE_PREFIX,
-  INVALIDATION_STRATEGY: INVALIDATION_STRATEGY,
-  CACHE_FLAGS: CACHE_FLAGS
+export default {
+  CACHE_TTL,
+  ENTITY_TTL,
+  CACHE_PREFIX,
+  INVALIDATION_STRATEGY,
+  CACHE_FLAGS
 };

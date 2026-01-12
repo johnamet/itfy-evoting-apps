@@ -1,13 +1,3 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.capitalize = capitalize;
-exports["default"] = void 0;
-exports.generateRandomString = generateRandomString;
-exports.slugify = slugify;
-exports.truncate = truncate;
 /**
  * String Helper Utility
  * Common string manipulation functions
@@ -18,7 +8,7 @@ exports.truncate = truncate;
  * @param {string} text - The text to slugify
  * @returns {string} The slugified string
  */
-function slugify(text) {
+export function slugify(text) {
   if (!text) return "";
   return text.toString().toLowerCase().trim().replace(/\s+/g, "-") // Replace spaces with -
   .replace(/[^\w-]+/g, "") // Remove all non-word chars
@@ -32,11 +22,10 @@ function slugify(text) {
  * @param {number} length - The length of the string
  * @returns {string} Random string
  */
-function generateRandomString() {
-  var length = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 10;
-  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  var result = "";
-  for (var i = 0; i < length; i++) {
+export function generateRandomString(length = 10) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
@@ -47,7 +36,7 @@ function generateRandomString() {
  * @param {string} text - The text to capitalize
  * @returns {string} Capitalized string
  */
-function capitalize(text) {
+export function capitalize(text) {
   if (!text) return "";
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
@@ -59,15 +48,13 @@ function capitalize(text) {
  * @param {string} suffix - Suffix to add if truncated (default: "...")
  * @returns {string} Truncated string
  */
-function truncate(text) {
-  var length = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 100;
-  var suffix = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "...";
+export function truncate(text, length = 100, suffix = "...") {
   if (!text || text.length <= length) return text || "";
   return text.substring(0, length - suffix.length) + suffix;
 }
-var _default = exports["default"] = {
-  slugify: slugify,
-  generateRandomString: generateRandomString,
-  capitalize: capitalize,
-  truncate: truncate
+export default {
+  slugify,
+  generateRandomString,
+  capitalize,
+  truncate
 };

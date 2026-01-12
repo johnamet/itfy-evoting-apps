@@ -1,9 +1,3 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.SMS_PROVIDER = exports.NOTIFICATION_TYPE = exports.NOTIFICATION_TEMPLATE = exports.NOTIFICATION_STATUS = exports.NOTIFICATION_PRIORITY = exports.NOTIFICATION_CHANNEL = exports.EMAIL_PROVIDER = exports.DELIVERY_PREFERENCE = void 0;
 /**
  * Notification constants
  * This file contains all notification-related constants used across the notification module
@@ -12,7 +6,7 @@ exports["default"] = exports.SMS_PROVIDER = exports.NOTIFICATION_TYPE = exports.
 /**
  * Notification types
  */
-var NOTIFICATION_TYPE = exports.NOTIFICATION_TYPE = {
+export const NOTIFICATION_TYPE = {
   // Vote-related
   VOTE_CAST: "vote_cast",
   VOTE_REFUNDED: "vote_refunded",
@@ -69,7 +63,7 @@ var NOTIFICATION_TYPE = exports.NOTIFICATION_TYPE = {
 /**
  * Notification channels
  */
-var NOTIFICATION_CHANNEL = exports.NOTIFICATION_CHANNEL = {
+export const NOTIFICATION_CHANNEL = {
   IN_APP: "in_app",
   EMAIL: "email",
   SMS: "sms",
@@ -80,7 +74,7 @@ var NOTIFICATION_CHANNEL = exports.NOTIFICATION_CHANNEL = {
 /**
  * Notification status
  */
-var NOTIFICATION_STATUS = exports.NOTIFICATION_STATUS = {
+export const NOTIFICATION_STATUS = {
   PENDING: "pending",
   QUEUED: "queued",
   SENT: "sent",
@@ -94,7 +88,7 @@ var NOTIFICATION_STATUS = exports.NOTIFICATION_STATUS = {
 /**
  * Notification priority
  */
-var NOTIFICATION_PRIORITY = exports.NOTIFICATION_PRIORITY = {
+export const NOTIFICATION_PRIORITY = {
   LOW: "low",
   NORMAL: "normal",
   HIGH: "high",
@@ -104,7 +98,7 @@ var NOTIFICATION_PRIORITY = exports.NOTIFICATION_PRIORITY = {
 /**
  * Notification delivery preferences
  */
-var DELIVERY_PREFERENCE = exports.DELIVERY_PREFERENCE = {
+export const DELIVERY_PREFERENCE = {
   ALL: "all",
   IMPORTANT_ONLY: "important_only",
   NONE: "none"
@@ -113,7 +107,7 @@ var DELIVERY_PREFERENCE = exports.DELIVERY_PREFERENCE = {
 /**
  * Email provider types
  */
-var EMAIL_PROVIDER = exports.EMAIL_PROVIDER = {
+export const EMAIL_PROVIDER = {
   SENDGRID: "sendgrid",
   MAILGUN: "mailgun",
   SES: "ses",
@@ -123,7 +117,7 @@ var EMAIL_PROVIDER = exports.EMAIL_PROVIDER = {
 /**
  * SMS provider types
  */
-var SMS_PROVIDER = exports.SMS_PROVIDER = {
+export const SMS_PROVIDER = {
   TWILIO: "twilio",
   AFRICASTALKING: "africastalking",
   TERMII: "termii"
@@ -132,7 +126,7 @@ var SMS_PROVIDER = exports.SMS_PROVIDER = {
 /**
  * Notification templates
  */
-var NOTIFICATION_TEMPLATE = exports.NOTIFICATION_TEMPLATE = {
+export const NOTIFICATION_TEMPLATE = {
   VOTE_CONFIRMATION: "vote_confirmation",
   PAYMENT_RECEIPT: "payment_receipt",
   EVENT_REMINDER: "event_reminder",
@@ -143,4 +137,4 @@ var NOTIFICATION_TEMPLATE = exports.NOTIFICATION_TEMPLATE = {
 };
 
 // Default export
-var _default = exports["default"] = NOTIFICATION_TYPE;
+export default NOTIFICATION_TYPE;

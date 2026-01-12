@@ -1,14 +1,9 @@
-"use strict";
+import { MAX_FILE_SIZE_MB } from "./file.constants.js";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.ERROR_MESSAGES = exports.DEFAULT_PAGINATION = void 0;
-var _fileConstants = require("./file.constants.js");
 // ========================================
 // DEFAULT PAGINATION SETTINGS
 // ========================================
-var DEFAULT_PAGINATION = exports.DEFAULT_PAGINATION = {
+export const DEFAULT_PAGINATION = {
   PAGE: 1,
   LIMIT: 20,
   MAX_LIMIT: 100
@@ -17,7 +12,7 @@ var DEFAULT_PAGINATION = exports.DEFAULT_PAGINATION = {
 // ========================================
 // ERROR MESSAGES (User-Friendly + Dev-Friendly)
 // ========================================
-var ERROR_MESSAGES = exports.ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   // === GENERAL ===
   INTERNAL_SERVER_ERROR: "Something went wrong on our end. Please try again later.",
   SERVICE_UNAVAILABLE: "Service is temporarily unavailable. We're working on it!",
@@ -37,7 +32,7 @@ var ERROR_MESSAGES = exports.ERROR_MESSAGES = {
   PASSWORDS_DO_NOT_MATCH: "Passwords do not match. Please confirm correctly.",
   CURRENT_PASSWORD_INCORRECT: "Current password is incorrect.",
   // === FILE UPLOAD ===
-  FILE_TOO_LARGE: "File size exceeds ".concat(_fileConstants.MAX_FILE_SIZE_MB, "MB limit."),
+  FILE_TOO_LARGE: `File size exceeds ${MAX_FILE_SIZE_MB}MB limit.`,
   INVALID_FILE_TYPE: "Invalid file type. Only JPEG, PNG, PDF, and Word documents are allowed.",
   FILE_UPLOAD_FAILED: "Failed to upload file. Please try again.",
   // === ADMIN ===
@@ -48,7 +43,7 @@ var ERROR_MESSAGES = exports.ERROR_MESSAGES = {
   INVALID_DATE: "Invalid date format. Use YYYY-MM-DD.",
   INVALID_URL: "Please enter a valid URL (e.g., https://example.com).",
   INVALID_PAGE: "Invalid page number. Must be a positive integer.",
-  INVALID_LIMIT: "Invalid limit. Must be between 1 and ".concat(DEFAULT_PAGINATION.MAX_LIMIT, "."),
+  INVALID_LIMIT: `Invalid limit. Must be between 1 and ${DEFAULT_PAGINATION.MAX_LIMIT}.`,
   // === NETWORK / EXTERNAL ===
   EXTERNAL_API_FAILED: "Failed to connect to external service. Please try again later.",
   EMAIL_SEND_FAILED: "Failed to send email. Please check your inbox or spam folder.",

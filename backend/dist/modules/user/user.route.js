@@ -1,17 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = void 0;
-var _express = require("express");
-var _userController = _interopRequireDefault(require("./user.controller.js"));
-var _authMiddleware = require("../../middleware/auth.middleware.js");
-var _activityLoggerMiddleware = require("../../middleware/activity-logger.middleware.js");
-var _userConstants = require("../../utils/constants/user.constants.js");
-var _activityConstants = require("../../utils/constants/activity.constants.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
-var router = (0, _express.Router)();
+import { Router } from "express";
+import UserController from "./user.controller.js";
+import { authenticate, authorize } from "../../middleware/auth.middleware.js";
+import { logActivity } from "../../middleware/activity-logger.middleware.js";
+import { ROLES } from "../../utils/constants/user.constants.js";
+import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
+const router = Router();
 
 // ==================== CURRENT USER PROFILE ====================
 
@@ -20,14 +13,14 @@ var router = (0, _express.Router)();
  * Get current user profile
  * Requires: Authentication
  */
-router.get("/profile", _authMiddleware.authenticate, _userController["default"].getProfile.bind(_userController["default"]));
+router.get("/profile", authenticate, UserController.getProfile.bind(UserController));
 
 /**
  * PUT /api/users/profile
  * Update current user profile
  * Requires: Authentication
  */
-router.put("/profile", _authMiddleware.authenticate, (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.PROFILE_UPDATED, _activityConstants.ENTITY_TYPE.USER), _userController["default"].updateProfile.bind(_userController["default"]));
+router.put("/profile", authenticate, logActivity(ACTION_TYPE.PROFILE_UPDATED, ENTITY_TYPE.USER), UserController.updateProfile.bind(UserController));
 
 // ==================== ADMIN STATISTICS ====================
 
@@ -36,14 +29,14 @@ router.put("/profile", _authMiddleware.authenticate, (0, _activityLoggerMiddlewa
  * Get user statistics
  * Requires: Admin
  */
-router.get("/stats", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].getStats.bind(_userController["default"]));
+router.get("/stats", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.getStats.bind(UserController));
 
 /**
  * GET /api/users/:id/statistics
  * Get individual user statistics
  * Requires: Admin
  */
-router.get("/:id/statistics", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].getUserStatistics.bind(_userController["default"]));
+router.get("/:id/statistics", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.getUserStatistics.bind(UserController));
 
 // ==================== DELETED USERS (SUPER ADMIN ONLY) ====================
 
@@ -52,42 +45,32 @@ router.get("/:id/statistics", _authMiddleware.authenticate, (0, _authMiddleware.
  * List all soft-deleted users
  * Requires: Super Admin
  */
-router.get("/deleted", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_ACCESSED, _activityConstants.ENTITY_TYPE.USER, {
-  getDescription: function getDescription() {
-    return "Accessed deleted users list";
-  },
+router.get("/deleted", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USERS_ACCESSED, ENTITY_TYPE.USER, {
+  getDescription: () => "Accessed deleted users list",
   severity: "info"
-}), _userController["default"].listDeleted.bind(_userController["default"]));
+}), UserController.listDeleted.bind(UserController));
 
 /**
  * POST /api/users/:id/restore
  * Restore a soft-deleted user
  * Requires: Super Admin
  */
-router.post("/:id/restore", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_RESTORED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Restored deleted user ".concat(req.params.id);
-  },
+router.post("/:id/restore", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USER_RESTORED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Restored deleted user ${req.params.id}`,
   severity: "warning"
-}), _userController["default"].restoreUser.bind(_userController["default"]));
+}), UserController.restoreUser.bind(UserController));
 
 /**
  * DELETE /api/users/:id/hard
  * Permanently delete user (hard delete)
  * Requires: Super Admin
  */
-router["delete"]("/:id/hard", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_HARD_DELETED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "PERMANENTLY deleted user ".concat(req.params.id);
-  },
+router.delete("/:id/hard", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USER_HARD_DELETED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `PERMANENTLY deleted user ${req.params.id}`,
   severity: "critical"
-}), _userController["default"].hardDeleteUser.bind(_userController["default"]));
+}), UserController.hardDeleteUser.bind(UserController));
 
 // ==================== ADMIN BULK OPERATIONS ====================
 
@@ -96,44 +79,36 @@ router["delete"]("/:id/hard", _authMiddleware.authenticate, (0, _authMiddleware.
  * Bulk update user status
  * Requires: Admin
  */
-router.post("/bulk/status", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_BULK_STATUS_UPDATED, _activityConstants.ENTITY_TYPE.USER), _userController["default"].bulkUpdateStatus.bind(_userController["default"]));
+router.post("/bulk/status", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USERS_BULK_STATUS_UPDATED, ENTITY_TYPE.USER), UserController.bulkUpdateStatus.bind(UserController));
 
 /**
  * POST /api/users/bulk/action
  * Bulk perform action on users
  * Requires: Admin
  */
-router.post("/bulk/action", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_BULK_ACTION, _activityConstants.ENTITY_TYPE.USER, {
-  getDescription: function getDescription(req) {
-    return "Performed bulk action: ".concat(req.body.action);
-  }
-}), _userController["default"].bulkAction.bind(_userController["default"]));
+router.post("/bulk/action", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USERS_BULK_ACTION, ENTITY_TYPE.USER, {
+  getDescription: req => `Performed bulk action: ${req.body.action}`
+}), UserController.bulkAction.bind(UserController));
 
 /**
  * POST /api/users/bulk/delete
  * Bulk soft delete users
  * Requires: Admin
  */
-router.post("/bulk/delete", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_BULK_DELETED, _activityConstants.ENTITY_TYPE.USER, {
-  getDescription: function getDescription(req) {
-    var _req$body$userIds;
-    return "Bulk deleted ".concat((_req$body$userIds = req.body.userIds) === null || _req$body$userIds === void 0 ? void 0 : _req$body$userIds.length, " users");
-  },
+router.post("/bulk/delete", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USERS_BULK_DELETED, ENTITY_TYPE.USER, {
+  getDescription: req => `Bulk deleted ${req.body.userIds?.length} users`,
   severity: "warning"
-}), _userController["default"].bulkDelete.bind(_userController["default"]));
+}), UserController.bulkDelete.bind(UserController));
 
 /**
  * POST /api/users/bulk/restore
  * Bulk restore deleted users
  * Requires: Super Admin
  */
-router.post("/bulk/restore", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_BULK_RESTORED, _activityConstants.ENTITY_TYPE.USER, {
-  getDescription: function getDescription(req) {
-    var _req$body$userIds2;
-    return "Bulk restored ".concat((_req$body$userIds2 = req.body.userIds) === null || _req$body$userIds2 === void 0 ? void 0 : _req$body$userIds2.length, " users");
-  },
+router.post("/bulk/restore", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USERS_BULK_RESTORED, ENTITY_TYPE.USER, {
+  getDescription: req => `Bulk restored ${req.body.userIds?.length} users`,
   severity: "warning"
-}), _userController["default"].bulkRestore.bind(_userController["default"]));
+}), UserController.bulkRestore.bind(UserController));
 
 // ==================== SEARCH & EXPORT ====================
 
@@ -142,18 +117,16 @@ router.post("/bulk/restore", _authMiddleware.authenticate, (0, _authMiddleware.a
  * Advanced user search
  * Requires: Admin
  */
-router.post("/search", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].searchUsers.bind(_userController["default"]));
+router.post("/search", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.searchUsers.bind(UserController));
 
 /**
  * GET /api/users/export
  * Export users to CSV/Excel
  * Requires: Admin
  */
-router.get("/export", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USERS_EXPORTED, _activityConstants.ENTITY_TYPE.USER, {
-  getDescription: function getDescription(req) {
-    return "Exported users in ".concat(req.query.format || 'csv', " format");
-  }
-}), _userController["default"].exportUsers.bind(_userController["default"]));
+router.get("/export", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USERS_EXPORTED, ENTITY_TYPE.USER, {
+  getDescription: req => `Exported users in ${req.query.format || 'csv'} format`
+}), UserController.exportUsers.bind(UserController));
 
 // ==================== ACTIVITY LOGS ====================
 
@@ -162,7 +135,7 @@ router.get("/export", _authMiddleware.authenticate, (0, _authMiddleware.authoriz
  * Get user activity log
  * Requires: Admin
  */
-router.get("/:id/activity", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].getUserActivity.bind(_userController["default"]));
+router.get("/:id/activity", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.getUserActivity.bind(UserController));
 
 // ==================== ADMIN CRUD ROUTES ====================
 
@@ -171,7 +144,7 @@ router.get("/:id/activity", _authMiddleware.authenticate, (0, _authMiddleware.au
  * Create a new user
  * Requires: Admin
  */
-router.post("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_CREATED, _activityConstants.ENTITY_TYPE.USER), _userController["default"].create.bind(_userController["default"]));
+router.post("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_CREATED, ENTITY_TYPE.USER), UserController.create.bind(UserController));
 
 /**
  * GET /api/users
@@ -179,7 +152,7 @@ router.post("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_u
  * Supports include_deleted parameter for Super Admin
  * Requires: Admin
  */
-router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].list.bind(_userController["default"]));
+router.get("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.list.bind(UserController));
 
 /**
  * GET /api/users/:id
@@ -187,29 +160,25 @@ router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_us
  * Supports include_deleted parameter
  * Requires: Admin
  */
-router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _userController["default"].getById.bind(_userController["default"]));
+router.get("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), UserController.getById.bind(UserController));
 
 /**
  * PUT /api/users/:id
  * Update user
  * Requires: Admin
  */
-router.put("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_UPDATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _userController["default"].update.bind(_userController["default"]));
+router.put("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_UPDATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id
+}), UserController.update.bind(UserController));
 
 /**
  * DELETE /api/users/:id
  * Delete user (soft delete)
  * Requires: Admin
  */
-router["delete"]("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_DELETED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _userController["default"]["delete"].bind(_userController["default"]));
+router.delete("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_DELETED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id
+}), UserController.delete.bind(UserController));
 
 // ==================== ROLE & PERMISSIONS ====================
 
@@ -218,27 +187,21 @@ router["delete"]("/:id", _authMiddleware.authenticate, (0, _authMiddleware.autho
  * Update user role
  * Requires: Super Admin
  */
-router.put("/:id/role", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_ROLE_UPDATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Updated role for user ".concat(req.params.id, " to ").concat(req.body.role);
-  },
+router.put("/:id/role", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USER_ROLE_UPDATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Updated role for user ${req.params.id} to ${req.body.role}`,
   severity: "warning"
-}), _userController["default"].updateRole.bind(_userController["default"]));
+}), UserController.updateRole.bind(UserController));
 
 /**
  * PUT /api/users/:id/permissions
  * Update user permissions
  * Requires: Super Admin
  */
-router.put("/:id/permissions", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_PERMISSIONS_UPDATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
+router.put("/:id/permissions", authenticate, authorize(ROLES.SUPER_ADMIN), logActivity(ACTION_TYPE.USER_PERMISSIONS_UPDATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
   severity: "warning"
-}), _userController["default"].updatePermissions.bind(_userController["default"]));
+}), UserController.updatePermissions.bind(UserController));
 
 // ==================== USER STATUS ====================
 
@@ -247,71 +210,55 @@ router.put("/:id/permissions", _authMiddleware.authenticate, (0, _authMiddleware
  * Activate user
  * Requires: Admin
  */
-router.put("/:id/activate", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_ACTIVATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _userController["default"].activate.bind(_userController["default"]));
+router.put("/:id/activate", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_ACTIVATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id
+}), UserController.activate.bind(UserController));
 
 /**
  * PUT /api/users/:id/deactivate
  * Deactivate user
  * Requires: Admin
  */
-router.put("/:id/deactivate", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_DEACTIVATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _userController["default"].deactivate.bind(_userController["default"]));
+router.put("/:id/deactivate", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_DEACTIVATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id
+}), UserController.deactivate.bind(UserController));
 
 /**
  * PUT /api/users/:id/suspend
  * Suspend user
  * Requires: Admin
  */
-router.put("/:id/suspend", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_SUSPENDED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
+router.put("/:id/suspend", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_SUSPENDED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
   severity: "warning"
-}), _userController["default"].suspend.bind(_userController["default"]));
+}), UserController.suspend.bind(UserController));
 
 /**
  * PUT /api/users/:id/reactivate
  * Reactivate user (unsuspend)
  * Requires: Admin
  */
-router.put("/:id/reactivate", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_ACTIVATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _userController["default"].reactivate.bind(_userController["default"]));
+router.put("/:id/reactivate", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_ACTIVATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id
+}), UserController.reactivate.bind(UserController));
 
 /**
  * PUT /api/users/:id/verify-email
  * Force verify user email
  * Requires: Admin
  */
-router.put("/:id/verify-email", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.USER_UPDATED, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Admin force verified email for user ".concat(req.params.id);
-  }
-}), _userController["default"].forceVerifyEmail.bind(_userController["default"]));
+router.put("/:id/verify-email", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.USER_UPDATED, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Admin force verified email for user ${req.params.id}`
+}), UserController.forceVerifyEmail.bind(UserController));
 
 /**
  * POST /api/users/:id/send-password-reset
  * Send password reset email
  * Requires: Admin
  */
-router.post("/:id/send-password-reset", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.PASSWORD_RESET_SENT, _activityConstants.ENTITY_TYPE.USER, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Admin sent password reset for user ".concat(req.params.id);
-  }
-}), _userController["default"].sendPasswordReset.bind(_userController["default"]));
-var _default = exports["default"] = router;
+router.post("/:id/send-password-reset", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.PASSWORD_RESET_SENT, ENTITY_TYPE.USER, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Admin sent password reset for user ${req.params.id}`
+}), UserController.sendPasswordReset.bind(UserController));
+export default router;

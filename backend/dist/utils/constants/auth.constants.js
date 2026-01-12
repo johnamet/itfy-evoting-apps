@@ -1,16 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.MAX_LOGIN_ATTEMPTS = exports.JWT_EXPIRATION = exports.ERROR_MESSAGES = exports.ACCOUNT_LOCK_DURATION_MINUTES = void 0;
 /**
  * Authentication Constants
  * Error messages, configuration, and constants for authentication service
  */
 
 // Error messages
-var ERROR_MESSAGES = exports.ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   INVALID_CREDENTIALS: "Invalid email/code or password",
   ACCOUNT_LOCKED: "Account is locked. Please try again in {duration} minutes",
   ACCOUNT_NOT_FOUND: "Account not found",
@@ -26,11 +20,11 @@ var ERROR_MESSAGES = exports.ERROR_MESSAGES = {
 };
 
 // Login/Security Configuration
-var MAX_LOGIN_ATTEMPTS = exports.MAX_LOGIN_ATTEMPTS = 5;
-var ACCOUNT_LOCK_DURATION_MINUTES = exports.ACCOUNT_LOCK_DURATION_MINUTES = 15;
+export const MAX_LOGIN_ATTEMPTS = 5;
+export const ACCOUNT_LOCK_DURATION_MINUTES = 15;
 
 // JWT Token Expiration
-var JWT_EXPIRATION = exports.JWT_EXPIRATION = {
+export const JWT_EXPIRATION = {
   ACCESS_TOKEN: "15m",
   REFRESH_TOKEN: "7d",
   RESET_TOKEN: "1h",
@@ -38,9 +32,9 @@ var JWT_EXPIRATION = exports.JWT_EXPIRATION = {
 };
 
 // Default export
-var _default = exports["default"] = {
-  ERROR_MESSAGES: ERROR_MESSAGES,
-  MAX_LOGIN_ATTEMPTS: MAX_LOGIN_ATTEMPTS,
-  ACCOUNT_LOCK_DURATION_MINUTES: ACCOUNT_LOCK_DURATION_MINUTES,
-  JWT_EXPIRATION: JWT_EXPIRATION
+export default {
+  ERROR_MESSAGES,
+  MAX_LOGIN_ATTEMPTS,
+  ACCOUNT_LOCK_DURATION_MINUTES,
+  JWT_EXPIRATION
 };

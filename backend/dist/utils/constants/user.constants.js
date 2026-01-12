@@ -1,11 +1,5 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.STATUS = exports.ROLES = exports.PERMISSIONS = void 0;
 // User roles
-var ROLES = exports.ROLES = {
+export const ROLES = {
   SUPER_ADMIN: "super_admin",
   ADMIN: "admin",
   ORGANISER: "organiser",
@@ -13,7 +7,7 @@ var ROLES = exports.ROLES = {
 };
 
 // User permissions
-var PERMISSIONS = exports.PERMISSIONS = {
+export const PERMISSIONS = {
   READ: "read",
   WRITE: "write",
   UPDATE: "update",
@@ -22,10 +16,10 @@ var PERMISSIONS = exports.PERMISSIONS = {
   // delete means hard deleting so exists exclusively for admins
   SUPER: "super"
 };
-var STATUS = exports.STATUS = {
+export const STATUS = {
   ACTIVE: "active",
   INACTIVE: "inactive",
   SUSPENDED: "suspended",
   DELETED: "deleted"
 };
-var _default = exports["default"] = ROLES;
+export default ROLES;

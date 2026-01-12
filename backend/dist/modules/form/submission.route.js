@@ -1,17 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = void 0;
-var _express = require("express");
-var _submissionController = _interopRequireDefault(require("./submission.controller.js"));
-var _authMiddleware = require("../../middleware/auth.middleware.js");
-var _activityLoggerMiddleware = require("../../middleware/activity-logger.middleware.js");
-var _userConstants = require("../../utils/constants/user.constants.js");
-var _activityConstants = require("../../utils/constants/activity.constants.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
-var router = (0, _express.Router)();
+import { Router } from "express";
+import SubmissionController from "./submission.controller.js";
+import { authenticate, authorize, optionalAuth } from "../../middleware/auth.middleware.js";
+import { logActivity } from "../../middleware/activity-logger.middleware.js";
+import { ROLES } from "../../utils/constants/user.constants.js";
+import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
+const router = Router();
 
 // ==================== PUBLIC SUBMISSION ====================
 
@@ -20,7 +13,7 @@ var router = (0, _express.Router)();
  * Submit a form (public or authenticated)
  * Optional auth - allows anonymous submissions if form settings allow
  */
-router.post("/", _authMiddleware.optionalAuth, _submissionController["default"].submit.bind(_submissionController["default"]));
+router.post("/", optionalAuth, SubmissionController.submit.bind(SubmissionController));
 
 // ==================== USER SUBMISSIONS ====================
 
@@ -29,7 +22,7 @@ router.post("/", _authMiddleware.optionalAuth, _submissionController["default"].
  * Get current user's submissions
  * Requires: Authentication
  */
-router.get("/me", _authMiddleware.authenticate, _submissionController["default"].getMySubmissions.bind(_submissionController["default"]));
+router.get("/me", authenticate, SubmissionController.getMySubmissions.bind(SubmissionController));
 
 // ==================== ADMIN LIST & QUERY ROUTES ====================
 
@@ -38,42 +31,42 @@ router.get("/me", _authMiddleware.authenticate, _submissionController["default"]
  * List all submissions with filters
  * Requires: Admin
  */
-router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].list.bind(_submissionController["default"]));
+router.get("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.list.bind(SubmissionController));
 
 /**
  * GET /api/submissions/form/:formId
  * Get submissions by form
  * Requires: Admin
  */
-router.get("/form/:formId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].getByForm.bind(_submissionController["default"]));
+router.get("/form/:formId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.getByForm.bind(SubmissionController));
 
 /**
  * GET /api/submissions/form/:formId/duplicates
  * Get suspected duplicates for a form
  * Requires: Admin
  */
-router.get("/form/:formId/duplicates", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _submissionController["default"].getSuspectedDuplicates.bind(_submissionController["default"]));
+router.get("/form/:formId/duplicates", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), SubmissionController.getSuspectedDuplicates.bind(SubmissionController));
 
 /**
  * GET /api/submissions/event/:eventId
  * Get submissions by event
  * Requires: Admin
  */
-router.get("/event/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].getByEvent.bind(_submissionController["default"]));
+router.get("/event/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.getByEvent.bind(SubmissionController));
 
 /**
  * GET /api/submissions/nominee/:identifier
  * Get submissions by nominee identifier (multi-category nominations)
  * Requires: Admin
  */
-router.get("/nominee/:identifier", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].getByNominee.bind(_submissionController["default"]));
+router.get("/nominee/:identifier", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.getByNominee.bind(SubmissionController));
 
 /**
  * GET /api/submissions/user/:userId
  * Get submissions by user
  * Requires: Admin
  */
-router.get("/user/:userId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].getByUser.bind(_submissionController["default"]));
+router.get("/user/:userId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.getByUser.bind(SubmissionController));
 
 // ==================== SINGLE SUBMISSION ROUTES ====================
 
@@ -82,18 +75,16 @@ router.get("/user/:userId", _authMiddleware.authenticate, (0, _authMiddleware.au
  * Get submission by ID
  * Requires: Admin
  */
-router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _submissionController["default"].getById.bind(_submissionController["default"]));
+router.get("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), SubmissionController.getById.bind(SubmissionController));
 
 /**
  * PUT /api/submissions/:id
  * Update submission
  * Requires: Admin
  */
-router.put("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.SUBMISSION_UPDATED, _activityConstants.ENTITY_TYPE.FORM_SUBMISSION, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _submissionController["default"].update.bind(_submissionController["default"]));
+router.put("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.SUBMISSION_UPDATED, ENTITY_TYPE.FORM_SUBMISSION, {
+  getEntityId: req => req.params.id
+}), SubmissionController.update.bind(SubmissionController));
 
 // ==================== APPROVAL WORKFLOW ====================
 
@@ -102,42 +93,30 @@ router.put("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(
  * Approve submission (and optionally create candidate)
  * Requires: Admin, Organiser
  */
-router.post("/:id/approve", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.SUBMISSION_APPROVED, _activityConstants.ENTITY_TYPE.FORM_SUBMISSION, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Approved submission ".concat(req.params.id);
-  }
-}), _submissionController["default"].approve.bind(_submissionController["default"]));
+router.post("/:id/approve", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.SUBMISSION_APPROVED, ENTITY_TYPE.FORM_SUBMISSION, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Approved submission ${req.params.id}`
+}), SubmissionController.approve.bind(SubmissionController));
 
 /**
  * POST /api/submissions/:id/reject
  * Reject submission
  * Requires: Admin, Organiser
  */
-router.post("/:id/reject", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.SUBMISSION_REJECTED, _activityConstants.ENTITY_TYPE.FORM_SUBMISSION, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Rejected submission ".concat(req.params.id);
-  }
-}), _submissionController["default"].reject.bind(_submissionController["default"]));
+router.post("/:id/reject", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.SUBMISSION_REJECTED, ENTITY_TYPE.FORM_SUBMISSION, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Rejected submission ${req.params.id}`
+}), SubmissionController.reject.bind(SubmissionController));
 
 /**
  * POST /api/submissions/:id/resolve-duplicate
  * Resolve duplicate submission
  * Requires: Admin, Organiser
  */
-router.post("/:id/resolve-duplicate", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.DUPLICATE_RESOLVED, _activityConstants.ENTITY_TYPE.FORM_SUBMISSION, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Resolved duplicate for submission ".concat(req.params.id);
-  }
-}), _submissionController["default"].resolveDuplicate.bind(_submissionController["default"]));
+router.post("/:id/resolve-duplicate", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.DUPLICATE_RESOLVED, ENTITY_TYPE.FORM_SUBMISSION, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Resolved duplicate for submission ${req.params.id}`
+}), SubmissionController.resolveDuplicate.bind(SubmissionController));
 
 // ==================== DUPLICATE DETECTION ====================
 
@@ -146,5 +125,5 @@ router.post("/:id/resolve-duplicate", _authMiddleware.authenticate, (0, _authMid
  * Manually trigger duplicate check for a submission
  * Requires: Admin
  */
-router.post("/:id/check-duplicates", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _submissionController["default"].checkDuplicates.bind(_submissionController["default"]));
-var _default = exports["default"] = router;
+router.post("/:id/check-duplicates", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), SubmissionController.checkDuplicates.bind(SubmissionController));
+export default router;

@@ -1,24 +1,18 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.VALIDATION_RULE = exports.SUBMISSION_STATUS = exports.FORM_TYPE = exports.FORM_STATUS = exports.FIELD_TYPE = exports.DUPLICATE_CHECK_METHOD = void 0;
 // form.constants.js
 
-var FORM_TYPE = exports.FORM_TYPE = {
+export const FORM_TYPE = {
   NOMINATION: "nomination",
   REGISTRATION: "registration",
   SURVEY: "survey",
   FEEDBACK: "feedback"
 };
-var FORM_STATUS = exports.FORM_STATUS = {
+export const FORM_STATUS = {
   DRAFT: "draft",
   ACTIVE: "active",
   CLOSED: "closed",
   ARCHIVED: "archived"
 };
-var FIELD_TYPE = exports.FIELD_TYPE = {
+export const FIELD_TYPE = {
   TEXT: "text",
   EMAIL: "email",
   PHONE: "phone",
@@ -39,7 +33,7 @@ var FIELD_TYPE = exports.FIELD_TYPE = {
   COLOR: "color",
   LOCATION: "location"
 };
-var VALIDATION_RULE = exports.VALIDATION_RULE = {
+export const VALIDATION_RULE = {
   REQUIRED: "required",
   MIN_LENGTH: "min_length",
   MAX_LENGTH: "max_length",
@@ -51,18 +45,18 @@ var VALIDATION_RULE = exports.VALIDATION_RULE = {
   URL: "url",
   CUSTOM: "custom"
 };
-var SUBMISSION_STATUS = exports.SUBMISSION_STATUS = {
+export const SUBMISSION_STATUS = {
   PENDING: "pending",
   APPROVED: "approved",
   REJECTED: "rejected",
   DUPLICATE: "duplicate",
   UNDER_REVIEW: "under_review"
 };
-var DUPLICATE_CHECK_METHOD = exports.DUPLICATE_CHECK_METHOD = {
+export const DUPLICATE_CHECK_METHOD = {
   EXACT_MATCH: "exact_match",
   FUZZY_MATCH: "fuzzy_match",
   FIELD_SIMILARITY: "field_similarity",
   EMAIL_MATCH: "email_match",
   PHONE_MATCH: "phone_match"
 };
-var _default = exports["default"] = FORM_TYPE;
+export default FORM_TYPE;

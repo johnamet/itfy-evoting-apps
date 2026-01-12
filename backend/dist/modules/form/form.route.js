@@ -1,17 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = void 0;
-var _express = require("express");
-var _formController = _interopRequireDefault(require("./form.controller.js"));
-var _authMiddleware = require("../../middleware/auth.middleware.js");
-var _activityLoggerMiddleware = require("../../middleware/activity-logger.middleware.js");
-var _userConstants = require("../../utils/constants/user.constants.js");
-var _activityConstants = require("../../utils/constants/activity.constants.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
-var router = (0, _express.Router)();
+import { Router } from "express";
+import FormController from "./form.controller.js";
+import { authenticate, authorize, optionalAuth } from "../../middleware/auth.middleware.js";
+import { logActivity } from "../../middleware/activity-logger.middleware.js";
+import { ROLES } from "../../utils/constants/user.constants.js";
+import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
+const router = Router();
 
 // ==================== PUBLIC ROUTES ====================
 
@@ -20,13 +13,13 @@ var router = (0, _express.Router)();
  * Get all active, published nomination forms (public)
  * Returns forms grouped by event with their categories
  */
-router.get("/public/nominations", _formController["default"].getPublicNominationForms.bind(_formController["default"]));
+router.get("/public/nominations", FormController.getPublicNominationForms.bind(FormController));
 
 /**
  * GET /api/forms/slug/:slug
  * Get form by slug (public for published forms)
  */
-router.get("/slug/:slug", _formController["default"].getBySlug.bind(_formController["default"]));
+router.get("/slug/:slug", FormController.getBySlug.bind(FormController));
 
 // ==================== ADMIN CRUD ROUTES ====================
 
@@ -35,43 +28,39 @@ router.get("/slug/:slug", _formController["default"].getBySlug.bind(_formControl
  * Create a new form
  * Requires: Admin, Organiser
  */
-router.post("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_CREATED, _activityConstants.ENTITY_TYPE.FORM), _formController["default"].create.bind(_formController["default"]));
+router.post("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.FORM_CREATED, ENTITY_TYPE.FORM), FormController.create.bind(FormController));
 
 /**
  * GET /api/forms
  * List all forms with filters
  * Requires: Admin
  */
-router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _formController["default"].list.bind(_formController["default"]));
+router.get("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), FormController.list.bind(FormController));
 
 /**
  * GET /api/forms/:id
  * Get form by ID
  * Optional auth - public for published, auth for unpublished
  */
-router.get("/:id", _authMiddleware.optionalAuth, _formController["default"].getById.bind(_formController["default"]));
+router.get("/:id", optionalAuth, FormController.getById.bind(FormController));
 
 /**
  * PUT /api/forms/:id
  * Update form
  * Requires: Admin, Organiser
  */
-router.put("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_UPDATED, _activityConstants.ENTITY_TYPE.FORM, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _formController["default"].update.bind(_formController["default"]));
+router.put("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.FORM_UPDATED, ENTITY_TYPE.FORM, {
+  getEntityId: req => req.params.id
+}), FormController.update.bind(FormController));
 
 /**
  * DELETE /api/forms/:id
  * Soft delete form
  * Requires: Admin
  */
-router["delete"]("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_DELETED, _activityConstants.ENTITY_TYPE.FORM, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _formController["default"]["delete"].bind(_formController["default"]));
+router.delete("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.FORM_DELETED, ENTITY_TYPE.FORM, {
+  getEntityId: req => req.params.id
+}), FormController.delete.bind(FormController));
 
 // ==================== EVENT-BASED QUERIES ====================
 
@@ -80,14 +69,14 @@ router["delete"]("/:id", _authMiddleware.authenticate, (0, _authMiddleware.autho
  * Get forms by event
  * Requires: Admin
  */
-router.get("/event/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _formController["default"].getByEvent.bind(_formController["default"]));
+router.get("/event/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), FormController.getByEvent.bind(FormController));
 
 /**
  * GET /api/forms/event/:eventId/nominations
  * Get nomination forms by event
  * Requires: Admin
  */
-router.get("/event/:eventId/nominations", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _formController["default"].getNominationForms.bind(_formController["default"]));
+router.get("/event/:eventId/nominations", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), FormController.getNominationForms.bind(FormController));
 
 // ==================== FORM STATUS MANAGEMENT ====================
 
@@ -96,28 +85,20 @@ router.get("/event/:eventId/nominations", _authMiddleware.authenticate, (0, _aut
  * Publish form
  * Requires: Admin, Organiser
  */
-router.put("/:id/publish", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_PUBLISHED, _activityConstants.ENTITY_TYPE.FORM, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Published form ".concat(req.params.id);
-  }
-}), _formController["default"].publish.bind(_formController["default"]));
+router.put("/:id/publish", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.FORM_PUBLISHED, ENTITY_TYPE.FORM, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Published form ${req.params.id}`
+}), FormController.publish.bind(FormController));
 
 /**
  * PUT /api/forms/:id/close
  * Close form
  * Requires: Admin, Organiser
  */
-router.put("/:id/close", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_CLOSED, _activityConstants.ENTITY_TYPE.FORM, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Closed form ".concat(req.params.id);
-  }
-}), _formController["default"].close.bind(_formController["default"]));
+router.put("/:id/close", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.FORM_CLOSED, ENTITY_TYPE.FORM, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Closed form ${req.params.id}`
+}), FormController.close.bind(FormController));
 
 // ==================== FIELD MAPPING ====================
 
@@ -126,16 +107,14 @@ router.put("/:id/close", _authMiddleware.authenticate, (0, _authMiddleware.autho
  * Get field mapping configuration
  * Requires: Admin, Organiser
  */
-router.get("/:id/field-mapping", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _formController["default"].getFieldMapping.bind(_formController["default"]));
+router.get("/:id/field-mapping", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), FormController.getFieldMapping.bind(FormController));
 
 /**
  * PUT /api/forms/:id/field-mapping
  * Update field mapping configuration
  * Requires: Admin, Organiser
  */
-router.put("/:id/field-mapping", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.FORM_FIELD_MAPPING_UPDATED, _activityConstants.ENTITY_TYPE.FORM, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  }
-}), _formController["default"].updateFieldMapping.bind(_formController["default"]));
-var _default = exports["default"] = router;
+router.put("/:id/field-mapping", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), logActivity(ACTION_TYPE.FORM_FIELD_MAPPING_UPDATED, ENTITY_TYPE.FORM, {
+  getEntityId: req => req.params.id
+}), FormController.updateFieldMapping.bind(FormController));
+export default router;

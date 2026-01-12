@@ -1,14 +1,8 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.SEVERITY = exports.ENTITY_TYPE = exports.ACTION_TYPE = void 0;
 /**
  * Activity constants for the activity module
  */
 
-var ACTION_TYPE = exports.ACTION_TYPE = {
+const ACTION_TYPE = {
   // User authentication
   LOGIN: "login",
   LOGOUT: "logout",
@@ -62,6 +56,8 @@ var ACTION_TYPE = exports.ACTION_TYPE = {
   PAYMENT_COMPLETED: "payment_completed",
   PAYMENT_FAILED: "payment_failed",
   PAYMENT_REFUNDED: "payment_refunded",
+  PAYMENT_AUTO_VOTE_CAST: "payment_auto_vote_cast",
+  PAYMENT_UPDATED: "payment_updated",
   // Form actions
   FORM_CREATE: "form_create",
   FORM_SUBMIT: "form_submit",
@@ -84,7 +80,7 @@ var ACTION_TYPE = exports.ACTION_TYPE = {
   SYSTEM_EVENT: "system_event",
   SCHEDULED_TASK: "scheduled_task"
 };
-var ENTITY_TYPE = exports.ENTITY_TYPE = {
+const ENTITY_TYPE = {
   USER: "user",
   EVENT: "event",
   CANDIDATE: "candidate",
@@ -98,10 +94,11 @@ var ENTITY_TYPE = exports.ENTITY_TYPE = {
   COUPON: "coupon",
   SYSTEM: "system"
 };
-var SEVERITY = exports.SEVERITY = {
+const SEVERITY = {
   INFO: "info",
   WARNING: "warning",
   ERROR: "error",
   CRITICAL: "critical"
 };
-var _default = exports["default"] = ACTION_TYPE;
+export { ACTION_TYPE, ENTITY_TYPE, SEVERITY };
+export default ACTION_TYPE;

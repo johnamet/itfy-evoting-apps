@@ -1,17 +1,11 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.STATUS = exports.PAYMENT_METHOD = void 0;
 // payment.constants.js
-var STATUS = exports.STATUS = {
+export const STATUS = {
   PENDING: "pending",
   COMPLETED: "completed",
   FAILED: "failed",
   REFUNDED: "refunded"
 };
-var PAYMENT_METHOD = exports.PAYMENT_METHOD = {
+export const PAYMENT_METHOD = {
   CARD: "card",
   BANK_TRANSFER: "bank_transfer",
   USSD: "ussd",

@@ -1,19 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.JWT_CONFIG = void 0;
 /**
  * JWT Configuration
  * Central configuration for JSON Web Token settings
  */
 
-// eslint-disable-next-line no-undef
-var getEnv = function getEnv(key, defaultValue) {
-  return process.env[key] || defaultValue;
-};
-var JWT_CONFIG = exports.JWT_CONFIG = {
+const getEnv = (key, defaultValue) => process.env[key] || defaultValue;
+export const JWT_CONFIG = {
   // Secret key for signing tokens - MUST be set in production
   SECRET_KEY: getEnv("JWT_SECRET", "your-super-secret-key-change-in-production"),
   // Refresh token secret (separate for added security)
@@ -41,4 +32,4 @@ var JWT_CONFIG = exports.JWT_CONFIG = {
     VERIFICATION_TOKEN: getEnv("JWT_VERIFICATION_EXPIRATION", "24h")
   }
 };
-var _default = exports["default"] = JWT_CONFIG;
+export default JWT_CONFIG;

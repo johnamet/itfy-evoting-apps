@@ -1,17 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = void 0;
-var _express = require("express");
-var _paymentController = _interopRequireDefault(require("./payment.controller.js"));
-var _authMiddleware = require("../../middleware/auth.middleware.js");
-var _activityLoggerMiddleware = require("../../middleware/activity-logger.middleware.js");
-var _userConstants = require("../../utils/constants/user.constants.js");
-var _activityConstants = require("../../utils/constants/activity.constants.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
-var router = (0, _express.Router)();
+import { Router } from "express";
+import PaymentController from "./payment.controller.js";
+import { authenticate, authorize } from "../../middleware/auth.middleware.js";
+import { logActivity } from "../../middleware/activity-logger.middleware.js";
+import { ROLES } from "../../utils/constants/user.constants.js";
+import { ACTION_TYPE, ENTITY_TYPE } from "../../utils/constants/activity.constants.js";
+const router = Router();
 
 // ==================== PUBLIC PAYMENT ROUTES ====================
 
@@ -20,49 +13,49 @@ var router = (0, _express.Router)();
  * Initialize a new payment
  * Public access (voters don't need auth)
  */
-router.post("/initialize", _paymentController["default"].initialize.bind(_paymentController["default"]));
+router.post("/initialize", PaymentController.initialize.bind(PaymentController));
 
 /**
  * GET /api/payments/verify/:reference
  * Verify payment status
  * Public access
  */
-router.get("/verify/:reference", _paymentController["default"].verify.bind(_paymentController["default"]));
+router.get("/verify/:reference", PaymentController.verify.bind(PaymentController));
 
 /**
  * POST /api/payments/webhook
  * Handle Paystack webhook
  * Public access (from Paystack)
  */
-router.post("/webhook", _paymentController["default"].webhook.bind(_paymentController["default"]));
+router.post("/webhook", PaymentController.webhook.bind(PaymentController));
 
 /**
  * POST /api/payments/validate-vote-code
  * Validate a vote code
  * Public access
  */
-router.post("/validate-vote-code", _paymentController["default"].validateVoteCode.bind(_paymentController["default"]));
+router.post("/validate-vote-code", PaymentController.validateVoteCode.bind(PaymentController));
 
 /**
  * GET /api/payments/vote-code/:code/status
  * Get vote code status and remaining votes
  * Public access
  */
-router.get("/vote-code/:code/status", _paymentController["default"].getVoteCodeStatus.bind(_paymentController["default"]));
+router.get("/vote-code/:code/status", PaymentController.getVoteCodeStatus.bind(PaymentController));
 
 /**
  * GET /api/payments/vote-code/:code
  * Get payment by vote code
  * Public access
  */
-router.get("/vote-code/:code", _paymentController["default"].getByVoteCode.bind(_paymentController["default"]));
+router.get("/vote-code/:code", PaymentController.getByVoteCode.bind(PaymentController));
 
 /**
  * GET /api/payments/reference/:reference
  * Get payment by transaction reference
  * Public access (for payment confirmation)
  */
-router.get("/reference/:reference", _paymentController["default"].getByReference.bind(_paymentController["default"]));
+router.get("/reference/:reference", PaymentController.getByReference.bind(PaymentController));
 
 // ==================== ADMIN STATISTICS ROUTES ====================
 
@@ -71,21 +64,21 @@ router.get("/reference/:reference", _paymentController["default"].getByReference
  * Get payment statistics for an event
  * Requires: Admin
  */
-router.get("/stats/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _paymentController["default"].getStats.bind(_paymentController["default"]));
+router.get("/stats/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), PaymentController.getStats.bind(PaymentController));
 
 /**
  * GET /api/payments/revenue/:eventId
  * Get revenue by bundle for an event
  * Requires: Admin
  */
-router.get("/revenue/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _paymentController["default"].getRevenueByBundle.bind(_paymentController["default"]));
+router.get("/revenue/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), PaymentController.getRevenueByBundle.bind(PaymentController));
 
 /**
  * GET /api/payments/daily-revenue/:eventId
  * Get daily revenue for an event
  * Requires: Admin
  */
-router.get("/daily-revenue/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _paymentController["default"].getDailyRevenue.bind(_paymentController["default"]));
+router.get("/daily-revenue/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), PaymentController.getDailyRevenue.bind(PaymentController));
 
 // ==================== ADMIN QUERY ROUTES ====================
 
@@ -94,21 +87,21 @@ router.get("/daily-revenue/:eventId", _authMiddleware.authenticate, (0, _authMid
  * Get payments by event
  * Requires: Admin
  */
-router.get("/event/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _paymentController["default"].getByEvent.bind(_paymentController["default"]));
+router.get("/event/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), PaymentController.getByEvent.bind(PaymentController));
 
 /**
  * GET /api/payments/bundle/:bundleId
  * Get payments by bundle
  * Requires: Admin
  */
-router.get("/bundle/:bundleId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _paymentController["default"].getByBundle.bind(_paymentController["default"]));
+router.get("/bundle/:bundleId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), PaymentController.getByBundle.bind(PaymentController));
 
 /**
  * GET /api/payments/voter/:email
  * Get voter's payment history
  * Requires: Admin
  */
-router.get("/voter/:email", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _paymentController["default"].getVoterHistory.bind(_paymentController["default"]));
+router.get("/voter/:email", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), PaymentController.getVoterHistory.bind(PaymentController));
 
 // ==================== ADMIN CRUD ROUTES ====================
 
@@ -117,14 +110,14 @@ router.get("/voter/:email", _authMiddleware.authenticate, (0, _authMiddleware.au
  * List all payments with filters
  * Requires: Admin
  */
-router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _paymentController["default"].list.bind(_paymentController["default"]));
+router.get("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), PaymentController.list.bind(PaymentController));
 
 /**
  * GET /api/payments/:id
  * Get payment by ID
  * Requires: Admin
  */
-router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _paymentController["default"].getById.bind(_paymentController["default"]));
+router.get("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), PaymentController.getById.bind(PaymentController));
 
 // ==================== REFUND MANAGEMENT ====================
 
@@ -133,13 +126,9 @@ router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(
  * Refund a payment
  * Requires: Admin
  */
-router.post("/:id/refund", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.PAYMENT_REFUNDED, _activityConstants.ENTITY_TYPE.PAYMENT, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
-  getDescription: function getDescription(req) {
-    return "Refunded payment ".concat(req.params.id);
-  },
+router.post("/:id/refund", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.PAYMENT_REFUNDED, ENTITY_TYPE.PAYMENT, {
+  getEntityId: req => req.params.id,
+  getDescription: req => `Refunded payment ${req.params.id}`,
   severity: "warning"
-}), _paymentController["default"].refund.bind(_paymentController["default"]));
-var _default = exports["default"] = router;
+}), PaymentController.refund.bind(PaymentController));
+export default router;

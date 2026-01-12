@@ -1,17 +1,10 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = void 0;
-var _express = require("express");
-var _voteController = _interopRequireDefault(require("./vote.controller.js"));
-var _authMiddleware = require("../../../middleware/auth.middleware.js");
-var _activityLoggerMiddleware = require("../../../middleware/activity-logger.middleware.js");
-var _userConstants = require("../../../utils/constants/user.constants.js");
-var _activityConstants = require("../../../utils/constants/activity.constants.js");
-function _interopRequireDefault(e) { return e && e.__esModule ? e : { "default": e }; }
-var router = (0, _express.Router)();
+import { Router } from "express";
+import VoteController from "./vote.controller.js";
+import { authenticate, authorize, optionalAuth } from "../../../middleware/auth.middleware.js";
+import { logActivity } from "../../../middleware/activity-logger.middleware.js";
+import { ROLES } from "../../../utils/constants/user.constants.js";
+import { ACTION_TYPE, ENTITY_TYPE } from "../../../utils/constants/activity.constants.js";
+const router = Router();
 
 // ==================== PUBLIC VOTING ROUTES ====================
 
@@ -20,28 +13,28 @@ var router = (0, _express.Router)();
  * Cast a vote
  * Public access (vote code based)
  */
-router.post("/", _authMiddleware.optionalAuth, (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.VOTE_CAST, _activityConstants.ENTITY_TYPE.VOTE), _voteController["default"].cast.bind(_voteController["default"]));
+router.post("/", optionalAuth, logActivity(ACTION_TYPE.VOTE_CAST, ENTITY_TYPE.VOTE), VoteController.cast.bind(VoteController));
 
 /**
  * POST /api/votes/validate-eligibility
  * Validate vote eligibility before casting
  * Public access
  */
-router.post("/validate-eligibility", _authMiddleware.optionalAuth, _voteController["default"].validateEligibility.bind(_voteController["default"]));
+router.post("/validate-eligibility", optionalAuth, VoteController.validateEligibility.bind(VoteController));
 
 /**
  * GET /api/votes/code/:code
  * Get votes by vote code
  * Public access (voter can check their votes)
  */
-router.get("/code/:code", _authMiddleware.optionalAuth, _voteController["default"].getByVoteCode.bind(_voteController["default"]));
+router.get("/code/:code", optionalAuth, VoteController.getByVoteCode.bind(VoteController));
 
 /**
  * GET /api/votes/history/:code
  * Get voter history by vote code
  * Public access (voter can check their history)
  */
-router.get("/history/:code", _authMiddleware.optionalAuth, _voteController["default"].getVoterHistory.bind(_voteController["default"]));
+router.get("/history/:code", optionalAuth, VoteController.getVoterHistory.bind(VoteController));
 
 // ==================== PUBLIC RESULTS (Event-dependent visibility) ====================
 
@@ -50,14 +43,14 @@ router.get("/history/:code", _authMiddleware.optionalAuth, _voteController["defa
  * Get category results
  * Public access (visibility depends on event settings)
  */
-router.get("/results/category/:categoryId", _authMiddleware.optionalAuth, _voteController["default"].getCategoryResults.bind(_voteController["default"]));
+router.get("/results/category/:categoryId", optionalAuth, VoteController.getCategoryResults.bind(VoteController));
 
 /**
  * GET /api/votes/results/event/:eventId
  * Get event results
  * Public access (visibility depends on event settings)
  */
-router.get("/results/event/:eventId", _authMiddleware.optionalAuth, _voteController["default"].getEventResults.bind(_voteController["default"]));
+router.get("/results/event/:eventId", optionalAuth, VoteController.getEventResults.bind(VoteController));
 
 // ==================== PUBLIC VOTE COUNTS ====================
 
@@ -66,21 +59,21 @@ router.get("/results/event/:eventId", _authMiddleware.optionalAuth, _voteControl
  * Get vote count by candidate
  * Public access (visibility depends on event settings)
  */
-router.get("/count/candidate/:candidateId", _authMiddleware.optionalAuth, _voteController["default"].countByCandidate.bind(_voteController["default"]));
+router.get("/count/candidate/:candidateId", optionalAuth, VoteController.countByCandidate.bind(VoteController));
 
 /**
  * GET /api/votes/count/category/:categoryId
  * Get vote count by category
  * Public access
  */
-router.get("/count/category/:categoryId", _authMiddleware.optionalAuth, _voteController["default"].countByCategory.bind(_voteController["default"]));
+router.get("/count/category/:categoryId", optionalAuth, VoteController.countByCategory.bind(VoteController));
 
 /**
  * GET /api/votes/count/event/:eventId
  * Get vote count by event
  * Public access
  */
-router.get("/count/event/:eventId", _authMiddleware.optionalAuth, _voteController["default"].countByEvent.bind(_voteController["default"]));
+router.get("/count/event/:eventId", optionalAuth, VoteController.countByEvent.bind(VoteController));
 
 // ==================== ADMIN ANALYTICS ====================
 
@@ -89,28 +82,28 @@ router.get("/count/event/:eventId", _authMiddleware.optionalAuth, _voteControlle
  * Get voting trends
  * Requires: Admin
  */
-router.get("/trends/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _voteController["default"].getVotingTrends.bind(_voteController["default"]));
+router.get("/trends/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), VoteController.getVotingTrends.bind(VoteController));
 
 /**
  * GET /api/votes/distribution/:eventId
  * Get vote distribution by category
  * Requires: Admin
  */
-router.get("/distribution/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _voteController["default"].getVoteDistribution.bind(_voteController["default"]));
+router.get("/distribution/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), VoteController.getVoteDistribution.bind(VoteController));
 
 /**
  * GET /api/votes/top-candidates/:eventId
  * Get top candidates
  * Requires: Admin
  */
-router.get("/top-candidates/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _voteController["default"].getTopCandidates.bind(_voteController["default"]));
+router.get("/top-candidates/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), VoteController.getTopCandidates.bind(VoteController));
 
 /**
  * GET /api/votes/stats/:eventId
  * Get voting statistics
  * Requires: Admin
  */
-router.get("/stats/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER), _voteController["default"].getVotingStats.bind(_voteController["default"]));
+router.get("/stats/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER), VoteController.getVotingStats.bind(VoteController));
 
 // ==================== SECURITY & MONITORING ====================
 
@@ -119,7 +112,7 @@ router.get("/stats/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.
  * Detect suspicious voting patterns
  * Requires: Admin
  */
-router.get("/suspicious/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), _voteController["default"].detectSuspicious.bind(_voteController["default"]));
+router.get("/suspicious/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), VoteController.detectSuspicious.bind(VoteController));
 
 // ==================== ADMIN VOTE QUERIES ====================
 
@@ -128,35 +121,35 @@ router.get("/suspicious/:eventId", _authMiddleware.authenticate, (0, _authMiddle
  * List all votes with filters
  * Requires: Admin
  */
-router.get("/", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _voteController["default"].list.bind(_voteController["default"]));
+router.get("/", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), VoteController.list.bind(VoteController));
 
 /**
  * GET /api/votes/candidate/:candidateId
  * Get votes by candidate
  * Requires: Admin
  */
-router.get("/candidate/:candidateId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _voteController["default"].getByCandidate.bind(_voteController["default"]));
+router.get("/candidate/:candidateId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), VoteController.getByCandidate.bind(VoteController));
 
 /**
  * GET /api/votes/category/:categoryId
  * Get votes by category
  * Requires: Admin
  */
-router.get("/category/:categoryId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _voteController["default"].getByCategory.bind(_voteController["default"]));
+router.get("/category/:categoryId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), VoteController.getByCategory.bind(VoteController));
 
 /**
  * GET /api/votes/event/:eventId
  * Get votes by event
  * Requires: Admin
  */
-router.get("/event/:eventId", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _voteController["default"].getByEvent.bind(_voteController["default"]));
+router.get("/event/:eventId", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), VoteController.getByEvent.bind(VoteController));
 
 /**
  * GET /api/votes/:id
  * Get vote by ID
  * Requires: Admin
  */
-router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN, _userConstants.ROLES.ORGANISER, _userConstants.ROLES.MODERATOR), _voteController["default"].getById.bind(_voteController["default"]));
+router.get("/:id", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.ORGANISER, ROLES.MODERATOR), VoteController.getById.bind(VoteController));
 
 // ==================== VOTE MANAGEMENT ====================
 
@@ -165,10 +158,8 @@ router.get("/:id", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(
  * Refund a vote
  * Requires: Admin
  */
-router.post("/:id/refund", _authMiddleware.authenticate, (0, _authMiddleware.authorize)(_userConstants.ROLES.SUPER_ADMIN, _userConstants.ROLES.ADMIN), (0, _activityLoggerMiddleware.logActivity)(_activityConstants.ACTION_TYPE.VOTE_REFUNDED, _activityConstants.ENTITY_TYPE.VOTE, {
-  getEntityId: function getEntityId(req) {
-    return req.params.id;
-  },
+router.post("/:id/refund", authenticate, authorize(ROLES.SUPER_ADMIN, ROLES.ADMIN), logActivity(ACTION_TYPE.VOTE_REFUNDED, ENTITY_TYPE.VOTE, {
+  getEntityId: req => req.params.id,
   severity: "warning"
-}), _voteController["default"].refund.bind(_voteController["default"]));
-var _default = exports["default"] = router;
+}), VoteController.refund.bind(VoteController));
+export default router;

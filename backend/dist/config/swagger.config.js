@@ -1,30 +1,39 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.swaggerUiOptions = exports.setupAPIDocs = exports.redocOptions = exports.openapiDocument = exports["default"] = void 0;
 /**
  * Swagger/OpenAPI Configuration
  * Sets up API documentation using Swagger UI and ReDoc
  */
 
-var swaggerUi = require("swagger-ui-express");
-var YAML = require("yamljs");
-var path = require("path");
+import swaggerUi from "swagger-ui-express";
+import YAML from "yamljs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Get current directory (ES6 module compatibility)
-var _dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load OpenAPI specification
-var openapiDocument = exports.openapiDocument = YAML.load(path.join(_dirname, "../../openapi.yaml"));
+const openapiDocument = YAML.load(path.join(__dirname, "../../openapi.yaml"));
 
 /**
  * Swagger UI Options
  * Customizes the appearance and behavior of Swagger UI
  */
-var swaggerUiOptions = exports.swaggerUiOptions = {
-  customCss: "\n    .swagger-ui .topbar { display: none }\n    .swagger-ui .info { margin: 20px 0; }\n    .swagger-ui .scheme-container { \n      background: #fafafa; \n      box-shadow: none; \n      padding: 20px;\n      border-radius: 4px;\n    }\n    .swagger-ui .info .title {\n      color: #3b4151;\n      font-size: 36px;\n    }\n  ",
+const swaggerUiOptions = {
+  customCss: `
+    .swagger-ui .topbar { display: none }
+    .swagger-ui .info { margin: 20px 0; }
+    .swagger-ui .scheme-container { 
+      background: #fafafa; 
+      box-shadow: none; 
+      padding: 20px;
+      border-radius: 4px;
+    }
+    .swagger-ui .info .title {
+      color: #3b4151;
+      font-size: 36px;
+    }
+  `,
   customSiteTitle: "ITFY E-Voting System API Docs",
   customfavIcon: "/favicon.ico",
   swaggerOptions: {
@@ -48,7 +57,7 @@ var swaggerUiOptions = exports.swaggerUiOptions = {
  * ReDoc Options
  * Customizes the appearance of ReDoc documentation
  */
-var redocOptions = exports.redocOptions = {
+const redocOptions = {
   title: "ITFY E-Voting System API Documentation",
   specUrl: "/api-docs/openapi.yaml",
   nonce: "",
@@ -93,15 +102,15 @@ var redocOptions = exports.redocOptions = {
  * Setup API documentation routes
  * @param {Express.Application} app - Express application instance
  */
-var setupAPIDocs = exports.setupAPIDocs = function setupAPIDocs(app) {
+const setupAPIDocs = app => {
   // Serve OpenAPI YAML file
-  app.get("/api-docs/openapi.yaml", function (req, res) {
+  app.get("/api-docs/openapi.yaml", (req, res) => {
     res.type("text/yaml");
-    res.sendFile(path.join(_dirname, "../../openapi.yaml"));
+    res.sendFile(path.join(__dirname, "../../openapi.yaml"));
   });
 
   // Serve OpenAPI JSON format
-  app.get("/api-docs/openapi.json", function (req, res) {
+  app.get("/api-docs/openapi.json", (req, res) => {
     res.json(openapiDocument);
   });
 
@@ -109,13 +118,222 @@ var setupAPIDocs = exports.setupAPIDocs = function setupAPIDocs(app) {
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiDocument, swaggerUiOptions));
 
   // ReDoc documentation (beautiful, responsive API docs)
-  app.get("/api-docs/redoc", function (req, res) {
-    res.send("\n      <!DOCTYPE html>\n      <html>\n        <head>\n          <title>".concat(redocOptions.title, "</title>\n          <meta charset=\"utf-8\"/>\n          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n          <link href=\"https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700\" rel=\"stylesheet\">\n          <style>\n            body {\n              margin: 0;\n              padding: 0;\n            }\n          </style>\n        </head>\n        <body>\n          <redoc spec-url='").concat(redocOptions.specUrl, "'></redoc>\n          <script src=\"https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js\"></script>\n        </body>\n      </html>\n    "));
+  app.get("/api-docs/redoc", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${redocOptions.title}</title>
+          <meta charset="utf-8"/>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+            }
+          </style>
+        </head>
+        <body>
+          <redoc spec-url='${redocOptions.specUrl}'></redoc>
+          <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+        </body>
+      </html>
+    `);
   });
 
   // API documentation landing page
-  app.get("/docs", function (req, res) {
-    res.send("\n      <!DOCTYPE html>\n      <html lang=\"en\">\n      <head>\n        <meta charset=\"UTF-8\">\n        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n        <title>ITFY E-Voting System - API Documentation</title>\n        <style>\n          * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n          }\n          body {\n            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            min-height: 100vh;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            padding: 20px;\n          }\n          .container {\n            background: white;\n            border-radius: 16px;\n            box-shadow: 0 20px 60px rgba(0,0,0,0.3);\n            max-width: 900px;\n            width: 100%;\n            padding: 60px 40px;\n            text-align: center;\n          }\n          h1 {\n            font-size: 42px;\n            color: #1a202c;\n            margin-bottom: 16px;\n            font-weight: 700;\n          }\n          .subtitle {\n            font-size: 18px;\n            color: #718096;\n            margin-bottom: 48px;\n          }\n          .version {\n            display: inline-block;\n            background: #667eea;\n            color: white;\n            padding: 6px 16px;\n            border-radius: 20px;\n            font-size: 14px;\n            font-weight: 600;\n            margin-bottom: 32px;\n          }\n          .docs-grid {\n            display: grid;\n            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));\n            gap: 24px;\n            margin-top: 40px;\n          }\n          .doc-card {\n            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n            color: white;\n            padding: 32px 24px;\n            border-radius: 12px;\n            text-decoration: none;\n            transition: transform 0.3s ease, box-shadow 0.3s ease;\n            box-shadow: 0 4px 12px rgba(0,0,0,0.1);\n          }\n          .doc-card:hover {\n            transform: translateY(-4px);\n            box-shadow: 0 8px 24px rgba(0,0,0,0.2);\n          }\n          .doc-card h3 {\n            font-size: 24px;\n            margin-bottom: 12px;\n            font-weight: 600;\n          }\n          .doc-card p {\n            font-size: 14px;\n            opacity: 0.95;\n            line-height: 1.6;\n          }\n          .doc-card.swagger {\n            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);\n          }\n          .doc-card.openapi {\n            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);\n          }\n          .features {\n            margin-top: 48px;\n            padding-top: 48px;\n            border-top: 2px solid #e2e8f0;\n          }\n          .features h2 {\n            font-size: 28px;\n            color: #1a202c;\n            margin-bottom: 24px;\n          }\n          .feature-list {\n            display: grid;\n            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));\n            gap: 16px;\n            text-align: left;\n          }\n          .feature-item {\n            padding: 16px;\n            background: #f7fafc;\n            border-radius: 8px;\n            border-left: 4px solid #667eea;\n          }\n          .feature-item strong {\n            color: #2d3748;\n            display: block;\n            margin-bottom: 4px;\n          }\n          .feature-item span {\n            color: #718096;\n            font-size: 14px;\n          }\n          .footer {\n            margin-top: 48px;\n            padding-top: 24px;\n            border-top: 1px solid #e2e8f0;\n            color: #718096;\n            font-size: 14px;\n          }\n        </style>\n      </head>\n      <body>\n        <div class=\"container\">\n          <span class=\"version\">v1.0.0</span>\n          <h1>\uD83D\uDDF3\uFE0F ITFY E-Voting System API</h1>\n          <p class=\"subtitle\">\n            Comprehensive API documentation for event-based e-voting platform\n          </p>\n          \n          <div class=\"docs-grid\">\n            <a href=\"/api-docs\" class=\"doc-card\">\n              <h3>\uD83D\uDCD8 Swagger UI</h3>\n              <p>Interactive API explorer with try-it-out functionality. Perfect for testing endpoints.</p>\n            </a>\n            \n            <a href=\"/api-docs/redoc\" class=\"doc-card swagger\">\n              <h3>\uD83D\uDCD7 ReDoc</h3>\n              <p>Beautiful, responsive API documentation. Great for reading and understanding the API.</p>\n            </a>\n            \n            <a href=\"/api-docs/openapi.yaml\" class=\"doc-card openapi\" download>\n              <h3>\uD83D\uDCC4 OpenAPI Spec</h3>\n              <p>Download the OpenAPI 3.0 specification file (YAML format).</p>\n            </a>\n          </div>\n\n          <div class=\"features\">\n            <h2>API Features</h2>\n            <div class=\"feature-list\">\n              <div class=\"feature-item\">\n                <strong>\uD83D\uDD10 Authentication</strong>\n                <span>JWT-based secure authentication</span>\n              </div>\n              <div class=\"feature-item\">\n                <strong>\uD83C\uDF89 Event Management</strong>\n                <span>Create & manage voting events</span>\n              </div>\n              <div class=\"feature-item\">\n                <strong>\uD83D\uDC64 Candidate Management</strong>\n                <span>Nominations & candidate profiles</span>\n              </div>\n              <div class=\"feature-item\">\n                <strong>\uD83D\uDDF3\uFE0F Voting System</strong>\n                <span>Secure vote casting & tracking</span>\n              </div>\n              <div class=\"feature-item\">\n                <strong>\uD83D\uDCB3 Payments</strong>\n                <span>Paystack integration for bundles</span>\n              </div>\n              <div class=\"feature-item\">\n                <strong>\uD83D\uDCCA Analytics</strong>\n                <span>Real-time voting analytics</span>\n              </div>\n            </div>\n          </div>\n\n          <div class=\"footer\">\n            <p>Need help? Contact <strong>support@itfy-evoting.com</strong></p>\n            <p style=\"margin-top: 8px;\">Base URL: <code>".concat(process.env.API_BASE_URL || "http://localhost:3001/api", "</code></p>\n          </div>\n        </div>\n      </body>\n      </html>\n    "));
+  app.get("/docs", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ITFY E-Voting System - API Documentation</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+          }
+          .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 60px 40px;
+            text-align: center;
+          }
+          h1 {
+            font-size: 42px;
+            color: #1a202c;
+            margin-bottom: 16px;
+            font-weight: 700;
+          }
+          .subtitle {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 48px;
+          }
+          .version {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 32px;
+          }
+          .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+          }
+          .doc-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          }
+          .doc-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+          }
+          .doc-card h3 {
+            font-size: 24px;
+            margin-bottom: 12px;
+            font-weight: 600;
+          }
+          .doc-card p {
+            font-size: 14px;
+            opacity: 0.95;
+            line-height: 1.6;
+          }
+          .doc-card.swagger {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+          }
+          .doc-card.openapi {
+            background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+          }
+          .features {
+            margin-top: 48px;
+            padding-top: 48px;
+            border-top: 2px solid #e2e8f0;
+          }
+          .features h2 {
+            font-size: 28px;
+            color: #1a202c;
+            margin-bottom: 24px;
+          }
+          .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            text-align: left;
+          }
+          .feature-item {
+            padding: 16px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+          }
+          .feature-item strong {
+            color: #2d3748;
+            display: block;
+            margin-bottom: 4px;
+          }
+          .feature-item span {
+            color: #718096;
+            font-size: 14px;
+          }
+          .footer {
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <span class="version">v1.0.0</span>
+          <h1>🗳️ ITFY E-Voting System API</h1>
+          <p class="subtitle">
+            Comprehensive API documentation for event-based e-voting platform
+          </p>
+          
+          <div class="docs-grid">
+            <a href="/api-docs" class="doc-card">
+              <h3>📘 Swagger UI</h3>
+              <p>Interactive API explorer with try-it-out functionality. Perfect for testing endpoints.</p>
+            </a>
+            
+            <a href="/api-docs/redoc" class="doc-card swagger">
+              <h3>📗 ReDoc</h3>
+              <p>Beautiful, responsive API documentation. Great for reading and understanding the API.</p>
+            </a>
+            
+            <a href="/api-docs/openapi.yaml" class="doc-card openapi" download>
+              <h3>📄 OpenAPI Spec</h3>
+              <p>Download the OpenAPI 3.0 specification file (YAML format).</p>
+            </a>
+          </div>
+
+          <div class="features">
+            <h2>API Features</h2>
+            <div class="feature-list">
+              <div class="feature-item">
+                <strong>🔐 Authentication</strong>
+                <span>JWT-based secure authentication</span>
+              </div>
+              <div class="feature-item">
+                <strong>🎉 Event Management</strong>
+                <span>Create & manage voting events</span>
+              </div>
+              <div class="feature-item">
+                <strong>👤 Candidate Management</strong>
+                <span>Nominations & candidate profiles</span>
+              </div>
+              <div class="feature-item">
+                <strong>🗳️ Voting System</strong>
+                <span>Secure vote casting & tracking</span>
+              </div>
+              <div class="feature-item">
+                <strong>💳 Payments</strong>
+                <span>Paystack integration for bundles</span>
+              </div>
+              <div class="feature-item">
+                <strong>📊 Analytics</strong>
+                <span>Real-time voting analytics</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <p>Need help? Contact <strong>support@itfy-evoting.com</strong></p>
+            <p style="margin-top: 8px;">Base URL: <code>${process.env.API_BASE_URL || "http://localhost:3001/api"}</code></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
   });
   console.log("📚 API Documentation routes configured:");
   console.log("   Swagger UI:    /api-docs");
@@ -124,4 +342,5 @@ var setupAPIDocs = exports.setupAPIDocs = function setupAPIDocs(app) {
   console.log("   OpenAPI JSON:  /api-docs/openapi.json");
   console.log("   Docs Home:     /docs");
 };
-var _default = exports["default"] = setupAPIDocs;
+export { setupAPIDocs, openapiDocument, swaggerUiOptions, redocOptions };
+export default setupAPIDocs;

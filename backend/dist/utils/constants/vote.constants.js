@@ -1,29 +1,23 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.VOTE_STATUS = exports.DISCOUNT_TYPE = exports.COUPON_STATUS = exports.BUNDLE_STATUS = void 0;
 // vote.constants.js
-var VOTE_STATUS = exports.VOTE_STATUS = {
+export const VOTE_STATUS = {
   ACTIVE: "active",
   REFUNDED: "refunded"
 };
 
 // bundle.constants.js
-var BUNDLE_STATUS = exports.BUNDLE_STATUS = {
+export const BUNDLE_STATUS = {
   ACTIVE: "active",
   INACTIVE: "inactive",
   ARCHIVED: "archived"
 };
 
 // coupon.constants.js
-var COUPON_STATUS = exports.COUPON_STATUS = {
+export const COUPON_STATUS = {
   ACTIVE: "active",
   INACTIVE: "inactive",
   EXPIRED: "expired"
 };
-var DISCOUNT_TYPE = exports.DISCOUNT_TYPE = {
+export const DISCOUNT_TYPE = {
   PERCENTAGE: "percentage",
   FIXED_AMOUNT: "fixed_amount",
   BONUS_VOTES: "bonus_votes",

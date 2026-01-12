@@ -1,14 +1,8 @@
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports["default"] = exports.VISIBILITY = exports.STATUS = exports.EVENT_TYPE = exports.CURRENCY = void 0;
 /**
  * Constant file for events
  */
 
-var STATUS = exports.STATUS = {
+const STATUS = {
   ACTIVE: "active",
   UPCOMING: "upcoming",
   ARCHIVED: "archived",
@@ -16,7 +10,7 @@ var STATUS = exports.STATUS = {
   DELETED: "deleted",
   PENDING: "pending"
 };
-var EVENT_TYPE = exports.EVENT_TYPE = {
+const EVENT_TYPE = {
   CONFERENCE: "conference",
   WORKSHOP: "workshop",
   SEMINAR: "seminar",
@@ -25,20 +19,21 @@ var EVENT_TYPE = exports.EVENT_TYPE = {
   HYBRID: "hybrid",
   OTHER: "other"
 };
-var VISIBILITY = exports.VISIBILITY = {
+const VISIBILITY = {
   PUBLIC: "public",
   PRIVATE: "private",
   UNLISTED: "unlisted"
 };
-var CURRENCY = exports.CURRENCY = {
+const CURRENCY = {
   USD: "USD",
   EUR: "EUR",
   GBP: "GBP",
-  GHS: "GH₵",
+  GHS: "GHS",
   NGN: "₦",
   ZAR: "R",
   INR: "₹",
   JPY: "¥",
   CNY: "¥"
 };
-var _default = exports["default"] = STATUS;
+export { STATUS, EVENT_TYPE, VISIBILITY, CURRENCY };
+export default STATUS;
