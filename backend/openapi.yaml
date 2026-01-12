@@ -50,7 +50,7 @@ info:
 servers:
   - url: http://localhost:3000/api/v1
     description: Development server
-  - url: https://api.itfy-evoting.com/api/v1
+  - url: https://api.itforyouthghana.org/api/v1
     description: Production server
 
 tags:

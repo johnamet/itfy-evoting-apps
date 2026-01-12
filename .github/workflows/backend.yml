@@ -190,6 +190,9 @@ jobs:
             pm2 reload backend --update-env || pm2 start npm --name backend -- start
             pm2 save
 
+            echo "stale for the server to fully restart..."
+            sleep 20
+
             echo "🏥 Health check..."
             sleep 5
             curl -f http://localhost:3000/api/v1/health
