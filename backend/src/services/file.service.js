@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * File Upload Service
  * Handles file uploads for ITFY E-Voting platform using Multer with support for:
@@ -17,9 +17,7 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
-import { createReadStream } from "fs";
 import sharp from "sharp";
-import { v4 as uuidv4 } from "uuid";
 import crypto from "crypto";
 import {
   MAX_FILE_SIZE_MB,
@@ -125,6 +123,7 @@ class FileService {
     sanitized = sanitized
       .replace(/\0/g, '') // null bytes
       .replace(/\.\.+/g, '.') // multiple dots
+      // eslint-disable-next-line no-control-regex
       .replace(/[<>:"|?*\x00-\x1f]/g, '_') // Windows forbidden chars and control chars
       .replace(/^\s+|\s+$/g, '') // trim whitespace
       .replace(/\s+/g, '_'); // replace spaces with underscore

@@ -161,7 +161,7 @@ export class EventCommands {
           const Vote = mongoose.models.Vote;
           voteCount = await Vote.countDocuments({ event: event._id });
         }
-      } catch (e) {
+      } catch (_e) {
         // Vote model may not exist
       }
 

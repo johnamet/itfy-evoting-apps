@@ -12,11 +12,9 @@ import CandidateRepository from "../../candidate/candidate.repository.js";
 import CategoryRepository from "../../category/category.repository.js";
 import EventRepository from "../../event/event.repository.js";
 import ActivityService from "../../activity/activity.service.js";
-import NotificationService from "../../../services/notification.service.js";
 import agendaManager from "../../../services/agenda.service.js";
 import VoteValidation from "./vote.validation.js";
 import { VOTE_STATUS as STATUS } from "../../../utils/constants/vote.constants.js";
-import { STATUS as CATEGORY_STATUS } from "../../../utils/constants/category.constants.js";
 import { STATUS as CANDIDATE_STATUS } from "../../../utils/constants/candidate.constants.js";
 import { ENTITY_TYPE, ACTION_TYPE } from "../../../utils/constants/activity.constants.js";
 import { IPHelper } from "../../../utils/helpers/ip.helper.js";
@@ -315,7 +313,7 @@ class VoteService extends BaseService {
       const createdVotes = [];
       const categoryVoteCounts = [];
 
-      for (const [categoryKey, voteData] of votesByCategory.entries()) {
+      for (const [_categoryKey, voteData] of votesByCategory.entries()) {
         const aggregatedVote = await this.repository.createAggregatedVote({
           candidate: candidateId,
           category: voteData.category,

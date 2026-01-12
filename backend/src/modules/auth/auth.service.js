@@ -751,7 +751,7 @@ class AuthService extends BaseService {
           if (ttl > 0) {
             await AuthHelpers.blacklistToken(validated.accessToken, ttl);
           }
-        } catch (error) {
+        } catch (_error) {
           // Token already invalid, no need to blacklist
         }
       }

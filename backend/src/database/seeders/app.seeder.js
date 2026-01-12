@@ -66,7 +66,7 @@ const generateSlug = (text) => {
 };
 
 // Helper function to generate candidate code
-const generateCandidateCode = (index) => {
+const _generateCandidateCode = (index) => {
   return `CAN${String(index).padStart(4, '0')}`;
 };
 

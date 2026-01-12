@@ -5,7 +5,6 @@
 
 import BaseController from "../shared/base.controller.js";
 import ActivityService from "./activity.service.js";
-import ActivityValidation from "./activity.validation.js";
 
 class ActivityController extends BaseController {
   constructor(dependencies = {}) {
@@ -21,7 +20,7 @@ class ActivityController extends BaseController {
    * GET /api/activities
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, [
       "user", "action", "entity_type", "entity_id", "event",
       "severity", "session_id", "ip_address"
@@ -182,12 +181,12 @@ class ActivityController extends BaseController {
     const { page, limit } = this.getPagination(req);
 
     // Date range filters
-    let timestampFrom, timestampTo;
+    let _timestampFrom, _timestampTo;
     if (req.query.timestamp_from) {
-      timestampFrom = new Date(req.query.timestamp_from);
+      _timestampFrom = new Date(req.query.timestamp_from);
     }
     if (req.query.timestamp_to) {
-      timestampTo = new Date(req.query.timestamp_to);
+      _timestampTo = new Date(req.query.timestamp_to);
     }
 
     const result = await this.service("activityService").getSecurityEvents(page, limit);

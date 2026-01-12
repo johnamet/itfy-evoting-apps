@@ -35,7 +35,7 @@ class NotificationController extends BaseController {
    * GET /api/notifications
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, [
       "user", "type", "channel", "status", "priority", "event", "batch_id"
     ]);

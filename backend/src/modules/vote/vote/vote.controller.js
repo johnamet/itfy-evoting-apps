@@ -66,7 +66,7 @@ class VoteController extends BaseController {
    * GET /api/votes
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["event", "candidate", "category", "payment", "status", "vote_code"]);
     const sort = this.getSort(req, "-cast_at");
 

@@ -45,10 +45,10 @@ class SubmissionController extends BaseController {
    * GET /api/submissions
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["form", "event", "status", "submitted_by", "nominee_identifier"]);
     const sort = this.getSort(req, "-created_at");
-    const search = this.getSearch(req);
+    const _search = this.getSearch(req);
 
     // Handle is_duplicate filter
     if (req.query.is_duplicate !== undefined) {

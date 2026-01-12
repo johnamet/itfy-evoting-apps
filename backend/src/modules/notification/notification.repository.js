@@ -4,6 +4,7 @@
  * It contains notification-specific data access methods
  */
 
+import mongoose from "mongoose";
 import { BaseRepository } from "../shared/base.repository.js";
 import NotificationModel from "./notification.model.js";
 import {

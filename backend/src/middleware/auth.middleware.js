@@ -133,12 +133,12 @@ export const authenticate = async (req, res, next) => {
     req.token = token;
 
     next();
-  } catch (error) {
-    console.error("Authentication error:", error);
+  } catch (_error) {
+    console.error("Authentication error:", _error);
     return ResponseHelper.error(res, {
       message: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
       status_code: HTTP_STATUS.INTERNAL_SERVER_ERROR,
-      errors: error,
+      errors: _error,
     });
   }
 };

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * Database Configuration & Connection Manager
  * Centralizes MongoDB connection, model registration, and health checks
@@ -168,8 +168,8 @@ class DatabaseManager {
       this.isConnected = true;
     });
 
-    db.on("error", (err) => {
-      console.error("Mongoose connection error:", err);
+    db.on("error", (_err) => {
+      console.error("Mongoose connection error:", _err);
       this.isConnected = false;
     });
 
@@ -203,8 +203,8 @@ class DatabaseManager {
       await mongoose.connection.close();
       console.log("MongoDB connection closed.");
       process.exit(0);
-    } catch (err) {
-      console.error("Error during shutdown:", err);
+    } catch (_err) {
+      console.error("Error during shutdown:", _err);
       process.exit(1);
     }
   }

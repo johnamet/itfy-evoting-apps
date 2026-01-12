@@ -5,7 +5,7 @@
 
 import BaseController from "../shared/base.controller.js";
 import EventService from "./event.service.js";
-import EventValidation, {
+import {
   createEventSchema,
   updateEventSchema,
   updateEventStatusSchema,

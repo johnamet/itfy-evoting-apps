@@ -76,7 +76,7 @@ class PaymentController extends BaseController {
    * GET /api/payments
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, [
       "event", "bundle", "payment_status", "payment_method",
       "voter_email", "vote_code", "transaction_reference", "webhook_received"

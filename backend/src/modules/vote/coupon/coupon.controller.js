@@ -36,7 +36,7 @@ class CouponController extends BaseController {
    * GET /api/coupons
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["event", "status", "discount_type", "is_public"]);
     const sort = this.getSort(req, "-created_at");
     const search = this.getSearch(req);

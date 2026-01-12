@@ -252,7 +252,7 @@ class BundleRepository extends BaseRepository {
    * @param {Object} [options] - Query options
    * @returns {Promise<Array>} - Best value bundles
    */
-  async findBestValue(eventId, limit = 5, options = {}) {
+  async findBestValue(eventId, limit = 5, _options = {}) {
     try {
       const bundles = await this.aggregate([
         {

@@ -276,7 +276,6 @@ class PaymentService extends BaseService {
         voter_phone: voterPhone,
         voter_name: voterName,
         coupon_code: couponCode = null,
-        callback_url: callbackUrl,
         candidate_id: candidateId,
         metadata = {},
       } = validatedData;
@@ -559,8 +558,8 @@ class PaymentService extends BaseService {
       // Log error with context (without sensitive data)
       logger.error("Payment initialization failed", {
         error: error.message,
-        eventId,
-        voterEmail: voterEmail?.substring(0, 3) + '***', // Partially mask email
+        eventId: paymentData?.event_id,
+        voterEmail: paymentData?.voter_email?.substring(0, 3) + '***', // Partially mask email
       });
       
       if (error.response?.data) {
@@ -588,7 +587,7 @@ class PaymentService extends BaseService {
         voter_phone: voterPhone,
         voter_name: voterName,
         coupon_code: couponCode = null,
-        callback_url: callbackUrl,
+        callback_url: _callbackUrl,
         metadata = {},
       } = validatedData;
 
@@ -665,7 +664,6 @@ class PaymentService extends BaseService {
           vote_code: voteCode,
           voter_name: voterName,
           voter_phone: voterPhone,
-          bundleCategoryMap,
           custom_fields: [
             {
               display_name: "Event",
@@ -886,7 +884,7 @@ class PaymentService extends BaseService {
         voteCode: payment.vote_code,
         votesCount: payment.votes_purchased,
         amountPaid: payment.amount_paid,
-        currency: payment.currency === "GH₵" ? "GHS" : currency,
+        currency: payment.currency === "GH₵" ? "GHS" : payment.currency,
         transactionReference: payment.transaction_reference,
         paidAt: updatedPayment.paid_at,
       });

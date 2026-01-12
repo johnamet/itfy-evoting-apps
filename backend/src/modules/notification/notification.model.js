@@ -120,7 +120,7 @@ const NotificationSchema = new Schema(
       validate: {
         validator: function (v) {
           if (!v) return true;
-          return /^\/[a-zA-Z0-9\-_\/]*$/.test(v);
+          return /^\/[a-zA-Z0-9\-_/]*$/.test(v);
         },
         message: "Action URL must be a valid path starting with /",
       },

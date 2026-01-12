@@ -194,7 +194,7 @@ class Activity extends BaseModel {
     };
 
     // Instance method: Serialize for API response
-    this.schema.methods.deserialize = function (options = {}) {
+    this.schema.methods.deserialize = function (_options = {}) {
       const obj = this.toObject();
       delete obj.__v;
       

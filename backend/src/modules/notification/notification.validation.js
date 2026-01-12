@@ -29,7 +29,7 @@ export const createNotificationSchema = Joi.object({
   payment: ObjectId().optional(),
   form: ObjectId().optional(),
   submission: ObjectId().optional(),
-  action_url: Joi.string().trim().pattern(/^\/[a-zA-Z0-9\-_\/]*$/).optional(),
+  action_url: Joi.string().trim().pattern(/^\/[a-zA-Z0-9\-_/]*$/).optional(),
   action_text: Joi.string().trim().max(50).optional(),
   metadata: Joi.object().unknown(true).default({}),
   email_to: Joi.string().trim().lowercase().email().optional(),
@@ -110,7 +110,7 @@ export const bulkCreateNotificationsSchema = Joi.object({
   channel: Joi.string().valid(...Object.values(NOTIFICATION_CHANNEL)).default(NOTIFICATION_CHANNEL.IN_APP),
   priority: Joi.string().valid(...Object.values(NOTIFICATION_PRIORITY)).default(NOTIFICATION_PRIORITY.NORMAL),
   event: ObjectId().optional(),
-  action_url: Joi.string().trim().pattern(/^\/[a-zA-Z0-9\-_\/]*$/).optional(),
+  action_url: Joi.string().trim().pattern(/^\/[a-zA-Z0-9\-_/]*$/).optional(),
   action_text: Joi.string().trim().max(50).optional(),
   metadata: Joi.object().unknown(true).optional(),
 });

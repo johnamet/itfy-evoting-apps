@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * ITFY E-Voting Backend Application
  * Main entry point - Production-ready Express server with MongoDB and Agenda
@@ -417,7 +417,7 @@ process.on("uncaughtException", (error) => {
 });
 
 // Handle unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason, _promise) => {
   logger.error("Unhandled Promise Rejection", {
     reason: reason instanceof Error ? reason.message : reason,
     stack: reason instanceof Error ? reason.stack : undefined,

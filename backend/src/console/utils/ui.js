@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * UI Utilities for Console Application
  * Provides colorful output, prompts, and formatting

@@ -264,12 +264,12 @@ class EventService extends BaseService {
       // Remove fields that shouldn't be cloned
       const {
         _id,
-        created_at,
-        updated_at,
-        deleted_at,
-        published_at,
-        current_attendees,
-        total_revenue,
+        created_at: _created_at,
+        updated_at: _updated_at,
+        deleted_at: _deleted_at,
+        published_at: _published_at,
+        current_attendees: _current_attendees,
+        total_revenue: _total_revenue,
         __v,
         ...cloneData
       } = originalEvent;

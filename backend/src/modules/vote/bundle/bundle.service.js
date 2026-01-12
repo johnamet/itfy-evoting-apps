@@ -37,7 +37,7 @@ class BundleService extends BaseService {
   async createBundle(bundleData, adminId) {
     try {
       // Validate input data using BaseService.validate()
-      const validatedData = this.validate(
+      const _validatedData = this.validate(
         { ...bundleData, created_by: adminId },
         BundleValidation.createBundleSchema
       );
@@ -132,7 +132,7 @@ class BundleService extends BaseService {
   async updateBundle(bundleId, updateData, adminId) {
     try {
       // Validate input data using BaseService.validate()
-      const validatedData = this.validate(
+      const _validatedData = this.validate(
         { ...updateData, updated_by: adminId },
         BundleValidation.updateBundleSchema
       );

@@ -36,7 +36,7 @@ class FormController extends BaseController {
    * GET /api/forms
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["event", "form_type", "status", "is_published"]);
     const sort = this.getSort(req, "-created_at");
     const search = this.getSearch(req);

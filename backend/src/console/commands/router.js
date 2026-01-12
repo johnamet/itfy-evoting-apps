@@ -307,7 +307,7 @@ export class CommandRouter {
   /**
    * Execute a command
    */
-  async execute(input, user) {
+  async execute(input, _user) {
     const [commandName, ...args] = this.parseInput(input);
     
     if (!commandName) return;

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 import BaseService from "../shared/base.service.js";
 import CandidateRepository from "./candidate.repository.js";
 import CandidateValidation from "./candidate.validation.js";

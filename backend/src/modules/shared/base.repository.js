@@ -51,7 +51,7 @@ class BaseRepository {
    * @param {Object} document - The affected document
    * @param {Object} options - Additional options
    */
-  async _invalidateCache(operation, document, options = {}) {
+  async _invalidateCache(operation, document, _options = {}) {
     if (!this.cacheEnabled || !document) return;
 
     try {

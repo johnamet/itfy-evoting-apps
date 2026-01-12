@@ -1227,7 +1227,7 @@ class AgendaManager {
           const { default: AnalyticsService } = await import("../modules/analytics/analytics.service.js");
 
           // Calculate final results
-          const results = await AnalyticsService.getEventDashboard(eventId);
+          const _results = await AnalyticsService.getEventDashboard(eventId);
 
           // Update event with results
           await EventRepository.updateById(eventId, {
@@ -1298,7 +1298,7 @@ class AgendaManager {
         try {
           console.log("🧹 Cleaning up expired tokens...");
 
-          const { cache } = await import("../utils/cache/cache.utils.js");
+          const { cache: _cache } = await import("../utils/cache/cache.utils.js");
 
           // Redis automatically expires keys with TTL, but we can clean up manually if needed
           console.log("✅ Expired tokens cleaned up (handled by Redis TTL)");
@@ -1509,7 +1509,7 @@ class AgendaManager {
       "detect-suspicious-activities",
       { priority: "normal", concurrency: 3 },
       async (job) => {
-        const { eventId, thresholdMinutes = 5, threshold = 10 } = job.attrs.data;
+        const { eventId: _eventId, thresholdMinutes = 5, threshold = 10 } = job.attrs.data;
 
         try {
           console.log("🔍 Detecting suspicious activity patterns...");

@@ -259,10 +259,10 @@ class CategoryService extends BaseService {
   /**
    * Open voting for a category
    * @param {string} categoryId - Category ID
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async openVoting(categoryId, userId) {
+  async openVoting(categoryId, _userId) {
     try {
       const category = await this.repository.findById(categoryId, {
         populate: ["event", "candidates"],
@@ -307,10 +307,10 @@ class CategoryService extends BaseService {
   /**
    * Close voting for a category
    * @param {string} categoryId - Category ID
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async closeVoting(categoryId, userId) {
+  async closeVoting(categoryId, _userId) {
     try {
       const category = await this.repository.findById(categoryId, {
         populate: ["event"],
@@ -409,10 +409,10 @@ class CategoryService extends BaseService {
    * Add candidate to category
    * @param {string} categoryId - Category ID
    * @param {string} candidateId - Candidate ID
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async addCandidate(categoryId, candidateId, userId) {
+  async addCandidate(categoryId, candidateId, _userId) {
     try {
       const category = await this.repository.findById(categoryId);
       if (!category) {
@@ -455,10 +455,10 @@ class CategoryService extends BaseService {
    * Remove candidate from category
    * @param {string} categoryId - Category ID
    * @param {string} candidateId - Candidate ID
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async removeCandidate(categoryId, candidateId, userId) {
+  async removeCandidate(categoryId, candidateId, _userId) {
     try {
       const category = await this.repository.findById(categoryId);
       if (!category) {
@@ -505,10 +505,10 @@ class CategoryService extends BaseService {
   /**
    * Toggle featured status
    * @param {string} categoryId - Category ID
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async toggleFeatured(categoryId, userId) {
+  async toggleFeatured(categoryId, _userId) {
     try {
       return await this.repository.toggleFeatured(categoryId);
     } catch (error) {
@@ -522,10 +522,10 @@ class CategoryService extends BaseService {
    * Update category display order
    * @param {string} categoryId - Category ID
    * @param {number} order - New display order
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async updateDisplayOrder(categoryId, order, userId) {
+  async updateDisplayOrder(categoryId, order, _userId) {
     try {
       return await this.repository.updateDisplayOrder(categoryId, order);
     } catch (error) {
@@ -536,10 +536,10 @@ class CategoryService extends BaseService {
   /**
    * Bulk update display orders
    * @param {Array<{id: string, order: number}>} updates - Array of updates
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Array>} - Updated categories
    */
-  async bulkUpdateDisplayOrder(updates, userId) {
+  async bulkUpdateDisplayOrder(updates, _userId) {
     try {
       return await this.repository.bulkUpdateDisplayOrder(updates);
     } catch (error) {
@@ -553,10 +553,10 @@ class CategoryService extends BaseService {
    * Update category status
    * @param {string} categoryId - Category ID
    * @param {string} status - New status
-   * @param {string} userId - User ID performing action
+   * @param {string} _userId - User ID performing action
    * @returns {Promise<Object>} - Updated category
    */
-  async updateStatus(categoryId, status, userId) {
+  async updateStatus(categoryId, status, _userId) {
     try {
       const category = await this.repository.findById(categoryId);
       if (!category) {

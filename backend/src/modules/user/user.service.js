@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * User Service
  * Business logic for user management

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * ITFY E-Voting Backend Application
  * Main entry point - Production-ready Express server with MongoDB and Agenda

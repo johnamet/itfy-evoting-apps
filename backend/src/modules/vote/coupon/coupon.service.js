@@ -133,7 +133,7 @@ class CouponService extends BaseService {
   async updateCoupon(couponId, updateData, adminId) {
     try {
       // Validate input data using BaseService.validate()
-      const validatedData = this.validate(
+      const _validatedData = this.validate(
         { ...updateData, updated_by: adminId },
         CouponValidation.updateCouponSchema
       );

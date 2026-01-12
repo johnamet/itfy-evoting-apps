@@ -36,7 +36,7 @@ class SlideController extends BaseController {
    * GET /api/slides
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["slide_type", "status", "event", "is_active", "position"]);
     const sort = this.getSort(req, "display_order");
     const search = this.getSearch(req);

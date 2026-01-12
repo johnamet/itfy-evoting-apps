@@ -7,7 +7,6 @@
 import { BaseRepository } from "../shared/base.repository.js";
 import PaymentModel from "./payment.model.js";
 import { STATUS, PAYMENT_METHOD } from "../../utils/constants/payment.constants.js";
-import { populate } from "dotenv";
 
 class PaymentRepository extends BaseRepository {
   constructor() {

@@ -9,7 +9,6 @@ import {
   FORM_TYPE,
   FORM_STATUS as STATUS,
   FIELD_TYPE,
-  VALIDATION_RULE,
   SUBMISSION_STATUS,
   DUPLICATE_CHECK_METHOD,
 } from "../../utils/constants/form.constants.js";

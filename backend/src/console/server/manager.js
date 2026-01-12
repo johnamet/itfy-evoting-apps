@@ -5,8 +5,6 @@
 
 import { spawn, exec } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs/promises';
 
 const execAsync = promisify(exec);
 

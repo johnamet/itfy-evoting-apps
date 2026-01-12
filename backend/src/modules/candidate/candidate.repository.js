@@ -7,7 +7,6 @@
 import { BaseRepository } from "../shared/base.repository.js";
 import CandidateModel from "./candidate.model.js";
 import { STATUS } from "../../utils/constants/candidate.constants.js";
-import { th } from "@faker-js/faker";
 
 class CandidateRepository extends BaseRepository {
   constructor() {

@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 
 /**
  * Main Console Application
@@ -96,7 +96,7 @@ export class ConsoleApp extends EventEmitter {
       
       await mongoose.default.disconnect();
       return adminCount > 0;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -240,7 +240,7 @@ export class ConsoleApp extends EventEmitter {
       this.ui.info('Stopping backend server...');
       try {
         this.serverManager.stopServer();
-      } catch (error) {
+      } catch (_error) {
         // Ignore errors during shutdown
       }
     }

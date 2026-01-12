@@ -414,7 +414,7 @@ class Coupon extends BaseModel {
     };
 
     // Instance method: Check if user can use coupon
-    this.schema.methods.canUserRedeem = async function (userIdentifier) {
+    this.schema.methods.canUserRedeem = async function (_userIdentifier) {
       // For anonymous voting, check redemptions by session/device
       // This would need to be implemented in the service layer
       // with session tracking or device fingerprinting

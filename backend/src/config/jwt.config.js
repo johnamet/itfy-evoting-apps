@@ -3,7 +3,7 @@
  * Central configuration for JSON Web Token settings
  */
 
-// eslint-disable-next-line no-undef
+ 
 const getEnv = (key, defaultValue) => process.env[key] || defaultValue;
 
 export const JWT_CONFIG = {

@@ -36,7 +36,7 @@ class BundleController extends BaseController {
    * GET /api/bundles
    */
   async list(req, res) {
-    const { page, limit, skip } = this.getPagination(req);
+    const { page, limit, skip: _skip } = this.getPagination(req);
     const filters = this.getFilters(req, ["event", "status", "is_featured", "is_popular"]);
     const sort = this.getSort(req, "display_order");
     const search = this.getSearch(req);

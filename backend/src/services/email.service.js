@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+ 
 /**
  * Email Service
  * Handles email sending for ITFY E-Voting platform using Nodemailer with:
