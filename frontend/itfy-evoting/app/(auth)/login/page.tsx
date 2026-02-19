@@ -85,15 +85,16 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      {/* Floating Particles Effect (optional subtle animation) */}
+      {/* Floating Particles Effect - Enhanced */}
       <div className="absolute inset-0 -z-5">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl animate-pulse delay-500" />
+        <div className="absolute top-20 left-10 w-80 h-80 bg-purple-400/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pink-400/25 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-400/30 rounded-full blur-3xl animate-pulse delay-500" />
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse delay-700" />
       </div>
 
-      {/* Login Card */}
-      <Card className="w-full max-w-md shadow-2xl backdrop-blur-xl bg-white/95 border-white/20">
+      {/* Login Card - Enhanced Glassmorphic */}
+      <Card className="w-full max-w-md shadow-2xl backdrop-blur-2xl bg-white/90 border border-white/30 rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
         <CardHeader className="space-y-1 text-center pb-8">
           <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
             <LogIn className="h-10 w-10 text-white" />
@@ -125,7 +126,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="admin@itforyouthghana.org"
-                  className="pl-12 h-12 text-base border-muted focus:border-indigo-500 transition-colors"
+                  className="pl-12 h-12 text-base border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                   disabled={isLoading || isSubmitting}
                   {...register('email')}
                 />
@@ -152,7 +153,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="pl-12 pr-12 h-12 text-base border-muted focus:border-indigo-500 transition-colors"
+                  className="pl-12 pr-12 h-12 text-base border border-indigo-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                   disabled={isLoading || isSubmitting}
                   {...register('password')}
                 />
