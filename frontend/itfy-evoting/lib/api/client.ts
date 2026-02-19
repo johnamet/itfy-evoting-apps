@@ -5,8 +5,12 @@
 
 import type { ApiResponse, PaginationParams, PaginationMeta } from '@/types';
 
-// API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+// API Configuration - Ensure proper URL construction
+const API_BASE_URL = (() => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'https://api.itforyouthghana.org/api';
+  // Remove trailing slash if present for consistency
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+})();
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = 'access_token';

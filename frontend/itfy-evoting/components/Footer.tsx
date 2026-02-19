@@ -87,9 +87,9 @@ export default function Footer() {
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-itfy-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-itfy-400/5 rounded-full blur-3xl" />
 
-      <div className="container mx-auto px-6 py-16 relative z-10">
+      <div className="container mx-auto px-4 sm:px-6 py-12 sm:py-16 relative z-10">
         {/* Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 sm:gap-12 mb-12 sm:mb-16">
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
