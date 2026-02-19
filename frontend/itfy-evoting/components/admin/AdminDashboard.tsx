@@ -304,6 +304,13 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
   }, [activeTab, user]);
 
+  // Scroll to top when tab changes
+  useEffect(() => {
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeTab]);
+
   const handleLogout = async () => {
     await logoutUser();
     window.location.href = "/login";

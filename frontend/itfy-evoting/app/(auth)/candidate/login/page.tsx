@@ -146,15 +146,16 @@ function CandidateLoginContent() {
         <div className="absolute inset-0 bg-black/30" />
       </div>
 
-      {/* Floating Glow Orbs */}
+      {/* Floating Glow Orbs - Enhanced */}
       <div className="absolute inset-0 -z-5">
-        <div className="absolute top-10 left-20 w-80 h-80 bg-emerald-400/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-10 right-20 w-96 h-96 bg-cyan-400/30 rounded-full blur-3xl animate-pulse delay-700" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-teal-500/25 rounded-full blur-3xl animate-pulse delay-300" />
+        <div className="absolute top-10 left-20 w-96 h-96 bg-emerald-400/35 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-10 right-20 w-96 h-96 bg-cyan-400/35 rounded-full blur-3xl animate-pulse delay-700" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/30 rounded-full blur-3xl animate-pulse delay-300" />
+        <div className="absolute bottom-1/3 left-1/4 w-80 h-80 bg-green-400/25 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
-      {/* Login Card */}
-      <Card className="w-full max-w-2xl shadow-2xl backdrop-blur-xl bg-white/95 border-white/20">
+      {/* Login Card - Enhanced Glassmorphic */}
+      <Card className="w-full max-w-2xl shadow-2xl backdrop-blur-2xl bg-white/90 border border-white/30 rounded-2xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
         <CardHeader className="text-center pb-8">
           <div className="mx-auto mb-6 h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-xl">
             <User className="h-10 w-10 text-white" />
@@ -169,12 +170,12 @@ function CandidateLoginContent() {
 
         <CardContent className="space-y-6">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'code' | 'email')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-14 rounded-xl bg-muted/50 p-1">
-              <TabsTrigger value="code" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-base">
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-14 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 p-1 border border-emerald-100/50">
+              <TabsTrigger value="code" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-base font-medium transition-all duration-300">
                 <Hash className="mr-2 h-5 w-5" />
                 Login with Code
               </TabsTrigger>
-              <TabsTrigger value="email" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-base">
+              <TabsTrigger value="email" className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-base font-medium transition-all duration-300">
                 <User className="mr-2 h-5 w-5" />
                 Login with Email
               </TabsTrigger>
@@ -204,7 +205,7 @@ function CandidateLoginContent() {
                       id="candidateCode"
                       type="text"
                       placeholder="CAN-ABC-1234"
-                      className="pl-12 h-12 text-base uppercase tracking-wider font-mono"
+                      className="pl-12 h-12 text-base uppercase tracking-wider font-mono border border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                       disabled={isLoading}
                       {...codeForm.register('candidateCode')}
                     />
@@ -222,7 +223,7 @@ function CandidateLoginContent() {
                       id="codePassword"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-12 pr-12 h-12 text-base"
+                      className="pl-12 pr-12 h-12 text-base border border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                       disabled={isLoading}
                       {...codeForm.register('password')}
                     />
@@ -271,7 +272,7 @@ function CandidateLoginContent() {
                       id="email"
                       type="email"
                       placeholder="you@example.com"
-                      className="pl-12 h-12 text-base"
+                      className="pl-12 h-12 text-base border border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                       disabled={isLoading}
                       {...emailForm.register('email')}
                     />
@@ -327,7 +328,7 @@ function CandidateLoginContent() {
                       id="emailPassword"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-12 pr-12 h-12 text-base"
+                      className="pl-12 pr-12 h-12 text-base border border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 bg-white/50 hover:bg-white/70"
                       disabled={isLoading}
                       {...emailForm.register('password')}
                     />

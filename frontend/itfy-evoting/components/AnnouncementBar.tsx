@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { X, Bell, ArrowRight, Clock } from 'lucide-react';
-import { mockSlides } from '@/lib/mocks/slides';
+import { X, Bell, ArrowRight } from 'lucide-react';
+import { slidesApi } from '@/lib/api/slides';
 import type { Slide } from '@/types';
 
 interface AnnouncementBarProps {
@@ -28,14 +28,36 @@ export default function AnnouncementBar({
 }: AnnouncementBarProps) {
   const [isVisible, setIsVisible] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [announcements, setAnnouncements] = useState<Slide[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter announcement slides
-  const announcements = mockSlides.filter(
-    (s): s is Slide =>
-      s.slide_type === 'announcement' &&
-      s.status === 'active' &&
-      (slideIds ? slideIds.includes(s._id) : true)
-  );
+  // Fetch announcements from API
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        setIsLoading(true);
+        // Use the public endpoint for active announcements
+        const response = await slidesApi.getActive();
+
+        if (response.success && response.data) {
+          const filtered = response.data.filter(
+            (s): s is Slide =>
+              s.slide_type === 'announcement' &&
+              s.status === 'active' &&
+              (slideIds ? slideIds.includes(s._id) : true)
+          );
+          setAnnouncements(filtered);
+        }
+      } catch (error) {
+        console.error('[v0] Failed to fetch announcements:', error);
+        setAnnouncements([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAnnouncements();
+  }, [slideIds]);
 
   // Auto-rotate announcements
   useEffect(() => {
@@ -61,13 +83,15 @@ export default function AnnouncementBar({
     }
   }, []);
 
-  if (!isVisible || announcements.length === 0) return null;
+  if (!isVisible || announcements.length === 0 || isLoading) return null;
 
   const currentAnnouncement = announcements[currentIndex];
 
   const handleDismiss = () => {
     setIsVisible(false);
-    localStorage.setItem('announcement-dismissed', new Date().toISOString());
+    if (dismissible) {
+      localStorage.setItem('announcement-dismissed', new Date().toISOString());
+    }
   };
 
   const positionClasses = position === 'top' 
